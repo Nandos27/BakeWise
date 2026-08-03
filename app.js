@@ -46,10 +46,21 @@ if (loginForm) {
     e.preventDefault();
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
+    const alertBox = document.getElementById("errorAlert");
 
     signInWithEmailAndPassword(auth, email, password)
-      .then(() => window.location.href = "dashboard.html")
-      .catch((error) => showAlert(document.getElementById("errorAlert"), "Login failed: " + error.message, "danger"));
+      .then((userCredential) => {
+        // SV Requirement: Check if email is verified BEFORE letting them in
+        if (!userCredential.user.emailVerified) {
+          signOut(auth); // Boot them back out
+          showAlert(alertBox, "Access Denied: Please verify your email first. Check your inbox!", "danger");
+          return; // Stop the code from going to the dashboard
+        }
+        
+        // If verified, go to dashboard
+        window.location.href = "dashboard.html";
+      })
+      .catch((error) => showAlert(alertBox, "Login failed: " + error.message, "danger"));
   });
 }
 
@@ -88,8 +99,11 @@ if (registerForm) {
           email: email,
           role: "kitchen_staff"
         }).then(() => {
-          showAlert(alertBox, "Account created! Verification email sent. Redirecting...", "success");
-          setTimeout(() => window.location.href = "index.html", 2000);
+          // Force sign out immediately so they don't auto-login
+          signOut(auth).then(() => {
+            showAlert(alertBox, "Account created! Please check your email to verify before logging in.", "success");
+            setTimeout(() => window.location.href = "index.html", 3000);
+          });
         });
       })
       .catch((err) => showAlert(alertBox, "Error: " + err.message, "danger"));
@@ -99,13 +113,26 @@ if (registerForm) {
 // Check logged-in user role
 onAuthStateChanged(auth, (user) => {
   if (user) {
+    // SECURITY GUARD: If user lands on dashboard without verifying email, kick them out!
+    if (!user.emailVerified) {
+      signOut(auth).then(() => {
+        if (window.location.pathname.includes("dashboard.html")) {
+          window.location.href = "index.html";
+        }
+      });
+      return;
+    }
+
     get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.val();
         const role = userData.role || "kitchen_staff";
 
-        document.getElementById("userGreeting").innerText = `Welcome, ${userData.fullName}!`;
-        document.getElementById("userRoleBadge").innerText = `Role: ${role.replace('_', ' ')}`;
+        const greeting = document.getElementById("userGreeting");
+        if (greeting) greeting.innerText = `Welcome, ${userData.fullName}!`;
+        
+        const roleBadge = document.getElementById("userRoleBadge");
+        if (roleBadge) roleBadge.innerText = `Role: ${role.replace('_', ' ')}`;
 
         // Show supervisor or admin elements
         if (role === "admin" || role === "supervisor") {
@@ -464,10 +491,6 @@ window.updateUserRole = (uid, newRole) => {
   }
   update(ref(db, `users/${uid}`), { role: newRole })
     .then(() => alert(`User role updated to ${newRole.replace('_', ' ')}!`));
-};
-
-window.updateUserRole = (uid, newRole) => {
-  update(ref(db, `users/${uid}`), { role: newRole }).then(() => alert(`User role updated to ${newRole}!`));
 };
 
 // Global delete functions
