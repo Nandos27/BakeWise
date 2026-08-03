@@ -1,0 +1,476 @@
+// Firebase Imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification, 
+  signOut, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, push, set, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyDJaABTeg8QWibEzf9Q9tFFPd-1GvBbp1k",
+  authDomain: "bakery-inventory-system.firebaseapp.com",
+  databaseURL: "https://bakery-inventory-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bakery-inventory-system",
+  storageBucket: "bakery-inventory-system.firebasestorage.app",
+  messagingSenderId: "369844090351",
+  appId: "1:369844090351:web:528b34f3a36cc14a74321a"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// Simple alert helper function
+function showAlert(element, message, type) {
+  if (element) {
+    element.className = `alert alert-${type}`;
+    element.innerText = message;
+    element.classList.remove("d-none");
+  }
+}
+
+// -------------------------------------------------------------
+// MODULE 1: LOGIN & REGISTRATION
+// -------------------------------------------------------------
+
+// Login form
+const loginForm = document.getElementById("loginForm");
+if (loginForm) {
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => window.location.href = "dashboard.html")
+      .catch((error) => showAlert(document.getElementById("errorAlert"), "Login failed: " + error.message, "danger"));
+  });
+}
+
+// Logout button
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth).then(() => window.location.href = "index.html");
+  });
+}
+
+// Registration form
+const registerForm = document.getElementById("registerForm");
+if (registerForm) {
+  registerForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const fullName = document.getElementById("regFullName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const confirmPassword = document.getElementById("regConfirmPassword").value;
+    const alertBox = document.getElementById("alertBox");
+
+    // Check password rules
+    if (password.length < 6) return showAlert(alertBox, "Password must be at least 6 characters.", "danger");
+    if (password !== confirmPassword) return showAlert(alertBox, "Passwords do not match!", "danger");
+
+    // Create user in Firebase Auth
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Send email notification
+        sendEmailVerification(userCredential.user).catch(err => console.log(err));
+
+        // Save default user role as kitchen_staff
+        set(ref(db, 'users/' + userCredential.user.uid), {
+          fullName: fullName,
+          email: email,
+          role: "kitchen_staff"
+        }).then(() => {
+          showAlert(alertBox, "Account created! Verification email sent. Redirecting...", "success");
+          setTimeout(() => window.location.href = "index.html", 2000);
+        });
+      })
+      .catch((err) => showAlert(alertBox, "Error: " + err.message, "danger"));
+  });
+}
+
+// Check logged-in user role
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    get(ref(db, `users/${user.uid}`)).then((snapshot) => {
+      if (snapshot.exists()) {
+        const userData = snapshot.val();
+        const role = userData.role || "kitchen_staff";
+
+        document.getElementById("userGreeting").innerText = `Welcome, ${userData.fullName}!`;
+        document.getElementById("userRoleBadge").innerText = `Role: ${role.replace('_', ' ')}`;
+
+        // Show supervisor or admin elements
+        if (role === "admin" || role === "supervisor") {
+          document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
+          const container = document.getElementById("ingTableContainer");
+          if (container) container.className = "col-md-8";
+        }
+        // Show admin-only elements
+        if (role === "admin") {
+          document.querySelectorAll(".super-admin-only").forEach(el => el.classList.remove("d-none"));
+        }
+      }
+    });
+  }
+});
+
+// -------------------------------------------------------------
+// MODULES 2, 7, 8, 9, 10: INGREDIENTS, SEARCH, LOW STOCK & EXPIRY
+// -------------------------------------------------------------
+let allIngredients = {};
+
+// Add ingredient form
+const addIngredientForm = document.getElementById("addIngredientForm");
+if (addIngredientForm) {
+  addIngredientForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const newIng = {
+      name: document.getElementById("ingName").value,
+      category: document.getElementById("ingCategorySelect").value,
+      quantity: parseFloat(document.getElementById("ingQty").value),
+      minThreshold: parseFloat(document.getElementById("ingMin").value),
+      expiryDate: document.getElementById("ingExpiry").value,
+      unit: document.getElementById("ingUnit").value
+    };
+
+    push(ref(db, 'ingredients/'), newIng).then(() => {
+      alert("Ingredient Saved!");
+      addIngredientForm.reset();
+    });
+  });
+
+  // Read ingredients from Firebase
+  onValue(ref(db, 'ingredients/'), (snapshot) => {
+    allIngredients = snapshot.exists() ? snapshot.val() : {};
+    renderInventoryTable();
+  });
+}
+
+// Search and filter triggers
+const searchInput = document.getElementById("searchInput");
+const filterCat = document.getElementById("filterCategorySelect");
+
+if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
+if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
+
+// Render inventory table with low stock and expiry check
+function renderInventoryTable() {
+  const tableBody = document.getElementById("inventoryTableBody");
+  const stockInSelect = document.getElementById("stockInIngSelect");
+  const stockOutSelect = document.getElementById("stockOutIngSelect");
+
+  if (tableBody) tableBody.innerHTML = "";
+  if (stockInSelect) stockInSelect.innerHTML = `<option value="">Select Ingredient</option>`;
+  if (stockOutSelect) stockOutSelect.innerHTML = `<option value="">Select Ingredient</option>`;
+
+  const searchVal = searchInput ? searchInput.value.toLowerCase() : "";
+  const catVal = filterCat ? filterCat.value : "";
+  const today = new Date().toISOString().split("T")[0];
+
+  let totalItems = 0, lowStockCount = 0, expiredCount = 0;
+
+  Object.keys(allIngredients).forEach((key) => {
+    const item = allIngredients[key];
+    totalItems++;
+
+    // Search and category matching
+    const matchesSearch = item.name.toLowerCase().includes(searchVal);
+    const matchesCategory = catVal === "" || item.category === catVal;
+
+    // Check low stock and expiry date
+    const isLowStock = item.quantity <= item.minThreshold;
+    const isExpired = item.expiryDate && item.expiryDate < today;
+
+    if (isLowStock) lowStockCount++;
+    if (isExpired) expiredCount++;
+
+    if (matchesSearch && matchesCategory) {
+      let statusBadges = "";
+      if (isLowStock) statusBadges += `<span class="badge bg-danger me-1">Low Stock</span>`;
+      if (isExpired) statusBadges += `<span class="badge bg-warning text-dark me-1">Expired</span>`;
+      if (!isLowStock && !isExpired) statusBadges = `<span class="badge bg-success">OK</span>`;
+
+      const row = `
+        <tr class="${isLowStock ? 'table-danger' : ''}">
+          <td class="fw-bold">${item.name}</td>
+          <td><span class="badge bg-secondary">${item.category}</span></td>
+          <td class="fw-bold">${item.quantity} ${item.unit}</td>
+          <td>${item.minThreshold} ${item.unit}</td>
+          <td>${item.expiryDate || 'N/A'}</td>
+          <td>${statusBadges}</td>
+          <td class="admin-only d-none">
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${key}', '${item.name}', ${item.quantity}, '${item.unit}', ${item.minThreshold}, '${item.expiryDate}')">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteIngredient('${key}')">Delete</button>
+          </td>
+        </tr>`;
+
+      if (tableBody) tableBody.innerHTML += row;
+    }
+
+    // Populate dropdowns for Stock In and Stock Out
+    if (stockInSelect) stockInSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
+    if (stockOutSelect) stockOutSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
+  });
+
+  // Update stats on Report Tab
+  if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
+  if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = lowStockCount;
+  if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = expiredCount;
+
+  // Make sure admin buttons stay visible if user is logged in as supervisor/admin
+  if (auth.currentUser) {
+    get(ref(db, `users/${auth.currentUser.uid}`)).then((snap) => {
+      if (snap.exists() && (snap.val().role === 'supervisor' || snap.val().role === 'admin')) {
+        document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
+      }
+    });
+  }
+}
+
+// Edit Modal Loader
+window.openEditModal = function(key, name, qty, unit, minThreshold, expiryDate) {
+  document.getElementById("editKey").value = key;
+  document.getElementById("editName").value = name;
+  document.getElementById("editQty").value = qty;
+  document.getElementById("editUnit").value = unit;
+  document.getElementById("editMin").value = minThreshold || 0;
+  document.getElementById("editExpiry").value = expiryDate || "";
+
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+};
+
+// Edit form submit
+const editForm = document.getElementById("editForm");
+if (editForm) {
+  editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const key = document.getElementById("editKey").value;
+    const updatedData = {
+      name: document.getElementById("editName").value,
+      quantity: parseFloat(document.getElementById("editQty").value),
+      minThreshold: parseFloat(document.getElementById("editMin").value),
+      expiryDate: document.getElementById("editExpiry").value,
+      unit: document.getElementById("editUnit").value
+    };
+
+    update(ref(db, 'ingredients/' + key), updatedData).then(() => {
+      alert("Ingredient updated!");
+      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+    });
+  });
+}
+
+// -------------------------------------------------------------
+// MODULE 3: CATEGORIES
+// -------------------------------------------------------------
+const addCategoryForm = document.getElementById("addCategoryForm");
+if (addCategoryForm) {
+  addCategoryForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    push(ref(db, 'categories/'), { name: document.getElementById("catName").value }).then(() => {
+      alert("Category Added!");
+      addCategoryForm.reset();
+    });
+  });
+
+  onValue(ref(db, 'categories/'), (snapshot) => {
+    const listGroup = document.getElementById("categoryListGroup");
+    const ingSelect = document.getElementById("ingCategorySelect");
+    const filterSelect = document.getElementById("filterCategorySelect");
+
+    if (listGroup) listGroup.innerHTML = "";
+    if (ingSelect) ingSelect.innerHTML = `<option value="">Select Category</option>`;
+    if (filterSelect) filterSelect.innerHTML = `<option value="">All Categories</option>`;
+
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      Object.keys(data).forEach((key) => {
+        const cat = data[key];
+        if (listGroup) listGroup.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${cat.name} <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${key}')">Delete</button></li>`;
+        if (ingSelect) ingSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+        if (filterSelect) filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+      });
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// MODULE 4: SUPPLIERS
+// -------------------------------------------------------------
+const addSupplierForm = document.getElementById("addSupplierForm");
+if (addSupplierForm) {
+  addSupplierForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    push(ref(db, 'suppliers/'), {
+      name: document.getElementById("supName").value,
+      contact: document.getElementById("supContact").value,
+      phone: document.getElementById("supPhone").value
+    }).then(() => {
+      alert("Supplier Saved!");
+      addSupplierForm.reset();
+    });
+  });
+
+  onValue(ref(db, 'suppliers/'), (snapshot) => {
+    const supTable = document.getElementById("supplierTableBody");
+    const stockInSupSelect = document.getElementById("stockInSupSelect");
+
+    if (supTable) supTable.innerHTML = "";
+    if (stockInSupSelect) stockInSupSelect.innerHTML = `<option value="">Select Supplier</option>`;
+
+    let count = 0;
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      Object.keys(data).forEach((key) => {
+        count++;
+        const item = data[key];
+        if (supTable) supTable.innerHTML += `<tr><td class="fw-bold">${item.name}</td><td>${item.contact}</td><td>${item.phone}</td><td><button class="btn btn-sm btn-outline-danger" onclick="deleteSupplier('${key}')">Delete</button></td></tr>`;
+        if (stockInSupSelect) stockInSupSelect.innerHTML += `<option value="${item.name}">${item.name}</option>`;
+      });
+    }
+    if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = count;
+  });
+}
+
+// -------------------------------------------------------------
+// MODULE 5: STOCK IN
+// -------------------------------------------------------------
+const stockInForm = document.getElementById("stockInForm");
+if (stockInForm) {
+  stockInForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const ingKey = document.getElementById("stockInIngSelect").value;
+    const addedQty = parseFloat(document.getElementById("stockInQty").value);
+    const supplierName = document.getElementById("stockInSupSelect").value;
+    const entryDate = document.getElementById("stockInDate").value;
+
+    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+      if (snap.exists()) {
+        const item = snap.val();
+        update(ref(db, `ingredients/${ingKey}`), { quantity: item.quantity + addedQty });
+        
+        push(ref(db, 'stock_in/'), { 
+          ingredientName: item.name, 
+          addedQty: addedQty, 
+          unit: item.unit, 
+          supplier: supplierName, 
+          date: entryDate 
+        }).then(() => { 
+          alert("Stock In recorded!"); 
+          stockInForm.reset(); 
+        });
+      }
+    });
+  });
+
+  onValue(ref(db, 'stock_in/'), (snap) => {
+    const table = document.getElementById("stockInTableBody");
+    if (table) table.innerHTML = "";
+    if (snap.exists()) {
+      Object.values(snap.val()).forEach((item) => {
+        if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td><td>${item.supplier}</td></tr>`;
+      });
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// MODULE 6: STOCK OUT
+// -------------------------------------------------------------
+const stockOutForm = document.getElementById("stockOutForm");
+if (stockOutForm) {
+  stockOutForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const ingKey = document.getElementById("stockOutIngSelect").value;
+    const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
+    const reason = document.getElementById("stockOutReason").value;
+    const entryDate = document.getElementById("stockOutDate").value;
+
+    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+      if (snap.exists()) {
+        const item = snap.val();
+        if (item.quantity < deductedQty) return alert("Error: Not enough stock to deduct!");
+
+        update(ref(db, `ingredients/${ingKey}`), { quantity: item.quantity - deductedQty });
+
+        push(ref(db, 'stock_out/'), { 
+          ingredientName: item.name, 
+          deductedQty: deductedQty, 
+          unit: item.unit, 
+          reason: reason, 
+          date: entryDate 
+        }).then(() => { 
+          alert("Stock Out recorded and stock deducted!"); 
+          stockOutForm.reset(); 
+        });
+      }
+    });
+  });
+
+  onValue(ref(db, 'stock_out/'), (snap) => {
+    const table = document.getElementById("stockOutTableBody");
+    if (table) table.innerHTML = "";
+    if (snap.exists()) {
+      Object.values(snap.val()).forEach((item) => {
+        if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
+      });
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
+// -------------------------------------------------------------
+const userTableBody = document.getElementById("userManagementTableBody");
+if (userTableBody) {
+  onValue(ref(db, 'users/'), (snapshot) => {
+    userTableBody.innerHTML = "";
+    if (snapshot.exists()) {
+      const users = snapshot.val();
+      Object.keys(users).forEach((uid) => {
+        const u = users[uid];
+        
+        // Skip listing any user who is an Admin (Hides Admin from the table)
+        if (u.role === "admin") return;
+
+        userTableBody.innerHTML += `
+          <tr>
+            <td>${u.fullName}</td>
+            <td>${u.email}</td>
+            <td><span class="badge bg-secondary text-capitalize">${u.role.replace('_', ' ')}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary me-1" onclick="updateUserRole('${uid}', 'kitchen_staff')">Set Staff</button>
+              <button class="btn btn-sm btn-outline-success" onclick="updateUserRole('${uid}', 'supervisor')">Set Supervisor</button>
+            </td>
+          </tr>`;
+      });
+    }
+  });
+}
+
+// Update role function (Only allows setting staff or supervisor)
+window.updateUserRole = (uid, newRole) => {
+  if (newRole !== 'kitchen_staff' && newRole !== 'supervisor') {
+    alert("Invalid role selection.");
+    return;
+  }
+  update(ref(db, `users/${uid}`), { role: newRole })
+    .then(() => alert(`User role updated to ${newRole.replace('_', ' ')}!`));
+};
+
+window.updateUserRole = (uid, newRole) => {
+  update(ref(db, `users/${uid}`), { role: newRole }).then(() => alert(`User role updated to ${newRole}!`));
+};
+
+// Global delete functions
+window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
+window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
+window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };

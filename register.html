@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bakery System - Register Account</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .register-card { max-width: 450px; margin: 50px auto; padding: 25px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="card shadow-sm register-card bg-white">
+    <h3 class="text-center mb-2 text-primary fw-bold">Register Account</h3>
+    <p class="text-center text-muted mb-4 small">Create an account to access the system</p>
+    
+    <div id="alertBox" class="alert d-none" role="alert"></div>
+
+    <form id="registerForm">
+      <div class="mb-3">
+        <label for="regFullName" class="form-label">Full Name</label>
+        <input type="text" class="form-control" id="regFullName" placeholder="John Doe" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="regEmail" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="regEmail" placeholder="staff@bakery.com" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="regPassword" class="form-label">Password</label>
+        <input type="password" class="form-control" id="regPassword" placeholder="Min 6 chars (e.g. Pass123!)" required>
+        <div class="form-text small">At least 6 characters, containing numbers & letters.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="regConfirmPassword" class="form-label">Confirm Password</label>
+        <input type="password" class="form-control" id="regConfirmPassword" placeholder="Repeat password" required>
+      </div>
+
+      <button type="submit" class="btn btn-success w-100 fw-bold">Create Account</button>
+    </form>
+
+    <div class="text-center mt-3">
+      <a href="index.html" class="text-decoration-none small">Already have an account? Login here</a>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

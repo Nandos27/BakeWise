@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bakery System - Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="#">Bakery System</a>
+      <div class="d-flex align-items-center gap-3">
+        <span class="text-white fw-bold" id="userGreeting">Welcome!</span>
+        <span class="badge bg-info text-dark text-capitalize px-3 py-2" id="userRoleBadge">Role: Staff</span>
+        <button class="btn btn-outline-light btn-sm" id="logoutBtn">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <!-- Module Tabs -->
+    <ul class="nav nav-pills nav-fill mb-4 bg-white p-2 rounded shadow-sm" id="moduleTabs">
+      <li class="nav-item">
+        <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#mod-ing">Ingredients & Stock</button>
+      </li>
+      <li class="nav-item admin-only d-none">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#mod-cat">Categories</button>
+      </li>
+      <li class="nav-item admin-only d-none">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#mod-sup">Suppliers</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#mod-stockin">Stock In</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#mod-stockout">Stock Out</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#mod-report">Reports</button>
+      </li>
+      <li class="nav-item super-admin-only d-none">
+        <button class="nav-link fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#mod-users">Manage Roles</button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      
+      <!-- MODULE 2, 7, 8, 9, 10: INGREDIENT & CURRENT STOCK -->
+      <div class="tab-pane fade show active" id="mod-ing">
+        <div class="row g-4">
+          <!-- Form to add ingredient (Supervisors/Admin only) -->
+          <div class="col-md-4 admin-only d-none">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Add New Ingredient</h5>
+              <form id="addIngredientForm">
+                <div class="mb-2">
+                  <label class="form-label">Ingredient Name</label>
+                  <input type="text" id="ingName" class="form-control" placeholder="e.g. Wheat Flour" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Category</label>
+                  <select id="ingCategorySelect" class="form-select" required></select>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Initial Quantity</label>
+                  <input type="number" step="0.1" id="ingQty" class="form-control" placeholder="0" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Low Stock Threshold</label>
+                  <input type="number" step="0.1" id="ingMin" class="form-control" placeholder="e.g. 5" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Expiry Date</label>
+                  <input type="date" id="ingExpiry" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Unit of Measure</label>
+                  <input type="text" id="ingUnit" class="form-control" placeholder="kg, grams, L" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Save Ingredient</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Main Inventory Table -->
+          <div class="col-md-12" id="ingTableContainer">
+            <div class="card shadow-sm p-3">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title text-primary m-0">Current Inventory List</h5>
+                
+                <!-- Module 10: Search and Filter -->
+                <div class="d-flex gap-2">
+                  <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search ingredient...">
+                  <select id="filterCategorySelect" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                  </select>
+                </div>
+              </div>
+
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Category</th>
+                    <th>Stock Level</th>
+                    <th>Min Alert</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th class="admin-only d-none">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 3: CATEGORIES -->
+      <div class="tab-pane fade" id="mod-cat">
+        <div class="row g-4">
+          <div class="col-md-5">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Add Category</h5>
+              <form id="addCategoryForm">
+                <div class="mb-3">
+                  <label class="form-label">Category Name</label>
+                  <input type="text" id="catName" class="form-control" placeholder="e.g. Dry Goods" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Add Category</button>
+              </form>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Category List</h5>
+              <ul class="list-group" id="categoryListGroup"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 4: SUPPLIERS -->
+      <div class="tab-pane fade" id="mod-sup">
+        <div class="row g-4">
+          <div class="col-md-5">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Add Supplier</h5>
+              <form id="addSupplierForm">
+                <div class="mb-2">
+                  <label class="form-label">Supplier Name</label>
+                  <input type="text" id="supName" class="form-control" placeholder="Company Name" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Contact Person</label>
+                  <input type="text" id="supContact" class="form-control" placeholder="Contact Name" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Phone Number</label>
+                  <input type="text" id="supPhone" class="form-control" placeholder="Phone Number" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Save Supplier</button>
+              </form>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Supplier Directory</h5>
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Supplier</th>
+                    <th>Contact</th>
+                    <th>Phone</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="supplierTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 5: STOCK IN -->
+      <div class="tab-pane fade" id="mod-stockin">
+        <div class="row g-4">
+          <div class="col-md-5">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Record Stock In</h5>
+              <form id="stockInForm">
+                <div class="mb-2">
+                  <label class="form-label">Select Ingredient</label>
+                  <select id="stockInIngSelect" class="form-select" required></select>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Select Supplier</label>
+                  <select id="stockInSupSelect" class="form-select" required></select>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Quantity Added</label>
+                  <input type="number" step="0.1" id="stockInQty" class="form-control" placeholder="0" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Entry Date</label>
+                  <input type="date" id="stockInDate" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Add Stock</button>
+              </form>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-primary mb-3">Stock In History</h5>
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Ingredient</th>
+                    <th>Added Qty</th>
+                    <th>Supplier</th>
+                  </tr>
+                </thead>
+                <tbody id="stockInTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 6: STOCK OUT -->
+      <div class="tab-pane fade" id="mod-stockout">
+        <div class="row g-4">
+          <div class="col-md-5">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-danger mb-3">Record Stock Out</h5>
+              <form id="stockOutForm">
+                <div class="mb-2">
+                  <label class="form-label">Select Ingredient</label>
+                  <select id="stockOutIngSelect" class="form-select" required></select>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Quantity Deducted</label>
+                  <input type="number" step="0.1" id="stockOutQty" class="form-control" placeholder="0" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">Reason</label>
+                  <input type="text" id="stockOutReason" class="form-control" placeholder="e.g. Baking, Damaged" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Date Used</label>
+                  <input type="date" id="stockOutDate" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-danger w-100">Deduct Stock</button>
+              </form>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="card shadow-sm p-3">
+              <h5 class="card-title text-danger mb-3">Stock Out History</h5>
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Ingredient</th>
+                    <th>Deducted Qty</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="stockOutTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 11: REPORTS -->
+      <div class="tab-pane fade" id="mod-report">
+        <div class="card shadow-sm p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="text-primary fw-bold m-0">Inventory Summary Report</h4>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">Print</button>
+          </div>
+          <div class="row text-center mb-2">
+            <div class="col-md-3">
+              <div class="p-3 bg-light rounded border">
+                <h6>Total Ingredients</h6>
+                <h3 class="text-primary fw-bold" id="rptTotalItems">0</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3 bg-light rounded border">
+                <h6>Low Stock Items</h6>
+                <h3 class="text-danger fw-bold" id="rptLowStock">0</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3 bg-light rounded border">
+                <h6>Expired Items</h6>
+                <h3 class="text-warning fw-bold" id="rptExpired">0</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3 bg-light rounded border">
+                <h6>Total Suppliers</h6>
+                <h3 class="text-success fw-bold" id="rptSuppliers">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 12: ADMIN USER ROLES -->
+      <div class="tab-pane fade" id="mod-users">
+        <div class="card shadow-sm p-3">
+          <h5 class="card-title text-danger mb-3">User Management (Admin Only)</h5>
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Current Role</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="userManagementTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EDIT INGREDIENT MODAL -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title text-primary fw-bold">Edit Ingredient</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <input type="hidden" id="editKey">
+            <div class="mb-2">
+              <label class="form-label">Ingredient Name</label>
+              <input type="text" id="editName" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Stock Quantity</label>
+              <input type="number" step="0.1" id="editQty" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Min Threshold</label>
+              <input type="number" step="0.1" id="editMin" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Expiry Date</label>
+              <input type="date" id="editExpiry" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Unit of Measure</label>
+              <input type="text" id="editUnit" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Update Ingredient</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
