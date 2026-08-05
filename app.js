@@ -212,18 +212,42 @@ function renderInventoryTable() {
     const matchesSearch = item.name.toLowerCase().includes(searchVal);
     const matchesCategory = catVal === "" || item.category === catVal;
 
-    // Check low stock and expiry date
+    // Check low stock (Warning if within 20% of threshold)
     const isLowStock = item.quantity <= item.minThreshold;
-    const isExpired = item.expiryDate && item.expiryDate < today;
+    const isAlmostLow = !isLowStock && (item.quantity <= (item.minThreshold * 1.2));
+
+    // Check expiry dates (Warning if within 7 days)
+    let isExpired = false;
+    let isExpiringSoon = false;
+    
+    if (item.expiryDate) {
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0); 
+      const expDate = new Date(item.expiryDate);
+      const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
+      
+      if (daysDiff < 0) isExpired = true;
+      else if (daysDiff >= 0 && daysDiff <= 7) isExpiringSoon = true;
+    }
 
     if (isLowStock) lowStockCount++;
     if (isExpired) expiredCount++;
 
     if (matchesSearch && matchesCategory) {
       let statusBadges = "";
+      
+      // Stock Badges
       if (isLowStock) statusBadges += `<span class="badge bg-danger me-1">Low Stock</span>`;
-      if (isExpired) statusBadges += `<span class="badge bg-warning text-dark me-1">Expired</span>`;
-      if (!isLowStock && !isExpired) statusBadges = `<span class="badge bg-success">OK</span>`;
+      else if (isAlmostLow) statusBadges += `<span class="badge bg-warning text-dark me-1">Almost Low</span>`;
+      
+      // Expiry Badges
+      if (isExpired) statusBadges += `<span class="badge bg-danger me-1">Expired</span>`;
+      else if (isExpiringSoon) statusBadges += `<span class="badge bg-warning text-dark me-1">Expiring Soon</span>`;
+      
+      // All Good Badge
+      if (!isLowStock && !isAlmostLow && !isExpired && !isExpiringSoon) {
+        statusBadges = `<span class="badge bg-success">OK</span>`;
+      }
 
       const row = `
         <tr class="${isLowStock ? 'table-danger' : ''}">
