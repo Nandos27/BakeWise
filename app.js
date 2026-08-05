@@ -48,7 +48,7 @@ if (loginForm) {
     const password = document.getElementById("password").value;
     const alertBox = document.getElementById("errorAlert");
 
-signInWithEmailAndPassword(auth, email, password)
+    signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         // VIP BYPASS: Check if email is verified, BUT ignore the rule if it's the Admin email
         if (!userCredential.user.emailVerified && email !== "admin@bakery.com") {
@@ -57,7 +57,7 @@ signInWithEmailAndPassword(auth, email, password)
           return; // Stop the code from going to the dashboard
         }
         
-        // If verified, go to dashboard
+        // If verified (or if it's the admin), go to dashboard
         window.location.href = "dashboard.html";
       })
       .catch((error) => showAlert(alertBox, "Login failed: " + error.message, "danger"));
@@ -99,7 +99,7 @@ if (registerForm) {
           email: email,
           role: "kitchen_staff"
         }).then(() => {
-          // Force sign out immediately so they don't auto-login
+          // Force sign out immediately so they don't auto-login unverified
           signOut(auth).then(() => {
             showAlert(alertBox, "Account created! Please check your email to verify before logging in.", "success");
             setTimeout(() => window.location.href = "index.html", 3000);
@@ -110,11 +110,11 @@ if (registerForm) {
   });
 }
 
-// Check logged-in user role
+// Check logged-in user state & role
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // SECURITY GUARD: If user lands on dashboard without verifying email, kick them out!
-    if (!user.emailVerified) {
+    // SECURITY GUARD & VIP BYPASS: If user lands on dashboard without verifying email, kick them out (unless Admin)!
+    if (!user.emailVerified && user.email !== "admin@bakery.com") {
       signOut(auth).then(() => {
         if (window.location.pathname.includes("dashboard.html")) {
           window.location.href = "index.html";
@@ -123,10 +123,16 @@ onAuthStateChanged(auth, (user) => {
       return;
     }
 
+    // Retrieve user profile data
     get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.val();
-        const role = userData.role || "kitchen_staff";
+        
+        // THE ULTIMATE ADMIN OVERRIDE: Automatically make this email Admin
+        let role = userData.role || "kitchen_staff";
+        if (user.email === "admin@bakery.com") {
+          role = "admin";
+        }
 
         const greeting = document.getElementById("userGreeting");
         if (greeting) greeting.innerText = `Welcome, ${userData.fullName}!`;
@@ -255,8 +261,14 @@ function renderInventoryTable() {
   // Make sure admin buttons stay visible if user is logged in as supervisor/admin
   if (auth.currentUser) {
     get(ref(db, `users/${auth.currentUser.uid}`)).then((snap) => {
-      if (snap.exists() && (snap.val().role === 'supervisor' || snap.val().role === 'admin')) {
-        document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
+      if (snap.exists()) {
+        const currentUserRole = snap.val().role || "kitchen_staff";
+        // Apply override check here too just in case
+        const finalRole = (auth.currentUser.email === "admin@bakery.com") ? "admin" : currentUserRole;
+        
+        if (finalRole === 'supervisor' || finalRole === 'admin') {
+          document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
+        }
       }
     });
   }
@@ -466,7 +478,7 @@ if (userTableBody) {
         const u = users[uid];
         
         // Skip listing any user who is an Admin (Hides Admin from the table)
-        if (u.role === "admin") return;
+        if (u.role === "admin" || u.email === "admin@bakery.com") return;
 
         userTableBody.innerHTML += `
           <tr>
