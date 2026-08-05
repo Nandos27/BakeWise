@@ -48,10 +48,10 @@ if (loginForm) {
     const password = document.getElementById("password").value;
     const alertBox = document.getElementById("errorAlert");
 
-    signInWithEmailAndPassword(auth, email, password)
+signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // SV Requirement: Check if email is verified BEFORE letting them in
-        if (!userCredential.user.emailVerified) {
+        // VIP BYPASS: Check if email is verified, BUT ignore the rule if it's the Admin email
+        if (!userCredential.user.emailVerified && email !== "admin@bakery.com") {
           signOut(auth); // Boot them back out
           showAlert(alertBox, "Access Denied: Please verify your email first. Check your inbox!", "danger");
           return; // Stop the code from going to the dashboard
