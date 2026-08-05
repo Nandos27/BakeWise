@@ -521,3 +521,13 @@ window.updateUserRole = (uid, newRole) => {
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
 window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
 window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
+
+// Auto-fill today's date in Stock In and Stock Out forms
+document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date().toISOString().split("T")[0];
+  const stockInDate = document.getElementById("stockInDate");
+  const stockOutDate = document.getElementById("stockOutDate");
+  
+  if (stockInDate) stockInDate.value = today;
+  if (stockOutDate) stockOutDate.value = today;
+});
