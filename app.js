@@ -50,14 +50,11 @@ if (loginForm) {
 
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // SV Requirement: Check if email is verified BEFORE letting them in
         if (!userCredential.user.emailVerified) {
-          signOut(auth); // Boot them back out
+          signOut(auth); 
           showAlert(alertBox, "Access Denied: Please verify your email first. Check your inbox!", "danger");
-          return; // Stop the code from going to the dashboard
+          return; 
         }
-        
-        // If verified, go to dashboard
         window.location.href = "dashboard.html";
       })
       .catch((error) => showAlert(alertBox, "Login failed: " + error.message, "danger"));
@@ -83,23 +80,18 @@ if (registerForm) {
     const confirmPassword = document.getElementById("regConfirmPassword").value;
     const alertBox = document.getElementById("alertBox");
 
-    // Check password rules
     if (password.length < 6) return showAlert(alertBox, "Password must be at least 6 characters.", "danger");
     if (password !== confirmPassword) return showAlert(alertBox, "Passwords do not match!", "danger");
 
-    // Create user in Firebase Auth
     createUserWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // Send email notification
         sendEmailVerification(userCredential.user).catch(err => console.log(err));
 
-        // Save default user role as kitchen_staff
         set(ref(db, 'users/' + userCredential.user.uid), {
           fullName: fullName,
           email: email,
           role: "kitchen_staff"
         }).then(() => {
-          // Force sign out immediately so they don't auto-login
           signOut(auth).then(() => {
             showAlert(alertBox, "Account created! Please check your email to verify before logging in.", "success");
             setTimeout(() => window.location.href = "index.html", 3000);
@@ -113,7 +105,6 @@ if (registerForm) {
 // Check logged-in user role
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // SECURITY GUARD: If user lands on dashboard without verifying email, kick them out!
     if (!user.emailVerified) {
       signOut(auth).then(() => {
         if (window.location.pathname.includes("dashboard.html")) {
@@ -134,13 +125,11 @@ onAuthStateChanged(auth, (user) => {
         const roleBadge = document.getElementById("userRoleBadge");
         if (roleBadge) roleBadge.innerText = `Role: ${role.replace('_', ' ')}`;
 
-        // Show supervisor or admin elements
         if (role === "admin" || role === "supervisor") {
           document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
           const container = document.getElementById("ingTableContainer");
           if (container) container.className = "col-md-8";
         }
-        // Show admin-only elements
         if (role === "admin") {
           document.querySelectorAll(".super-admin-only").forEach(el => el.classList.remove("d-none"));
         }
@@ -174,21 +163,19 @@ if (addIngredientForm) {
     });
   });
 
-  // Read ingredients from Firebase
   onValue(ref(db, 'ingredients/'), (snapshot) => {
     allIngredients = snapshot.exists() ? snapshot.val() : {};
     renderInventoryTable();
   });
 }
 
-// Search and filter triggers
 const searchInput = document.getElementById("searchInput");
 const filterCat = document.getElementById("filterCategorySelect");
 
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
-// Render inventory table with low stock and expiry check
+// Render inventory table
 function renderInventoryTable() {
   const tableBody = document.getElementById("inventoryTableBody");
   const stockInSelect = document.getElementById("stockInIngSelect");
@@ -200,7 +187,6 @@ function renderInventoryTable() {
 
   const searchVal = searchInput ? searchInput.value.toLowerCase() : "";
   const catVal = filterCat ? filterCat.value : "";
-  const today = new Date().toISOString().split("T")[0];
 
   let totalItems = 0, lowStockCount = 0, expiredCount = 0;
 
@@ -208,15 +194,12 @@ function renderInventoryTable() {
     const item = allIngredients[key];
     totalItems++;
 
-    // Search and category matching
     const matchesSearch = item.name.toLowerCase().includes(searchVal);
     const matchesCategory = catVal === "" || item.category === catVal;
 
-    // Check low stock (Warning if within 20% of threshold)
     const isLowStock = item.quantity <= item.minThreshold;
     const isAlmostLow = !isLowStock && (item.quantity <= (item.minThreshold * 1.2));
 
-    // Check expiry dates (Warning if within 7 days)
     let isExpired = false;
     let isExpiringSoon = false;
     
@@ -236,15 +219,12 @@ function renderInventoryTable() {
     if (matchesSearch && matchesCategory) {
       let statusBadges = "";
       
-      // Stock Badges
       if (isLowStock) statusBadges += `<span class="badge bg-danger me-1">Low Stock</span>`;
       else if (isAlmostLow) statusBadges += `<span class="badge bg-warning text-dark me-1">Almost Low</span>`;
       
-      // Expiry Badges
       if (isExpired) statusBadges += `<span class="badge bg-danger me-1">Expired</span>`;
       else if (isExpiringSoon) statusBadges += `<span class="badge bg-warning text-dark me-1">Expiring Soon</span>`;
       
-      // All Good Badge
       if (!isLowStock && !isAlmostLow && !isExpired && !isExpiringSoon) {
         statusBadges = `<span class="badge bg-success">OK</span>`;
       }
@@ -266,17 +246,14 @@ function renderInventoryTable() {
       if (tableBody) tableBody.innerHTML += row;
     }
 
-    // Populate dropdowns for Stock In and Stock Out
     if (stockInSelect) stockInSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
     if (stockOutSelect) stockOutSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
   });
 
-  // Update stats on Report Tab
   if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
   if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = lowStockCount;
   if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = expiredCount;
 
-  // Make sure admin buttons stay visible if user is logged in as supervisor/admin
   if (auth.currentUser) {
     get(ref(db, `users/${auth.currentUser.uid}`)).then((snap) => {
       if (snap.exists() && (snap.val().role === 'supervisor' || snap.val().role === 'admin')) {
@@ -284,9 +261,11 @@ function renderInventoryTable() {
       }
     });
   }
+
+  // THIS IS THE FIX: Automatically draw the charts when the table updates
+  renderDashboardWidgets();
 }
 
-// Edit Modal Loader
 window.openEditModal = function(key, name, qty, unit, minThreshold, expiryDate) {
   document.getElementById("editKey").value = key;
   document.getElementById("editName").value = name;
@@ -298,7 +277,6 @@ window.openEditModal = function(key, name, qty, unit, minThreshold, expiryDate) 
   new bootstrap.Modal(document.getElementById('editModal')).show();
 };
 
-// Edit form submit
 const editForm = document.getElementById("editForm");
 if (editForm) {
   editForm.addEventListener("submit", (e) => {
@@ -489,7 +467,6 @@ if (userTableBody) {
       Object.keys(users).forEach((uid) => {
         const u = users[uid];
         
-        // Skip listing any user who is an Admin (Hides Admin from the table)
         if (u.role === "admin") return;
 
         userTableBody.innerHTML += `
@@ -507,7 +484,6 @@ if (userTableBody) {
   });
 }
 
-// Update role function (Only allows setting staff or supervisor)
 window.updateUserRole = (uid, newRole) => {
   if (newRole !== 'kitchen_staff' && newRole !== 'supervisor') {
     alert("Invalid role selection.");
@@ -517,15 +493,18 @@ window.updateUserRole = (uid, newRole) => {
     .then(() => alert(`User role updated to ${newRole.replace('_', ' ')}!`));
 };
 
+// -------------------------------------------------------------
+// DASHBOARD WIDGETS FIX
+// -------------------------------------------------------------
 function renderDashboardWidgets() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // --- 1. ACTION TABLE LOGIC ---
     const attentionTable = document.getElementById("attentionTableBody");
     let attentionHTML = "";
     
-    inventoryData.forEach(item => {
+    // Using the actual database array
+    Object.values(allIngredients).forEach(item => {
         const isLowStock = item.quantity <= item.minThreshold;
         let isExpired = false;
         
@@ -551,48 +530,18 @@ function renderDashboardWidgets() {
         }
     });
     
-    // Fallback if everything is fine
     if (!attentionHTML) {
         attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal!</td></tr>`;
     }
     if (attentionTable) attentionTable.innerHTML = attentionHTML;
 
-
-    // --- 2. RECENT ACTIVITY LOGIC ---
     const activityTable = document.getElementById("recentActivityBody");
-    let activityHTML = "";
-    
-    // Sort transactions by date (newest first) and grab the top 5
-    if (typeof transactionHistory !== 'undefined' && transactionHistory.length > 0) {
-        const recentTx = transactionHistory.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-        
-        recentTx.forEach(tx => {
-            const typeBadge = tx.type === "IN" 
-                ? `<span class="badge bg-success">Stock In</span>` 
-                : `<span class="badge bg-secondary">Stock Out</span>`;
-            
-            const qtyColor = tx.type === "IN" ? "text-success" : "text-danger";
-            const sign = tx.type === "IN" ? "+" : "-";
-
-            activityHTML += `
-                <tr>
-                    <td>${tx.date}</td>
-                    <td>${typeBadge}</td>
-                    <td class="fw-bold">${tx.ingredientName}</td>
-                    <td class="fw-bold ${qtyColor}">${sign}${tx.quantity}</td>
-                    <td class="text-muted">${tx.reason || 'Standard Update'}</td>
-                </tr>`;
-        });
-    } else {
-        activityHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No recent transactions logged yet.</td></tr>`;
+    if (activityTable) {
+        activityTable.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Check Stock In/Out tabs for full transaction logs.</td></tr>`;
     }
-    
-    if (activityTable) activityTable.innerHTML = activityHTML;
 
-
-    // --- 3. CHART.JS LOGIC ---
     const categoryCounts = {};
-    inventoryData.forEach(item => {
+    Object.values(allIngredients).forEach(item => {
         categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
     });
 
@@ -600,7 +549,6 @@ function renderDashboardWidgets() {
     if (chartCanvas) {
         const ctx = chartCanvas.getContext('2d');
         
-        // Destroy previous chart to prevent hover flickering glitches
         if (window.inventoryChart) window.inventoryChart.destroy();
         
         window.inventoryChart = new Chart(ctx, {
