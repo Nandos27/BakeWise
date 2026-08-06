@@ -517,6 +517,113 @@ window.updateUserRole = (uid, newRole) => {
     .then(() => alert(`User role updated to ${newRole.replace('_', ' ')}!`));
 };
 
+function renderDashboardWidgets() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // --- 1. ACTION TABLE LOGIC ---
+    const attentionTable = document.getElementById("attentionTableBody");
+    let attentionHTML = "";
+    
+    inventoryData.forEach(item => {
+        const isLowStock = item.quantity <= item.minThreshold;
+        let isExpired = false;
+        
+        if (item.expiryDate) {
+            const expDate = new Date(item.expiryDate);
+            if (expDate < today) isExpired = true;
+        }
+
+        if (isLowStock || isExpired) {
+            let issueBadge = isExpired 
+                ? `<span class="badge bg-warning text-dark">Expired</span>`
+                : `<span class="badge bg-danger">Low Stock</span>`;
+            
+            let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
+
+            attentionHTML += `
+                <tr>
+                    <td class="fw-bold">${item.name}</td>
+                    <td>${issueBadge}</td>
+                    <td>${item.quantity} ${item.unit}</td>
+                    <td class="text-muted">${limitText}</td>
+                </tr>`;
+        }
+    });
+    
+    // Fallback if everything is fine
+    if (!attentionHTML) {
+        attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal!</td></tr>`;
+    }
+    if (attentionTable) attentionTable.innerHTML = attentionHTML;
+
+
+    // --- 2. RECENT ACTIVITY LOGIC ---
+    const activityTable = document.getElementById("recentActivityBody");
+    let activityHTML = "";
+    
+    // Sort transactions by date (newest first) and grab the top 5
+    if (typeof transactionHistory !== 'undefined' && transactionHistory.length > 0) {
+        const recentTx = transactionHistory.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+        
+        recentTx.forEach(tx => {
+            const typeBadge = tx.type === "IN" 
+                ? `<span class="badge bg-success">Stock In</span>` 
+                : `<span class="badge bg-secondary">Stock Out</span>`;
+            
+            const qtyColor = tx.type === "IN" ? "text-success" : "text-danger";
+            const sign = tx.type === "IN" ? "+" : "-";
+
+            activityHTML += `
+                <tr>
+                    <td>${tx.date}</td>
+                    <td>${typeBadge}</td>
+                    <td class="fw-bold">${tx.ingredientName}</td>
+                    <td class="fw-bold ${qtyColor}">${sign}${tx.quantity}</td>
+                    <td class="text-muted">${tx.reason || 'Standard Update'}</td>
+                </tr>`;
+        });
+    } else {
+        activityHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No recent transactions logged yet.</td></tr>`;
+    }
+    
+    if (activityTable) activityTable.innerHTML = activityHTML;
+
+
+    // --- 3. CHART.JS LOGIC ---
+    const categoryCounts = {};
+    inventoryData.forEach(item => {
+        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+    });
+
+    const chartCanvas = document.getElementById('categoryChart');
+    if (chartCanvas) {
+        const ctx = chartCanvas.getContext('2d');
+        
+        // Destroy previous chart to prevent hover flickering glitches
+        if (window.inventoryChart) window.inventoryChart.destroy();
+        
+        window.inventoryChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(categoryCounts),
+                datasets: [{
+                    data: Object.values(categoryCounts),
+                    backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+}
+
 // Global delete functions
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
 window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
