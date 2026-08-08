@@ -614,6 +614,39 @@ function renderDashboardWidgets() {
         activityTable.innerHTML = activityHTML;
     }
 
+    // --- 3. CHART.JS LOGIC ---
+    const categoryCounts = {};
+    Object.values(allIngredients).forEach(item => {
+        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+    });
+
+    const chartCanvas = document.getElementById('categoryChart');
+    if (chartCanvas) {
+        const ctx = chartCanvas.getContext('2d');
+        
+        if (window.inventoryChart) window.inventoryChart.destroy();
+        
+        window.inventoryChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(categoryCounts),
+                datasets: [{
+                    data: Object.values(categoryCounts),
+                    backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+} // <--- This bracket was missing!
+
 // Global delete functions
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
 window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
