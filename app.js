@@ -176,6 +176,8 @@ onAuthStateChanged(auth, (user) => {
 // MODULES 2, 7, 8, 9, 10: INGREDIENTS, SEARCH, LOW STOCK & EXPIRY
 // -------------------------------------------------------------
 let allIngredients = {};
+let globalStockIn = [];
+let globalStockOut = [];
 
 // Add ingredient form
 const addIngredientForm = document.getElementById("addIngredientForm");
@@ -437,11 +439,14 @@ if (stockInForm) {
   onValue(ref(db, 'stock_in/'), (snap) => {
     const table = document.getElementById("stockInTableBody");
     if (table) table.innerHTML = "";
+    globalStockIn = [];
     if (snap.exists()) {
       Object.values(snap.val()).forEach((item) => {
+        globalStockIn.push({...item, type: "IN"});
         if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td><td>${item.supplier}</td></tr>`;
       });
     }
+    renderDashboardWidgets();
   });
 }
 
@@ -481,11 +486,14 @@ if (stockOutForm) {
   onValue(ref(db, 'stock_out/'), (snap) => {
     const table = document.getElementById("stockOutTableBody");
     if (table) table.innerHTML = "";
+    globalStockOut = [];
     if (snap.exists()) {
       Object.values(snap.val()).forEach((item) => {
+        globalStockOut.push({...item, type: "OUT"});
         if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
       });
     }
+    renderDashboardWidgets();
   });
 }
 
@@ -569,42 +577,42 @@ function renderDashboardWidgets() {
     }
     if (attentionTable) attentionTable.innerHTML = attentionHTML;
 
+    // --- 2. RECENT ACTIVITY LOGIC ---
     const activityTable = document.getElementById("recentActivityBody");
     if (activityTable) {
-        activityTable.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Check Stock In/Out tabs for full transaction logs.</td></tr>`;
-    }
-
-    const categoryCounts = {};
-    Object.values(allIngredients).forEach(item => {
-        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
-    });
-
-    const chartCanvas = document.getElementById('categoryChart');
-    if (chartCanvas) {
-        const ctx = chartCanvas.getContext('2d');
+        // Combine both arrays into one big list
+        const allTx = [...globalStockIn, ...globalStockOut];
         
-        if (window.inventoryChart) window.inventoryChart.destroy();
+        // Sort by date (newest first)
+        allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        window.inventoryChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(categoryCounts),
-                datasets: [{
-                    data: Object.values(categoryCounts),
-                    backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
+        // Grab only the top 5
+        const recentTx = allTx.slice(0, 5);
+
+        let activityHTML = "";
+        recentTx.forEach(tx => {
+            const isIn = tx.type === "IN";
+            const typeBadge = isIn ? `<span class="badge bg-success">Stock In</span>` : `<span class="badge bg-secondary">Stock Out</span>`;
+            const qtyColor = isIn ? "text-success" : "text-danger";
+            const sign = isIn ? "+" : "-";
+            const qty = isIn ? tx.addedQty : tx.deductedQty;
+            const detail = isIn ? tx.supplier : tx.reason;
+
+            activityHTML += `
+                <tr>
+                    <td>${tx.date}</td>
+                    <td>${typeBadge}</td>
+                    <td class="fw-bold">${tx.ingredientName}</td>
+                    <td class="fw-bold ${qtyColor}">${sign}${qty} ${tx.unit}</td>
+                    <td class="text-muted">${detail}</td>
+                </tr>`;
         });
+
+        if (activityHTML === "") {
+            activityHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No recent transactions logged yet.</td></tr>`;
+        }
+        activityTable.innerHTML = activityHTML;
     }
-}
 
 // Global delete functions
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
