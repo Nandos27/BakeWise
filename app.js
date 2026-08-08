@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendEmailVerification, 
+  sendPasswordResetEmail, 
   signOut, 
   onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -99,6 +100,34 @@ if (registerForm) {
         });
       })
       .catch((err) => showAlert(alertBox, "Error: " + err.message, "danger"));
+  });
+}
+
+// Forgot Password Logic
+const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+if (forgotPasswordLink) {
+  forgotPasswordLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    
+    // Check if they already typed an email in the login box
+    let email = document.getElementById("email") ? document.getElementById("email").value.trim() : "";
+    
+    // If the login box is empty, prompt them to type it in
+    if (!email) {
+      email = prompt("Please enter your account email address to reset your password:");
+    }
+
+    if (email) {
+      sendPasswordResetEmail(auth, email)
+        .then(() => {
+          alert(`Success! A password reset link has been sent to ${email}. Check your inbox.`);
+        })
+        .catch((error) => {
+          alert("Error sending reset email: " + error.message);
+        });
+    } else {
+      alert("Email address is required to reset your password.");
+    }
   });
 }
 
