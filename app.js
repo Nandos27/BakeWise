@@ -131,7 +131,7 @@ if (forgotPasswordLink) {
   });
 }
 
-// Check logged-in user role
+// Check logged-in user role & secure the page
 onAuthStateChanged(auth, (user) => {
   if (user) {
     if (!user.emailVerified) {
@@ -164,6 +164,11 @@ onAuthStateChanged(auth, (user) => {
         }
       }
     });
+  } else {
+    // THE BOUNCER: If no user is logged in, kick them out of the dashboard
+    if (window.location.pathname.includes("dashboard.html")) {
+      window.location.href = "index.html";
+    }
   }
 });
 
