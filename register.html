@@ -6,15 +6,123 @@
   <title>Bakery System - Register Account</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f8f9fa; }
-    .register-card { max-width: 450px; margin: 50px auto; padding: 25px; border-radius: 10px; }
+    /* 1. Full-screen background image matching login page */
+    body {
+      background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('kitchen-bg.jpg') no-repeat center center fixed;
+      background-size: cover;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: zoomIn 0.4s ease-out forwards;
+      overflow-x: hidden;
+    }
+
+    /* 2. Register card with side border frame and background image */
+    .register-card {
+      width: 100%;
+      max-width: 470px;
+      padding: 35px 50px; /* Padding clears the side border pattern */
+      margin: 20px;
+      border-radius: 16px;
+      
+      background-image: url('side-border.png'), url('box-image-3.png');
+      background-position: center, center;
+      background-size: 100% 100%, cover;
+      background-repeat: no-repeat, no-repeat;
+
+      border: 2px solid #000000;
+      box-shadow: 0 12px 35px rgba(255, 153, 19, 0.35) !important;
+    }
+
+    /* 3. Light Brown Title Box for legibility */
+    .title-badge {
+      background-color: #f3e9dc; /* Warm light tan/brown */
+      border: 1px solid #cbb8a1;
+      border-radius: 12px;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 4. Text color adjustments (Dark Brown Theme) */
+    .register-card h3 {
+      font-size: 1.8rem;
+      color: #3d2314 !important; /* Deep Espresso Brown */
+      font-weight: 800;
+    }
+
+    .form-label, .text-muted, .form-text {
+      color: #4a2c11 !important; /* Dark Chocolate Brown */
+      font-weight: 600;
+    }
+
+    .register-card a, a.small, a.text-decoration-none {
+      color: #5c3a21 !important; /* Warm dark brown for links */
+      font-weight: 600;
+    }
+
+    .register-card a:hover {
+      color: #2d1a0e !important;
+      text-decoration: underline !important;
+    }
+
+    /* 5. Maroon Create Account Button Styling */
+    .btn-maroon {
+      background-color: #800020 !important;
+      border-color: #66fc2b !important;
+      color: #ffffff !important;
+      transition: background-color 0.5s ease-in-out;
+    }
+
+    .btn-maroon:hover {
+      background-color: #e6682e !important;
+      border-color: #fa9b0c !important;
+    }
+
+    /* 6. Solid white input fields */
+    .register-card .form-control {
+      background-color: #ffffff !important;
+      border: 1px solid #ced4da;
+      color: #212529;
+    }
+
+    /* 7. Animations */
+    @keyframes zoomIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    body.zoom-out {
+      animation: zoomOut 0.3s ease-in forwards;
+    }
+
+    @keyframes zoomOut {
+      from {
+        opacity: 1;
+        transform: scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: scale(1.05);
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="card shadow-sm register-card bg-white">
-    <h3 class="text-center mb-2 text-primary fw-bold">Register Account</h3>
-    <p class="text-center text-muted mb-4 small">Create an account to access the system</p>
+  <div class="card shadow-lg register-card">
+    <!-- Light Brown Container for Title & Subtitle -->
+    <div class="title-badge text-center">
+      <h3 class="mb-1 fw-bold">Register Account</h3>
+      <p class="text-muted mb-0 small">Create an account to access BakeWise</p>
+    </div>
     
     <div id="alertBox" class="alert d-none" role="alert"></div>
 
@@ -40,7 +148,7 @@
         <input type="password" class="form-control" id="regConfirmPassword" placeholder="Repeat password" required>
       </div>
 
-      <button type="submit" class="btn btn-success w-100 fw-bold">Create Account</button>
+      <button type="submit" class="btn btn-maroon w-100 fw-bold">Create Account</button>
     </form>
 
     <div class="text-center mt-3">
@@ -49,5 +157,20 @@
   </div>
 
   <script type="module" src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const navLinks = document.querySelectorAll('a[href$=".html"]');
+      navLinks.forEach(link => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const targetUrl = link.getAttribute("href");
+          document.body.classList.add("zoom-out");
+          setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 300);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
