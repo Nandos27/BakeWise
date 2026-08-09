@@ -6,15 +6,143 @@
   <title>Bakery System - Login</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f8f9fa; }
-    .login-card { max-width: 400px; margin: 80px auto; padding: 25px; border-radius: 10px; }
+    /* 1. Body layout setup */
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow-x: hidden;
+      margin: 0;
+    }
+
+    /* 2. Isolated Full-Screen Background Image with Ultra-Fast Zoom Animation */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), url('kitchen-bg-1.jpg') no-repeat center center;
+      background-size: cover;
+      z-index: -1;
+      /* Speed up to 0.35s with snappy cubic-bezier curve */
+      animation: bgZoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
+
+    /* 3. Login card styling */
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 35px 50px;
+      margin: 20px;
+      border-radius: 16px;
+      
+      background-image: url('side-border.png'), url('box-image-3.png');
+      background-position: center, center;
+      background-size: 100% 100%, cover;
+      background-repeat: no-repeat, no-repeat;
+
+      border: 2px solid #000000;
+      box-shadow: 0 12px 35px rgba(255, 153, 19, 0.35) !important;
+
+      /* Faster, smooth card fade-in */
+      animation: cardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* 4. Text color adjustments (Dark Brown Theme) */
+    .login-card h3 {
+      font-size: 1.8rem;
+      color: #3d2314 !important;
+      font-weight: 800;
+    }
+
+    .form-label, .text-muted {
+      color: #4a2c11 !important;
+      font-weight: 600;
+    }
+
+    .login-card a, a.small, a.text-decoration-none {
+      color: #5c3a21 !important;
+      font-weight: 600;
+    }
+
+    .login-card a:hover {
+      color: #2d1a0e !important;
+      text-decoration: underline !important;
+    }
+
+    /* 5. Maroon Login Button Styling */
+    .btn-maroon {
+      background-color: #800020 !important;
+      border-color: #15ff63 !important;
+      color: #ffffff !important;
+      transition: background-color 0.3s ease-in-out;
+    }
+
+    .btn-maroon:hover {
+      background-color: #e6682e !important;
+      border-color: #050102 !important;
+    }
+
+    /* 6. Solid white input fields */
+    .login-card .form-control {
+      background-color: #ffffff !important;
+      border: 1px solid #ced4da;
+      color: #212529;
+    }
+
+    /* 7. Keyframe Animations */
+    
+    /* Fast Entrance Zoom (Scale 1.10 -> 1.0) */
+    @keyframes bgZoomIn {
+      from {
+        transform: scale(1.10);
+        opacity: 0.5;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Smooth Card Fade */
+    @keyframes cardFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Fast Exit Zoom */
+    body.zoom-out::before {
+      animation: bgZoomOut 0.2s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+    }
+
+    @keyframes bgZoomOut {
+      from {
+        transform: scale(1);
+        opacity: 1;
+      }
+      to {
+        transform: scale(1.08);
+        opacity: 0;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="card shadow-sm login-card bg-white">
-    <h3 class="text-center mb-2 text-primary fw-bold">Bakery Management</h3>
-    <p class="text-center text-muted mb-4 small">Sistem Pengurusan Bahan Kedai Bakery</p>
+  <div class="card shadow-lg login-card">
+    <h3 class="text-center mb-2 fw-bold">BakeWise</h3>
+    <p class="text-center text-muted mb-4 small">Smart Bakery Ingredient Tracking System</p>
     
     <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
 
@@ -33,7 +161,7 @@
         <a href="#" id="forgotPasswordLink" class="text-decoration-none">Forgot Password?</a>
       </div>
       
-      <button type="submit" class="btn btn-primary w-100 fw-bold">Login</button>
+      <button type="submit" class="btn btn-maroon w-100 fw-bold">Login</button>
     </form>
 
     <div class="text-center mt-3">
@@ -42,5 +170,21 @@
   </div>
 
   <script type="module" src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const navLinks = document.querySelectorAll('a[href$=".html"]');
+      navLinks.forEach(link => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const targetUrl = link.getAttribute("href");
+          document.body.classList.add("zoom-out");
+          /* Reduced to 200ms to match the rapid exit animation */
+          setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 200);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
