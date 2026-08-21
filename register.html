@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bakery System - Register Account</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* 1. Full-screen background image matching login page */
     body {
-      background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('kitchen-bg.jpg') no-repeat center center fixed;
+      background: linear-gradient(rgba(61, 35, 20, 0.55), rgba(30, 15, 8, 0.6)), url('kitchen-bg-1.jpg') no-repeat center center fixed;
       background-size: cover;
       min-height: 100vh;
       display: flex;
@@ -16,40 +18,53 @@
       justify-content: center;
       animation: zoomIn 0.4s ease-out forwards;
       overflow-x: hidden;
+      font-family: 'Inter', sans-serif;
     }
 
-    /* 2. Register card with side border frame and background image */
+    /* 2. Register card, matching login card styling */
     .register-card {
       width: 100%;
-      max-width: 470px;
-      padding: 35px 50px; /* Padding clears the side border pattern */
+      max-width: 450px;
+      padding: 40px 45px;
       margin: 20px;
-      border-radius: 16px;
-      
-      background-image: url('side-border.png'), url('box-image-3.png');
-      background-position: center, center;
-      background-size: 100% 100%, cover;
-      background-repeat: no-repeat, no-repeat;
+      border-radius: 18px;
 
-      border: 2px solid #000000;
-      box-shadow: 0 12px 35px rgba(255, 153, 19, 0.35) !important;
+      background-color: #fbf6ee;
+      border: 1px solid #e4d3ba;
+      box-shadow: 0 20px 45px rgba(30, 15, 8, 0.35) !important;
     }
 
-    /* 3. Light Brown Title Box for legibility */
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #a8641f;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+
+    /* 3. Title area */
     .title-badge {
-      background-color: #f3e9dc; /* Warm light tan/brown */
-      border: 1px solid #cbb8a1;
-      border-radius: 12px;
-      padding: 12px 15px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+      text-align: center;
+      padding-bottom: 6px;
+      margin-bottom: 22px;
+    }
+
+    .title-badge .brand-rule {
+      width: 48px;
+      height: 3px;
+      background: #c9922e;
+      border-radius: 3px;
+      margin: 6px auto 12px;
     }
 
     /* 4. Text color adjustments (Dark Brown Theme) */
     .register-card h3 {
-      font-size: 1.8rem;
+      font-family: 'Fraunces', serif;
+      font-size: 1.9rem;
       color: #3d2314 !important; /* Deep Espresso Brown */
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .form-label, .text-muted, .form-text {
@@ -58,7 +73,7 @@
     }
 
     .register-card a, a.small, a.text-decoration-none {
-      color: #5c3a21 !important; /* Warm dark brown for links */
+      color: #a8641f !important; /* Warm accent for links */
       font-weight: 600;
     }
 
@@ -70,21 +85,27 @@
     /* 5. Maroon Create Account Button Styling */
     .btn-maroon {
       background-color: #800020 !important;
-      border-color: #66fc2b !important;
+      border-color: #800020 !important;
       color: #ffffff !important;
-      transition: background-color 0.5s ease-in-out;
+      transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     }
 
     .btn-maroon:hover {
-      background-color: #e6682e !important;
-      border-color: #fa9b0c !important;
+      background-color: #5c0016 !important;
+      border-color: #5c0016 !important;
     }
 
     /* 6. Solid white input fields */
     .register-card .form-control {
       background-color: #ffffff !important;
-      border: 1px solid #ced4da;
+      border: 1px solid #dcccb4;
       color: #212529;
+      border-radius: 8px;
+    }
+
+    .register-card .form-control:focus {
+      border-color: #c9922e;
+      box-shadow: 0 0 0 0.2rem rgba(201, 146, 46, 0.2);
     }
 
     /* 7. Animations */
@@ -118,9 +139,11 @@
 <body>
 
   <div class="card shadow-lg register-card">
-    <!-- Light Brown Container for Title & Subtitle -->
-    <div class="title-badge text-center">
-      <h3 class="mb-1 fw-bold">Register Account</h3>
+    <!-- Title & Subtitle -->
+    <div class="title-badge">
+      <div class="brand-mark"><i class="bi bi-egg-fried"></i></div>
+      <h3 class="mb-0 fw-bold">Register Account</h3>
+      <div class="brand-rule"></div>
       <p class="text-muted mb-0 small">Create an account to access BakeWise</p>
     </div>
     

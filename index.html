@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bakery System - Login</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* 1. Body layout setup */
     body {
@@ -15,6 +17,7 @@
       position: relative;
       overflow-x: hidden;
       margin: 0;
+      font-family: 'Inter', sans-serif;
     }
 
     /* 2. Isolated Full-Screen Background Image with Ultra-Fast Zoom Animation */
@@ -25,7 +28,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), url('kitchen-bg-1.jpg') no-repeat center center;
+      background: linear-gradient(rgba(61, 35, 20, 0.55), rgba(30, 15, 8, 0.6)), url('kitchen-bg-1.jpg') no-repeat center center;
       background-size: cover;
       z-index: -1;
       /* Speed up to 0.35s with snappy cubic-bezier curve */
@@ -36,28 +39,43 @@
     /* 3. Login card styling */
     .login-card {
       width: 100%;
-      max-width: 440px;
-      padding: 35px 50px;
+      max-width: 420px;
+      padding: 40px 45px;
       margin: 20px;
-      border-radius: 16px;
-      
-      background-image: url('side-border.png'), url('box-image-3.png');
-      background-position: center, center;
-      background-size: 100% 100%, cover;
-      background-repeat: no-repeat, no-repeat;
+      border-radius: 18px;
 
-      border: 2px solid #000000;
-      box-shadow: 0 12px 35px rgba(255, 153, 19, 0.35) !important;
+      background-color: #fbf6ee;
+      border: 1px solid #e4d3ba;
+      box-shadow: 0 20px 45px rgba(30, 15, 8, 0.35) !important;
 
       /* Faster, smooth card fade-in */
       animation: cardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #a8641f;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+
     /* 4. Text color adjustments (Dark Brown Theme) */
     .login-card h3 {
-      font-size: 1.8rem;
+      font-family: 'Fraunces', serif;
+      font-size: 1.9rem;
       color: #3d2314 !important;
-      font-weight: 800;
+      font-weight: 700;
+    }
+
+    .login-card .brand-rule {
+      width: 48px;
+      height: 3px;
+      background: #c9922e;
+      border-radius: 3px;
+      margin: 6px auto 18px;
     }
 
     .form-label, .text-muted {
@@ -66,7 +84,7 @@
     }
 
     .login-card a, a.small, a.text-decoration-none {
-      color: #5c3a21 !important;
+      color: #a8641f !important;
       font-weight: 600;
     }
 
@@ -78,21 +96,27 @@
     /* 5. Maroon Login Button Styling */
     .btn-maroon {
       background-color: #800020 !important;
-      border-color: #15ff63 !important;
+      border-color: #800020 !important;
       color: #ffffff !important;
-      transition: background-color 0.3s ease-in-out;
+      transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     }
 
     .btn-maroon:hover {
-      background-color: #e6682e !important;
-      border-color: #050102 !important;
+      background-color: #5c0016 !important;
+      border-color: #5c0016 !important;
     }
 
     /* 6. Solid white input fields */
     .login-card .form-control {
       background-color: #ffffff !important;
-      border: 1px solid #ced4da;
+      border: 1px solid #dcccb4;
       color: #212529;
+      border-radius: 8px;
+    }
+
+    .login-card .form-control:focus {
+      border-color: #c9922e;
+      box-shadow: 0 0 0 0.2rem rgba(201, 146, 46, 0.2);
     }
 
     /* 7. Keyframe Animations */
@@ -141,7 +165,9 @@
 <body>
 
   <div class="card shadow-lg login-card">
-    <h3 class="text-center mb-2 fw-bold">BakeWise</h3>
+    <div class="brand-mark"><i class="bi bi-egg-fried"></i></div>
+    <h3 class="text-center mb-0 fw-bold">BakeWise</h3>
+    <div class="brand-rule"></div>
     <p class="text-center text-muted mb-4 small">Smart Bakery Ingredient Tracking System</p>
     
     <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
