@@ -189,14 +189,18 @@
       background-color: #1b5e20;
     }
 
-    /* 10. Bottom Logo (FIXED: Flow naturally) */
+    /* 10. Bottom Logo */
     .bottom-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Oswald', sans-serif; /* Matches the Welcome heading */
       font-size: 1.5rem;
-      font-style: italic;
-      font-weight: 900;
+      font-weight: 700;
       color: #ffffff;
-      margin-top: auto; /* Pushes the logo to the bottom automatically */
+      margin-top: auto; 
       padding-top: 40px; 
+      letter-spacing: 0.5px;
     }
 
     /* Mobile Responsiveness */
@@ -270,8 +274,8 @@
         <button type="submit" class="btn-login">LOGIN</button>
       </form>
 
-      <!-- Branding Icon (Now part of the normal flow) -->
-      <div class="bottom-logo"><i class="bi bi-egg-fried"></i></div>
+      <!-- Branding Logo & Text -->
+      <div class="bottom-logo"><i class="bi bi-egg-fried"></i> BakeWise</div>
 
     </div>
 
