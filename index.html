@@ -16,12 +16,10 @@
       align-items: center;
       justify-content: center;
       font-family: 'Inter', sans-serif;
-      /* Blurred version of the background for the outside area */
       background: url('kitchen-bg-1.jpg') no-repeat center center fixed;
       background-size: cover;
     }
 
-    /* Dark overlay for the outside body area */
     body::before {
       content: "";
       position: absolute;
@@ -31,12 +29,12 @@
       z-index: -1;
     }
 
-    /* 2. Main Card Container */
+    /* 2. Main Card Container (FIXED: removed fixed height) */
     .login-container {
       display: flex;
       width: 100%;
       max-width: 1000px;
-      height: 600px;
+      min-height: 600px; /* Allows it to grow if needed */
       border-radius: 15px;
       overflow: hidden;
       box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
@@ -47,20 +45,18 @@
     /* 3. Left Side: Glassmorphism Form Area */
     .login-left {
       width: 50%;
-      background: rgba(30, 40, 30, 0.7); /* Dark greenish/black tint */
+      background: rgba(30, 40, 30, 0.7);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
       padding: 50px 40px;
       display: flex;
       flex-direction: column;
       color: #ffffff;
-      position: relative;
     }
 
     /* 4. Right Side: Clear Image */
     .login-right {
       width: 50%;
-      /* Using your actual bakery image for the right side */
       background: url('kitchen-bg.jpg') no-repeat center center;
       background-size: cover;
     }
@@ -92,7 +88,7 @@
     }
 
     .nav-links .active {
-      color: #4caf50; /* Green from the design */
+      color: #4caf50;
     }
 
     .nav-links .inactive {
@@ -118,7 +114,7 @@
       text-transform: uppercase;
     }
 
-    /* 7. Input Fields (Translucent Boxes) */
+    /* 7. Input Fields */
     .custom-input-group {
       margin-bottom: 20px;
     }
@@ -144,7 +140,7 @@
       border: 1px solid #4caf50;
     }
 
-    /* 8. Options Row (Checkbox & Forgot Password) */
+    /* 8. Options Row */
     .options-row {
       display: flex;
       justify-content: space-between;
@@ -174,9 +170,9 @@
       color: #ffffff;
     }
 
-    /* 9. Green Submit Button */
+    /* 9. Submit Button */
     .btn-login {
-      background-color: #2e7d32; /* Deep green */
+      background-color: #2e7d32;
       color: white;
       border: none;
       padding: 14px 40px;
@@ -193,34 +189,14 @@
       background-color: #1b5e20;
     }
 
-    /* 10. Social Login Footer */
-    .social-login {
-      margin-top: 35px;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      font-size: 0.85rem;
-      color: #a0a0a0;
-    }
-
-    .social-icons i {
-      font-size: 1.2rem;
-      cursor: pointer;
-      margin-right: 10px;
-    }
-
-    .bi-google { color: #ea4335; }
-    .bi-facebook { color: #1877f2; }
-
-    /* Bottom Logo */
+    /* 10. Bottom Logo (FIXED: Flow naturally) */
     .bottom-logo {
-      position: absolute;
-      bottom: 30px;
-      left: 40px;
       font-size: 1.5rem;
       font-style: italic;
       font-weight: 900;
       color: #ffffff;
+      margin-top: auto; /* Pushes the logo to the bottom automatically */
+      padding-top: 40px; 
     }
 
     /* Mobile Responsiveness */
@@ -234,7 +210,10 @@
       }
       .login-right {
         height: 200px;
-        order: -1; /* Puts image on top for mobile */
+        order: -1; 
+      }
+      .bottom-logo {
+        display: none;
       }
     }
 
@@ -266,10 +245,10 @@
         <p>TO BAKEWISE LOGIN PAGE.</p>
       </div>
 
-      <!-- Alert Box for Firebase Errors -->
+      <!-- Alert Box -->
       <div id="errorAlert" class="alert alert-danger d-none py-2 mb-3" style="font-size: 0.85rem;" role="alert"></div>
 
-      <!-- Login Form (IDs matched to app.js) -->
+      <!-- Login Form -->
       <form id="loginForm">
         
         <div class="custom-input-group">
@@ -291,16 +270,7 @@
         <button type="submit" class="btn-login">LOGIN</button>
       </form>
 
-      <!-- Socials -->
-      <div class="social-login">
-        <span>Or login with</span>
-        <div class="social-icons">
-          <i class="bi bi-google"></i>
-          <i class="bi bi-facebook"></i>
-        </div>
-      </div>
-
-      <!-- Branding Icon -->
+      <!-- Branding Icon (Now part of the normal flow) -->
       <div class="bottom-logo"><i class="bi bi-egg-fried"></i></div>
 
     </div>
@@ -312,7 +282,6 @@
 
   <script type="module" src="app.js"></script>
   <script>
-    // Simple UI Script to handle the new "Show Password" checkbox
     document.addEventListener("DOMContentLoaded", () => {
       const showPasswordToggle = document.getElementById('showPasswordToggle');
       const passwordInput = document.getElementById('password');
