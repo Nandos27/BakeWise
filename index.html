@@ -3,213 +3,325 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bakery System - Login</title>
+  <title>BakeWise - Login</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    /* 1. Body layout setup */
+    /* 1. Main Background */
     body {
+      margin: 0;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-      overflow-x: hidden;
-      margin: 0;
       font-family: 'Inter', sans-serif;
+      /* Blurred version of the background for the outside area */
+      background: url('kitchen-bg-1.jpg') no-repeat center center fixed;
+      background-size: cover;
     }
 
-    /* 2. Isolated Full-Screen Background Image with Ultra-Fast Zoom Animation */
+    /* Dark overlay for the outside body area */
     body::before {
       content: "";
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(rgba(61, 35, 20, 0.55), rgba(30, 15, 8, 0.6)), url('kitchen-bg-1.jpg') no-repeat center center;
-      background-size: cover;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
       z-index: -1;
-      /* Speed up to 0.35s with snappy cubic-bezier curve */
-      animation: bgZoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      will-change: transform, opacity;
     }
 
-    /* 3. Login card styling */
-    .login-card {
+    /* 2. Main Card Container */
+    .login-container {
+      display: flex;
       width: 100%;
-      max-width: 420px;
-      padding: 40px 45px;
-      margin: 20px;
-      border-radius: 18px;
-
-      background-color: #fbf6ee;
-      border: 1px solid #e4d3ba;
-      box-shadow: 0 20px 45px rgba(30, 15, 8, 0.35) !important;
-
-      /* Faster, smooth card fade-in */
-      animation: cardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      max-width: 1000px;
+      height: 600px;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      background-color: transparent;
+      animation: fadeIn 0.4s ease-out forwards;
     }
 
-    .brand-mark {
+    /* 3. Left Side: Glassmorphism Form Area */
+    .login-left {
+      width: 50%;
+      background: rgba(30, 40, 30, 0.7); /* Dark greenish/black tint */
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      padding: 50px 40px;
+      display: flex;
+      flex-direction: column;
+      color: #ffffff;
+      position: relative;
+    }
+
+    /* 4. Right Side: Clear Image */
+    .login-right {
+      width: 50%;
+      /* Using your actual bakery image for the right side */
+      background: url('kitchen-bg.jpg') no-repeat center center;
+      background-size: cover;
+    }
+
+    /* 5. Top Navigation Links */
+    .top-nav {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: #a8641f;
-      font-size: 1.4rem;
-      margin-bottom: 4px;
+      margin-bottom: 50px;
     }
-
-    /* 4. Text color adjustments (Dark Brown Theme) */
-    .login-card h3 {
-      font-family: 'Fraunces', serif;
-      font-size: 1.9rem;
-      color: #3d2314 !important;
-      font-weight: 700;
-    }
-
-    .login-card .brand-rule {
-      width: 48px;
-      height: 3px;
-      background: #c9922e;
-      border-radius: 3px;
-      margin: 6px auto 18px;
-    }
-
-    .form-label, .text-muted {
-      color: #4a2c11 !important;
-      font-weight: 600;
-    }
-
-    .login-card a, a.small, a.text-decoration-none {
-      color: #a8641f !important;
-      font-weight: 600;
-    }
-
-    .login-card a:hover {
-      color: #2d1a0e !important;
-      text-decoration: underline !important;
-    }
-
-    /* 5. Maroon Login Button Styling */
-    .btn-maroon {
-      background-color: #800020 !important;
-      border-color: #800020 !important;
-      color: #ffffff !important;
-      transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
-    }
-
-    .btn-maroon:hover {
-      background-color: #5c0016 !important;
-      border-color: #5c0016 !important;
-    }
-
-    /* 6. Solid white input fields */
-    .login-card .form-control {
-      background-color: #ffffff !important;
-      border: 1px solid #dcccb4;
-      color: #212529;
-      border-radius: 8px;
-    }
-
-    .login-card .form-control:focus {
-      border-color: #c9922e;
-      box-shadow: 0 0 0 0.2rem rgba(201, 146, 46, 0.2);
-    }
-
-    /* 7. Keyframe Animations */
     
-    /* Fast Entrance Zoom (Scale 1.10 -> 1.0) */
-    @keyframes bgZoomIn {
-      from {
-        transform: scale(1.10);
-        opacity: 0.5;
+    .menu-icon {
+      font-size: 1.5rem;
+      color: #9e9e9e;
+      margin-right: 30px;
+      cursor: pointer;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 30px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links .active {
+      color: #4caf50; /* Green from the design */
+    }
+
+    .nav-links .inactive {
+      color: #b0b0b0;
+      border-bottom: 1px solid #666;
+      padding-bottom: 3px;
+    }
+
+    /* 6. Greeting Text */
+    .greeting h1 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      letter-spacing: 1px;
+    }
+
+    .greeting p {
+      font-size: 0.85rem;
+      color: #d1d1d1;
+      letter-spacing: 0.5px;
+      margin-bottom: 35px;
+      text-transform: uppercase;
+    }
+
+    /* 7. Input Fields (Translucent Boxes) */
+    .custom-input-group {
+      margin-bottom: 20px;
+    }
+
+    .custom-input-group input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      padding: 16px 20px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: background 0.3s, border 0.3s;
+    }
+
+    .custom-input-group input::placeholder {
+      color: #c4c4c4;
+    }
+
+    .custom-input-group input:focus {
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid #4caf50;
+    }
+
+    /* 8. Options Row (Checkbox & Forgot Password) */
+    .options-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      margin-bottom: 30px;
+      color: #c4c4c4;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .options-row a {
+      color: #c4c4c4;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.3s;
+    }
+
+    .options-row a:hover {
+      color: #ffffff;
+    }
+
+    /* 9. Green Submit Button */
+    .btn-login {
+      background-color: #2e7d32; /* Deep green */
+      color: white;
+      border: none;
+      padding: 14px 40px;
+      font-weight: 700;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      width: fit-content;
+      transition: background-color 0.3s;
+      letter-spacing: 1px;
+    }
+
+    .btn-login:hover {
+      background-color: #1b5e20;
+    }
+
+    /* 10. Social Login Footer */
+    .social-login {
+      margin-top: 35px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 0.85rem;
+      color: #a0a0a0;
+    }
+
+    .social-icons i {
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    .bi-google { color: #ea4335; }
+    .bi-facebook { color: #1877f2; }
+
+    /* Bottom Logo */
+    .bottom-logo {
+      position: absolute;
+      bottom: 30px;
+      left: 40px;
+      font-size: 1.5rem;
+      font-style: italic;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .login-container {
+        flex-direction: column;
+        height: auto;
       }
-      to {
-        transform: scale(1);
-        opacity: 1;
+      .login-left, .login-right {
+        width: 100%;
+      }
+      .login-right {
+        height: 200px;
+        order: -1; /* Puts image on top for mobile */
       }
     }
 
-    /* Smooth Card Fade */
-    @keyframes cardFadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* Fast Exit Zoom */
-    body.zoom-out::before {
-      animation: bgZoomOut 0.2s cubic-bezier(0.7, 0, 0.84, 0) forwards;
-    }
-
-    @keyframes bgZoomOut {
-      from {
-        transform: scale(1);
-        opacity: 1;
-      }
-      to {
-        transform: scale(1.08);
-        opacity: 0;
-      }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
 
-  <div class="card shadow-lg login-card">
-    <div class="brand-mark"><i class="bi bi-egg-fried"></i></div>
-    <h3 class="text-center mb-0 fw-bold">BakeWise</h3>
-    <div class="brand-rule"></div>
-    <p class="text-center text-muted mb-4 small">Smart Bakery Ingredient Tracking System</p>
+  <div class="login-container">
     
-    <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
-
-    <form id="loginForm">
-      <div class="mb-3">
-        <label for="email" class="form-label">Email Address</label>
-        <input type="email" class="form-control" id="email" placeholder="staff@bakery.com" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" placeholder="******" required>
-      </div>
-
-      <div class="text-center mt-2 mb-3">
-        <a href="#" id="forgotPasswordLink" class="text-decoration-none">Forgot Password?</a>
-      </div>
+    <!-- LEFT SIDE: Glassmorphism Panel -->
+    <div class="login-left">
       
-      <button type="submit" class="btn btn-maroon w-100 fw-bold">Login</button>
-    </form>
+      <!-- Top Nav -->
+      <div class="top-nav">
+        <i class="bi bi-list menu-icon"></i>
+        <div class="nav-links">
+          <a href="#" class="active">Login</a>
+          <a href="register.html" class="inactive">Register Now</a>
+        </div>
+      </div>
 
-    <div class="text-center mt-3">
-      <a href="register.html" class="text-decoration-none small">Don't have an account? Register here</a>
+      <!-- Greeting -->
+      <div class="greeting">
+        <h1>WELCOME!</h1>
+        <p>TO BAKEWISE LOGIN PAGE.</p>
+      </div>
+
+      <!-- Alert Box for Firebase Errors -->
+      <div id="errorAlert" class="alert alert-danger d-none py-2 mb-3" style="font-size: 0.85rem;" role="alert"></div>
+
+      <!-- Login Form (IDs matched to app.js) -->
+      <form id="loginForm">
+        
+        <div class="custom-input-group">
+          <input type="email" id="email" placeholder="Email Address" required>
+        </div>
+        
+        <div class="custom-input-group">
+          <input type="password" id="password" placeholder="Password" required>
+        </div>
+
+        <div class="options-row">
+          <label class="checkbox-container">
+            <input type="checkbox" id="showPasswordToggle">
+            Show Password
+          </label>
+          <a href="#" id="forgotPasswordLink"><i class="bi bi-key-fill"></i> Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="btn-login">LOGIN</button>
+      </form>
+
+      <!-- Socials -->
+      <div class="social-login">
+        <span>Or login with</span>
+        <div class="social-icons">
+          <i class="bi bi-google"></i>
+          <i class="bi bi-facebook"></i>
+        </div>
+      </div>
+
+      <!-- Branding Icon -->
+      <div class="bottom-logo"><i class="bi bi-egg-fried"></i></div>
+
     </div>
+
+    <!-- RIGHT SIDE: Clear Image -->
+    <div class="login-right"></div>
+
   </div>
 
   <script type="module" src="app.js"></script>
   <script>
+    // Simple UI Script to handle the new "Show Password" checkbox
     document.addEventListener("DOMContentLoaded", () => {
-      const navLinks = document.querySelectorAll('a[href$=".html"]');
-      navLinks.forEach(link => {
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          const targetUrl = link.getAttribute("href");
-          document.body.classList.add("zoom-out");
-          /* Reduced to 200ms to match the rapid exit animation */
-          setTimeout(() => {
-            window.location.href = targetUrl;
-          }, 200);
+      const showPasswordToggle = document.getElementById('showPasswordToggle');
+      const passwordInput = document.getElementById('password');
+
+      if (showPasswordToggle && passwordInput) {
+        showPasswordToggle.addEventListener('change', function() {
+          passwordInput.type = this.checked ? 'text' : 'password';
         });
-      });
+      }
     });
   </script>
 </body>
