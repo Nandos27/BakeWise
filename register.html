@@ -3,197 +3,261 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bakery System - Register Account</title>
+  <title>BakeWise - Register</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    /* 1. Full-screen background image matching login page */
+    /* 1. Main Background */
     body {
-      background: linear-gradient(rgba(61, 35, 20, 0.55), rgba(30, 15, 8, 0.6)), url('kitchen-bg-1.jpg') no-repeat center center fixed;
-      background-size: cover;
+      margin: 0;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: zoomIn 0.4s ease-out forwards;
-      overflow-x: hidden;
       font-family: 'Inter', sans-serif;
+      background: url('kitchen-bg-1.jpg') no-repeat center center fixed;
+      background-size: cover;
     }
 
-    /* 2. Register card, matching login card styling */
-    .register-card {
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: -1;
+    }
+
+    /* 2. Main Card Container */
+    .login-container {
+      display: flex;
       width: 100%;
-      max-width: 450px;
-      padding: 40px 45px;
-      margin: 20px;
-      border-radius: 18px;
-
-      background-color: #fbf6ee;
-      border: 1px solid #e4d3ba;
-      box-shadow: 0 20px 45px rgba(30, 15, 8, 0.35) !important;
+      max-width: 1000px;
+      min-height: 600px;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      background-color: transparent;
+      animation: fadeIn 0.4s ease-out forwards;
     }
 
-    .brand-mark {
+    /* 3. Left Side: Glassmorphism Form Area */
+    .login-left {
+      width: 50%;
+      background: rgba(30, 40, 30, 0.7);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      padding: 50px 40px;
+      display: flex;
+      flex-direction: column;
+      color: #ffffff;
+    }
+
+    /* 4. Right Side: Clear Image */
+    .login-right {
+      width: 50%;
+      background: url('kitchen-bg.jpg') no-repeat center center;
+      background-size: cover;
+    }
+
+    /* 5. Top Navigation Links */
+    .top-nav {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: #a8641f;
-      font-size: 1.4rem;
-      margin-bottom: 4px;
+      margin-bottom: 40px;
     }
 
-    /* 3. Title area */
-    .title-badge {
-      text-align: center;
-      padding-bottom: 6px;
-      margin-bottom: 22px;
+    .menu-icon {
+      font-size: 1.5rem;
+      color: #9e9e9e;
+      margin-right: 30px;
+      cursor: pointer;
     }
 
-    .title-badge .brand-rule {
-      width: 48px;
-      height: 3px;
-      background: #c9922e;
-      border-radius: 3px;
-      margin: 6px auto 12px;
+    .nav-links {
+      display: flex;
+      gap: 30px;
     }
 
-    /* 4. Text color adjustments (Dark Brown Theme) */
-    .register-card h3 {
-      font-family: 'Fraunces', serif;
-      font-size: 1.9rem;
-      color: #3d2314 !important; /* Deep Espresso Brown */
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links .active {
+      color: #4caf50;
+    }
+
+    .nav-links .inactive {
+      color: #b0b0b0;
+      border-bottom: 1px solid #666;
+      padding-bottom: 3px;
+    }
+
+    /* 6. Greeting Text */
+    .greeting h1 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2.2rem;
       font-weight: 700;
+      margin-bottom: 5px;
+      letter-spacing: 1px;
     }
 
-    .form-label, .text-muted, .form-text {
-      color: #4a2c11 !important; /* Dark Chocolate Brown */
-      font-weight: 600;
+    .greeting p {
+      font-size: 0.85rem;
+      color: #d1d1d1;
+      letter-spacing: 0.5px;
+      margin-bottom: 25px;
+      text-transform: uppercase;
     }
 
-    .register-card a, a.small, a.text-decoration-none {
-      color: #a8641f !important; /* Warm accent for links */
-      font-weight: 600;
+    /* 7. Input Fields */
+    .custom-input-group {
+      margin-bottom: 16px;
     }
 
-    .register-card a:hover {
-      color: #2d1a0e !important;
-      text-decoration: underline !important;
+    .custom-input-group input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      padding: 14px 20px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: background 0.3s, border 0.3s;
     }
 
-    /* 5. Maroon Create Account Button Styling */
-    .btn-maroon {
-      background-color: #800020 !important;
-      border-color: #800020 !important;
-      color: #ffffff !important;
-      transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    .custom-input-group input::placeholder {
+      color: #c4c4c4;
     }
 
-    .btn-maroon:hover {
-      background-color: #5c0016 !important;
-      border-color: #5c0016 !important;
+    .custom-input-group input:focus {
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid #4caf50;
     }
 
-    /* 6. Solid white input fields */
-    .register-card .form-control {
-      background-color: #ffffff !important;
-      border: 1px solid #dcccb4;
-      color: #212529;
-      border-radius: 8px;
+    .custom-input-group .form-text {
+      color: #b0b0b0 !important;
+      font-size: 0.78rem;
+      margin-top: 4px;
     }
 
-    .register-card .form-control:focus {
-      border-color: #c9922e;
-      box-shadow: 0 0 0 0.2rem rgba(201, 146, 46, 0.2);
+    /* 8. Submit Button */
+    .btn-login {
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      padding: 14px 40px;
+      font-weight: 700;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      width: fit-content;
+      transition: background-color 0.3s;
+      letter-spacing: 1px;
+      margin-top: 8px;
     }
 
-    /* 7. Animations */
-    @keyframes zoomIn {
-      from {
-        opacity: 0;
-        transform: scale(0.95);
+    .btn-login:hover {
+      background-color: #1b5e20;
+    }
+
+    /* Bottom Logo */
+    .bottom-logo {
+      font-size: 1.5rem;
+      font-style: italic;
+      font-weight: 900;
+      color: #ffffff;
+      margin-top: auto;
+      padding-top: 40px;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .login-container {
+        flex-direction: column;
+        height: auto;
       }
-      to {
-        opacity: 1;
-        transform: scale(1);
+      .login-left, .login-right {
+        width: 100%;
+      }
+      .login-right {
+        height: 200px;
+        order: -1;
+      }
+      .bottom-logo {
+        display: none;
       }
     }
 
-    body.zoom-out {
-      animation: zoomOut 0.3s ease-in forwards;
-    }
-
-    @keyframes zoomOut {
-      from {
-        opacity: 1;
-        transform: scale(1);
-      }
-      to {
-        opacity: 0;
-        transform: scale(1.05);
-      }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
 
-  <div class="card shadow-lg register-card">
-    <!-- Title & Subtitle -->
-    <div class="title-badge">
-      <div class="brand-mark"><i class="bi bi-egg-fried"></i></div>
-      <h3 class="mb-0 fw-bold">Register Account</h3>
-      <div class="brand-rule"></div>
-      <p class="text-muted mb-0 small">Create an account to access BakeWise</p>
+  <div class="login-container">
+
+    <!-- LEFT SIDE: Glassmorphism Panel -->
+    <div class="login-left">
+
+      <!-- Top Nav -->
+      <div class="top-nav">
+        <i class="bi bi-list menu-icon"></i>
+        <div class="nav-links">
+          <a href="index.html" class="inactive">Login</a>
+          <a href="#" class="active">Register Now</a>
+        </div>
+      </div>
+
+      <!-- Greeting -->
+      <div class="greeting">
+        <h1>CREATE ACCOUNT</h1>
+        <p>JOIN BAKEWISE TO GET STARTED.</p>
+      </div>
+
+      <!-- Alert Box -->
+      <div id="alertBox" class="alert alert-danger d-none py-2 mb-3" style="font-size: 0.85rem;" role="alert"></div>
+
+      <!-- Register Form -->
+      <form id="registerForm">
+
+        <div class="custom-input-group">
+          <input type="text" id="regFullName" placeholder="Full Name" required>
+        </div>
+
+        <div class="custom-input-group">
+          <input type="email" id="regEmail" placeholder="Email Address" required>
+        </div>
+
+        <div class="custom-input-group">
+          <input type="password" id="regPassword" placeholder="Password" required>
+          <div class="form-text">At least 6 characters, containing numbers & letters.</div>
+        </div>
+
+        <div class="custom-input-group">
+          <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required>
+        </div>
+
+        <button type="submit" class="btn-login">CREATE ACCOUNT</button>
+      </form>
+
+      <!-- Branding Icon -->
+      <div class="bottom-logo"><i class="bi bi-egg-fried"></i></div>
+
     </div>
-    
-    <div id="alertBox" class="alert d-none" role="alert"></div>
 
-    <form id="registerForm">
-      <div class="mb-3">
-        <label for="regFullName" class="form-label">Full Name</label>
-        <input type="text" class="form-control" id="regFullName" placeholder="John Doe" required>
-      </div>
+    <!-- RIGHT SIDE: Clear Image -->
+    <div class="login-right"></div>
 
-      <div class="mb-3">
-        <label for="regEmail" class="form-label">Email Address</label>
-        <input type="email" class="form-control" id="regEmail" placeholder="staff@bakery.com" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="regPassword" class="form-label">Password</label>
-        <input type="password" class="form-control" id="regPassword" placeholder="Min 6 chars (e.g. Pass123!)" required>
-        <div class="form-text small">At least 6 characters, containing numbers & letters.</div>
-      </div>
-
-      <div class="mb-3">
-        <label for="regConfirmPassword" class="form-label">Confirm Password</label>
-        <input type="password" class="form-control" id="regConfirmPassword" placeholder="Repeat password" required>
-      </div>
-
-      <button type="submit" class="btn btn-maroon w-100 fw-bold">Create Account</button>
-    </form>
-
-    <div class="text-center mt-3">
-      <a href="index.html" class="text-decoration-none small">Already have an account? Login here</a>
-    </div>
   </div>
 
   <script type="module" src="app.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const navLinks = document.querySelectorAll('a[href$=".html"]');
-      navLinks.forEach(link => {
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          const targetUrl = link.getAttribute("href");
-          document.body.classList.add("zoom-out");
-          setTimeout(() => {
-            window.location.href = targetUrl;
-          }, 300);
-        });
-      });
-    });
-  </script>
 </body>
 </html>
