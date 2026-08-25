@@ -666,6 +666,57 @@ function renderDashboardWidgets() {
             }
         });
     }
+
+    // --- 4. MONTHLY RESTOCK FORECAST ALGORITHM ---
+    const forecastTable = document.getElementById("forecastTableBody");
+    if (forecastTable) {
+        let forecastHTML = "";
+        
+        // Get the date 30 days ago
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Step 1: Calculate usage per ingredient over the last 30 days
+        const usageStats = {};
+        globalStockOut.forEach(tx => {
+            const txDate = new Date(tx.date);
+            if (txDate >= thirtyDaysAgo) {
+                usageStats[tx.ingredientName] = (usageStats[tx.ingredientName] || 0) + parseFloat(tx.deductedQty);
+            }
+        });
+
+        // Step 2: Build the forecast for each ingredient
+        Object.values(allIngredients).forEach(item => {
+            const usedLast30Days = usageStats[item.name] || 0;
+            
+            // Only forecast if we actually use this ingredient
+            if (usedLast30Days > 0) {
+                // Add 10% safety buffer to the demand
+                const targetStock = usedLast30Days * 1.1; 
+                // Subtract what we currently have
+                let toOrder = targetStock - item.quantity;
+                
+                // If the number is greater than 0, we need to buy more
+                if (toOrder > 0) {
+                    forecastHTML += `
+                        <tr>
+                            <td class="fw-bold">${item.name}</td>
+                            <td>${item.category}</td>
+                            <td>${usedLast30Days.toFixed(1)} ${item.unit}</td>
+                            <td class="text-warning">${item.quantity} ${item.unit}</td>
+                            <td class="text-success fw-bold">+${Math.ceil(toOrder)} ${item.unit}</td>
+                        </tr>`;
+                }
+            }
+        });
+
+        // If stock levels are perfect and nothing needs ordering
+        if (forecastHTML === "") {
+            forecastHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Inventory levels are optimal. No bulk orders required right now.</td></tr>`;
+        }
+        forecastTable.innerHTML = forecastHTML;
+    }
+  
 } // <--- This bracket was missing!
 
 // Global delete functions
