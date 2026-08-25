@@ -224,6 +224,47 @@
       from { opacity: 1; }
       to { opacity: 0; }
     }
+
+    /* --- PURCHASE ORDER PRINT STYLING --- */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printArea, #printArea * {
+        visibility: visible;
+      }
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      #printArea .card-header {
+        display: block !important;
+        color: #000000 !important;
+        border-bottom: 2px solid #000000 !important;
+        font-size: 1.5rem !important;
+        padding-bottom: 15px;
+      }
+      #printArea table {
+        color: #000000 !important;
+      }
+      #printArea th, #printArea td {
+        border-color: #dddddd !important;
+        color: #000000 !important;
+      }
+      #printArea .table-light th {
+        background-color: #f8f9fa !important;
+      }
+      /* Hide the dark glass background for printing */
+      body::before {
+        display: none !important;
+      }
+    }
+    
   </style>
 </head>
 <body>
@@ -263,6 +304,9 @@
       </li>
       <li class="nav-item super-admin-only d-none">
         <button class="nav-link fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#mod-users">Manage Roles</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link fw-bold text-success" data-bs-toggle="tab" data-bs-target="#mod-forecast">Forecast</button>
       </li>
     </ul>
 
@@ -610,6 +654,48 @@
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- MODULE: 30-DAY FORECAST -->
+      <div class="tab-pane fade" id="mod-forecast">
+        <div class="card p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold m-0">
+              <i class="bi bi-graph-up-arrow text-success me-2"></i> Monthly Order Forecast
+            </h4>
+            <button class="btn btn-outline-success btn-sm fw-bold d-print-none" onclick="window.print()">
+              <i class="bi bi-printer"></i> Export Purchase Order
+            </button>
+          </div>
+
+          <!-- Printable Area -->
+          <div class="row">
+            <div class="col-12">
+              <div class="card p-0" id="printArea" style="background: rgba(0,0,0,0.15) !important; border: 1px solid rgba(255,255,255,0.05) !important;">
+                <div class="card-header fw-bold bg-transparent d-print-block d-none" style="color: black !important; border-bottom: 2px solid black !important; font-size: 1.5rem !important;">
+                  BakeWise - 30-Day Purchase Order
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 bg-transparent">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Ingredient</th>
+                          <th>Category</th>
+                          <th>30-Day Usage</th>
+                          <th>Current Stock</th>
+                          <th>Suggested Order (+10% Buffer)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="forecastTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
         </div>
       </div>
 
