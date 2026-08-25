@@ -416,12 +416,29 @@ if (stockInForm) {
     const addedQty = parseFloat(document.getElementById("stockInQty").value);
     const supplierName = document.getElementById("stockInSupSelect").value;
     const entryDate = document.getElementById("stockInDate").value;
+    
+    // Grab the new expiry date if they filled it out
+    const newExpiryField = document.getElementById("stockInNewExpiry");
+    const newExpiryDate = newExpiryField ? newExpiryField.value : "";
 
     get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
       if (snap.exists()) {
         const item = snap.val();
-        update(ref(db, `ingredients/${ingKey}`), { quantity: item.quantity + addedQty });
         
+        // Prepare the data to update
+        let ingredientUpdates = { 
+          quantity: item.quantity + addedQty 
+        };
+        
+        // If a new expiry date was selected, add it to the update package
+        if (newExpiryDate !== "") {
+          ingredientUpdates.expiryDate = newExpiryDate;
+        }
+
+        // Update the main ingredient list
+        update(ref(db, `ingredients/${ingKey}`), ingredientUpdates);
+        
+        // Log the transaction
         push(ref(db, 'stock_in/'), { 
           ingredientName: item.name, 
           addedQty: addedQty, 
@@ -429,8 +446,12 @@ if (stockInForm) {
           supplier: supplierName, 
           date: entryDate 
         }).then(() => { 
-          alert("Stock In recorded!"); 
+          alert("Stock In recorded successfully!"); 
           stockInForm.reset(); 
+          
+          // Reset the date field back to today automatically
+          const today = new Date().toISOString().split("T")[0];
+          document.getElementById("stockInDate").value = today;
         });
       }
     });
