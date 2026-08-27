@@ -225,43 +225,34 @@
       to { opacity: 0; }
     }
 
-    /* --- PURCHASE ORDER PRINT STYLING --- */
+   /* --- PURCHASE ORDER & REPORT PRINT STYLING --- */
     @media print {
-      body * {
-        visibility: hidden;
+      /* Hide navigation, tabs, and all print buttons */
+      .navbar-bakewise, #moduleTabs, .d-print-none, button[onclick="window.print()"] {
+        display: none !important;
       }
-      #printArea, #printArea * {
-        visibility: visible;
-      }
-      #printArea {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+
+      /* Strip the dark glass backgrounds and force white for ink saving */
+      body, .tab-content, .card {
         background: #ffffff !important;
-        border: none !important;
         box-shadow: none !important;
+        border: none !important;
       }
-      #printArea .card-header {
-        display: block !important;
-        color: #000000 !important;
-        border-bottom: 2px solid #000000 !important;
-        font-size: 1.5rem !important;
-        padding-bottom: 15px;
-      }
-      #printArea table {
-        color: #000000 !important;
-      }
-      #printArea th, #printArea td {
-        border-color: #dddddd !important;
-        color: #000000 !important;
-      }
-      #printArea .table-light th {
-        background-color: #f8f9fa !important;
-      }
-      /* Hide the dark glass background for printing */
+      
+      /* Kill the dark overlay image */
       body::before {
         display: none !important;
+      }
+
+      /* Force text and tables to be black for readability */
+      body, .card-title, h4, h5, h6, .table, th, td {
+        color: #000000 !important;
+        border-color: #dddddd !important;
+      }
+
+      /* Ensure charts don't get cut off */
+      canvas {
+        max-width: 100% !important;
       }
     }
     
