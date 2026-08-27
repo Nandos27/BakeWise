@@ -254,6 +254,20 @@
       canvas {
         max-width: 100% !important;
       }
+
+      /* 6. Fix the blank first page and prevent awkward page breaks */
+      .container, .tab-content, .tab-pane {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        page-break-before: avoid !important;
+      }
+      
+      /* Keep tables and charts from splitting in half across pages */
+      .card, .row {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 15px !important;
+      }
     }
     
   </style>
