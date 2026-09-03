@@ -417,7 +417,7 @@ if (addSupplierForm) {
 }
 
 // -------------------------------------------------------------
-// MODULE 5: STOCK IN
+// MODULE 5: STOCK IN (WITH STAFF APPROVAL WORKFLOW)
 // -------------------------------------------------------------
 const stockInForm = document.getElementById("stockInForm");
 if (stockInForm) {
@@ -427,40 +427,31 @@ if (stockInForm) {
     const addedQty = parseFloat(document.getElementById("stockInQty").value);
     const supplierName = document.getElementById("stockInSupSelect").value;
     const entryDate = document.getElementById("stockInDate").value;
-    
-    // Grab the new expiry date if they filled it out
     const newExpiryField = document.getElementById("stockInNewExpiry");
     const newExpiryDate = newExpiryField ? newExpiryField.value : "";
 
     get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
-      if (snap.exists()) {
-        const item = snap.val();
-        
-        // Prepare the data to update
-        let ingredientUpdates = { 
-          quantity: item.quantity + addedQty 
-        };
-        
-        // If a new expiry date was selected, add it to the update package
-        if (newExpiryDate !== "") {
-          ingredientUpdates.expiryDate = newExpiryDate;
-        }
+      if (!snap.exists()) return;
+      const item = snap.val();
 
-        // Update the main ingredient list
-        update(ref(db, `ingredients/${ingKey}`), ingredientUpdates);
-        
-        // Log the transaction
-        push(ref(db, 'stock_in/'), { 
-          ingredientName: item.name, 
-          addedQty: addedQty, 
-          unit: item.unit, 
-          supplier: supplierName, 
-          date: entryDate 
-        }).then(() => { 
-          alert("Stock In recorded successfully!"); 
-          stockInForm.reset(); 
-          
-          // Reset the date field back to today automatically
+      const payload = {
+        ingredientKey: ingKey,
+        ingredientName: item.name,
+        addedQty: addedQty,
+        unit: item.unit,
+        supplier: supplierName,
+        date: entryDate,
+        newExpiryDate: newExpiryDate,
+        submittedBy: auth.currentUser ? auth.currentUser.email : "Staff"
+      };
+
+      // Admin & Supervisor write directly; Staff routed to pending queue
+      if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
+        executeDirectStockIn(payload);
+      } else {
+        push(ref(db, 'pending_stock_in/'), payload).then(() => {
+          alert("Stock In submitted for Admin verification.");
+          stockInForm.reset();
           const today = new Date().toISOString().split("T")[0];
           document.getElementById("stockInDate").value = today;
         });
@@ -482,6 +473,84 @@ if (stockInForm) {
   });
 }
 
+function executeDirectStockIn(payload) {
+  let ingredientUpdates = { 
+    quantity: (allIngredients[payload.ingredientKey]?.quantity || 0) + payload.addedQty 
+  };
+  
+  if (payload.newExpiryDate) {
+    ingredientUpdates.expiryDate = payload.newExpiryDate;
+  }
+
+  update(ref(db, `ingredients/${payload.ingredientKey}`), ingredientUpdates);
+  
+  push(ref(db, 'stock_in/'), { 
+    ingredientName: payload.ingredientName, 
+    addedQty: payload.addedQty, 
+    unit: payload.unit, 
+    supplier: payload.supplier, 
+    date: payload.date 
+  }).then(() => { 
+    alert("Stock In recorded successfully!"); 
+    stockInForm.reset(); 
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("stockInDate").value = today;
+  });
+}
+
+// --- ADMIN APPROVAL ACTIONS FOR PENDING STOCK ---
+onValue(ref(db, 'pending_stock_in/'), (snap) => {
+  const container = document.getElementById("pendingStockCard");
+  const table = document.getElementById("pendingStockTableBody");
+  const countBadge = document.getElementById("pendingStockCount");
+  
+  if (!table) return;
+  table.innerHTML = "";
+
+  const isAdminOrSup = window.currentUserRole === "admin" || window.currentUserRole === "supervisor";
+
+  if (isAdminOrSup && snap.exists()) {
+    if (container) container.style.display = "block";
+    const pendingData = snap.val();
+    const keys = Object.keys(pendingData);
+    if (countBadge) countBadge.textContent = `${keys.length} Pending`;
+
+    keys.forEach(key => {
+      const item = pendingData[key];
+      table.innerHTML += `
+        <tr>
+          <td>${item.date}</td>
+          <td><small class="text-info">${item.submittedBy}</small></td>
+          <td class="fw-bold">${item.ingredientName}</td>
+          <td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td>
+          <td>${item.supplier}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-success py-0 px-2" onclick="approvePendingStock('${key}')">Approve</button>
+            <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="rejectPendingStock('${key}')">Reject</button>
+          </td>
+        </tr>`;
+    });
+  } else {
+    if (container) container.style.display = "none";
+  }
+});
+
+window.approvePendingStock = async function(key) {
+  const snapshot = await get(ref(db, 'pending_stock_in/' + key));
+  if (!snapshot.exists()) return;
+
+  const item = snapshot.val();
+  executeDirectStockIn(item);
+  await remove(ref(db, 'pending_stock_in/' + key));
+};
+
+window.rejectPendingStock = async function(key) {
+  if (confirm("Reject and delete this entry?")) {
+    await remove(ref(db, 'pending_stock_in/' + key));
+  }
+};
+
+    
 // -------------------------------------------------------------
 // MODULE 6: STOCK OUT
 // -------------------------------------------------------------
