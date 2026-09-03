@@ -6,7 +6,7 @@
   <title>BakeWise - Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- Elegant Fonts for the artisanal bakery look -->
+  <!-- Elegant Fonts for artisanal bakery look -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -15,8 +15,8 @@
     body {
       min-height: 100vh;
       margin: 0;
-      background-color: #F8F7F3; /* Creamy off-white */
-      color: #3E362E; /* Dark espresso brown */
+      background-color: #F8F7F3;
+      color: #3E362E;
       font-family: 'Inter', sans-serif;
     }
 
@@ -34,7 +34,7 @@
 
     .sidebar {
       width: 250px;
-      background-color: #F0EDE6; /* Slightly deeper warm cream */
+      background-color: #F0EDE6;
       border-right: 1px solid #EBE6DC;
       position: sticky;
       top: 0;
@@ -55,7 +55,7 @@
     }
 
     .sidebar-brand i {
-      color: #A05A35; /* Terracotta accent */
+      color: #A05A35;
     }
 
     .sidebar .nav-link {
@@ -69,6 +69,10 @@
       gap: 0.6rem;
       transition: all 0.2s ease;
       text-decoration: none;
+      background: transparent;
+      border: none;
+      width: 100%;
+      text-align: left;
     }
 
     .sidebar .nav-link:hover {
@@ -84,7 +88,7 @@
 
     .main-content {
       flex-grow: 1;
-      padding: 2rem;
+      padding: 2.25rem 2.5rem;
       min-width: 0;
       background-color: #F8F7F3;
       overflow-y: auto;
@@ -179,7 +183,7 @@
       to { opacity: 0; }
     }
 
-    /* 8. PRINT STYLING */
+    /* 8. Print Styling */
     @media print {
       .sidebar, .d-print-none, button[onclick="window.print()"] {
         display: none !important;
@@ -194,9 +198,8 @@
         border: none !important;
       }
       .container, .tab-content, .tab-pane {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
-        page-break-before: avoid !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
       .card, .row {
         page-break-inside: avoid !important;
@@ -209,66 +212,106 @@
 </head>
 <body>
 
-  <!-- Navigation Bar (Header) -->
-  <nav class="navbar navbar-expand-lg navbar-bakewise shadow-sm">
-    <div class="container-fluid px-4">
-      <!-- Logo Left -->
-      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-        <i class="bi bi-egg-fried"></i> BakeWise
+<div class="app-wrapper">
+
+  <!-- VERTICAL NAVIGATION SIDEBAR -->
+  <aside class="sidebar">
+    <div class="px-2 mb-3">
+      <a class="sidebar-brand d-flex align-items-center gap-2" href="#">
+        <i class="bi bi-pie-chart-fill"></i> BakeWise
       </a>
-      
-      <!-- Centered Links -->
-      <div class="collapse navbar-collapse justify-content-center">
-        <ul class="navbar-nav nav-center-links">
-          <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="#">Ingredients</a></li>
-          <li class="nav-item"><a class="nav-link" href="#">Recipes</a></li>
-          <li class="nav-item"><a class="nav-link active" href="#">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="#">About</a></li>
-        </ul>
-      </div>
-
-      <!-- User Info Right -->
-      <div class="d-flex align-items-center gap-3">
-        <span class="fw-bold d-none d-md-block" id="userGreeting" style="color: #3E362E;">Welcome!</span>
-        <span class="badge user-badge text-capitalize px-3 py-2 d-flex align-items-center gap-2" id="userRoleBadge">
-          <i class="bi bi-person-circle fs-5"></i> Role: Staff
-        </span>
-        <button class="btn btn-outline-secondary btn-sm fw-bold px-3" id="logoutBtn">Logout</button>
-      </div>
+      <span class="badge mt-2 text-capitalize px-3 py-1" style="background-color: #EBE6DC; color: #3E362E;" id="userRoleBadge">
+        Role: Loading...
+      </span>
     </div>
-  </nav>
 
-  <div class="container my-4">
-    <!-- Module Tabs -->
-    <ul class="nav nav-pills nav-fill mb-4 p-2 dashboard-tabs" id="moduleTabs">
+    <hr class="mt-1 mb-3" style="border-color: #EBE6DC;">
+
+    <!-- Navigation Buttons connected to tab IDs -->
+    <ul class="nav nav-pills flex-column mb-auto" id="moduleTabs" role="tablist">
       <li class="nav-item">
-        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#mod-ing">Ingredients & Stock</button>
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#mod-ing">
+          <i class="bi bi-box-seam"></i> Ingredients & Stock
+        </button>
       </li>
       <li class="nav-item admin-only d-none">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-cat">Categories</button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-cat">
+          <i class="bi bi-tags"></i> Categories
+        </button>
       </li>
       <li class="nav-item admin-only d-none">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-sup">Suppliers</button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-sup">
+          <i class="bi bi-truck"></i> Suppliers
+        </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockin">Stock In</button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockin">
+          <i class="bi bi-box-arrow-in-down"></i> Stock In
+        </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockout">Stock Out</button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockout">
+          <i class="bi bi-box-arrow-up"></i> Stock Out
+        </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-report">Reports</button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-forecast">
+          <i class="bi bi-graph-up-arrow"></i> Forecast
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-report">
+          <i class="bi bi-file-earmark-text"></i> Reports
+        </button>
       </li>
       <li class="nav-item super-admin-only d-none">
-        <button class="nav-link text-danger" data-bs-toggle="tab" data-bs-target="#mod-users">Manage Roles</button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-forecast">Forecast</button>
+        <button class="nav-link text-danger" data-bs-toggle="tab" data-bs-target="#mod-users">
+          <i class="bi bi-people"></i> Manage Roles
+        </button>
       </li>
     </ul>
 
-    <div class="tab-content">
+    <hr style="border-color: #EBE6DC;">
+
+    <!-- User Information & Exit Session -->
+    <div class="px-2">
+      <div class="small fw-semibold mb-2 text-truncate" id="userGreeting" style="color: #3E362E;">Welcome!</div>
+      <button class="btn btn-sm btn-outline-danger w-100 fw-bold" id="logoutBtn">
+        <i class="bi bi-box-arrow-left me-1"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="main-content">
+    
+    <!-- PENDING STOCK APPROVALS (Pinned at top of workspace for Admin/Supervisor) -->
+    <div class="card p-3 mb-4 shadow-sm" id="pendingStockCard" style="display: none; border-left: 4px solid #ffc107 !important; background: rgba(255, 193, 7, 0.08) !important;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="fw-bold text-warning mb-0" style="font-family: 'Playfair Display', serif;">
+          Pending Stock-In Verifications
+        </h5>
+        <span class="badge bg-warning text-dark" id="pendingStockCount">0 Pending</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Submitted By</th>
+              <th>Ingredient</th>
+              <th>Qty</th>
+              <th>Supplier</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody id="pendingStockTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB WORKSPACE CONTENT -->
+    <div class="tab-content" id="dashboardTabContent">
       
       <!-- MODULE 2, 7, 8, 9, 10: INGREDIENT & CURRENT STOCK -->
       <div class="tab-pane fade show active" id="mod-ing">
@@ -411,31 +454,6 @@
         </div>
       </div>
 
-      <!-- PENDING STOCK APPROVALS -->
-      <div class="card p-3 mb-4 shadow-sm" id="pendingStockCard" style="display: none; border-left: 4px solid #ffc107 !important;">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="fw-bold text-warning mb-0" style="font-family: 'Playfair Display', serif;">
-            ⚠️ Pending Stock-In Verifications
-          </h5>
-          <span class="badge bg-warning text-dark" id="pendingStockCount">0 Pending</span>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Submitted By</th>
-                <th>Ingredient</th>
-                <th>Qty</th>
-                <th>Supplier</th>
-                <th class="text-end">Action</th>
-              </tr>
-            </thead>
-            <tbody id="pendingStockTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-      
       <!-- MODULE 5: STOCK IN -->
       <div class="tab-pane fade" id="mod-stockin">
         <div class="row g-4">
@@ -542,7 +560,9 @@
         <div class="card p-4 border-0 shadow-sm">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="card-title m-0">Inventory Summary Report</h4>
-            <button class="btn btn-outline-maroon btn-sm fw-bold" onclick="window.print()">Print Report</button>
+            <button class="btn btn-outline-maroon btn-sm fw-bold" onclick="window.print()">
+              <i class="bi bi-printer me-1"></i> Print Report
+            </button>
           </div>
 
           <div class="row text-center mb-4 g-3">
@@ -665,7 +685,7 @@
             </div>
           </div>
 
-          <!-- Bottom Row: Recent Activity Feed -->
+          <!-- Recent Activity Feed -->
           <div class="row">
             <div class="col-12">
               <div class="card p-0 border-0 shadow-sm">
@@ -758,108 +778,64 @@
       </div>
 
     </div>
-  </div>
+  </main>
 
-  <!-- EDIT INGREDIENT MODAL -->
-  <div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title card-title fw-bold">Edit Ingredient</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="editForm">
-            <input type="hidden" id="editKey">
-            <div class="mb-2">
-              <label class="form-label">Ingredient Name</label>
-              <input type="text" id="editName" class="form-control" required>
-            </div>
-            <div class="mb-2">
-              <label class="form-label">Stock Quantity</label>
-              <input type="number" step="0.1" id="editQty" class="form-control" required>
-            </div>
-            <div class="mb-2">
-              <label class="form-label">Min Threshold</label>
-              <input type="number" step="0.1" id="editMin" class="form-control" required>
-            </div>
-            <div class="mb-2">
-              <label class="form-label">Expiry Date</label>
-              <input type="date" id="editExpiry" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Unit of Measure</label>
-              <input type="text" id="editUnit" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-maroon w-100 fw-bold">Update Ingredient</button>
-          </form>
-        </div>
+</div>
+
+<!-- EDIT INGREDIENT MODAL -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title card-title fw-bold">Edit Ingredient</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm">
+          <input type="hidden" id="editKey">
+          <div class="mb-2">
+            <label class="form-label">Ingredient Name</label>
+            <input type="text" id="editName" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Stock Quantity</label>
+            <input type="number" step="0.1" id="editQty" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Min Threshold</label>
+            <input type="number" step="0.1" id="editMin" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Expiry Date</label>
+            <input type="date" id="editExpiry" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Unit of Measure</label>
+            <input type="text" id="editUnit" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-maroon w-100 fw-bold">Update Ingredient</button>
+        </form>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Dark Footer -->
-  <footer class="footer-bakewise">
-    <div class="container">
-      <div class="row text-center text-md-start">
-        <div class="col-md-4 mb-3">
-          <h5 class="fw-bold mb-3" style="font-family: 'Playfair Display', serif;"><i class="bi bi-egg-fried" style="color:#A05A35;"></i> BakeWise</h5>
-          <p class="small text-muted" style="color: #8C847A !important;">The artisanal bakery's operations companion. Track every ingredient, cost every recipe.</p>
-        </div>
-        <div class="col-md-4 mb-3">
-          <h6 class="fw-bold mb-3" style="letter-spacing: 1px;">KITCHEN</h6>
-          <ul class="list-unstyled small">
-            <li class="mb-2"><a href="#">Ingredients</a></li>
-            <li class="mb-2"><a href="#">Recipes</a></li>
-            <li class="mb-2"><a href="#">Dashboard</a></li>
-          </ul>
-        </div>
-        <div class="col-md-4 mb-3">
-          <h6 class="fw-bold mb-3" style="letter-spacing: 1px;">HOUSE</h6>
-          <ul class="list-unstyled small">
-            <li class="mb-2"><a href="#">About & Contact</a></li>
-            <li class="mb-2"><a href="#">Staff Sign-in</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="row mt-4 pt-3 border-top border-secondary text-center small text-muted" style="color: #8C847A !important;">
-        <div class="col-12">
-          &copy; 2026 BakeWise - Baked fresh every day.
-        </div>
-      </div>
-    </div>
-  </footer>
+<!-- Global Chart Font Color -->
+<script>
+  Chart.defaults.color = '#3E362E';
+</script>
 
-  <!-- Set Global Chart.js Font Color to Dark Brown -->
-  <script>
-    Chart.defaults.color = '#3E362E';
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script type="module" src="app.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Smooth exit transition for navigation buttons (like Logout)
-      const logoutBtn = document.getElementById("logoutBtn");
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-          document.body.classList.add("zoom-out");
-        });
-      }
-
-      // Smooth exit transition for links navigating away from dashboard
-      const navLinks = document.querySelectorAll('a[href$=".html"]');
-      navLinks.forEach(link => {
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          const targetUrl = link.getAttribute("href");
-          document.body.classList.add("zoom-out");
-          setTimeout(() => {
-            window.location.href = targetUrl;
-          }, 200);
-        });
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="app.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        document.body.classList.add("zoom-out");
       });
-    });
-  </script>
+    }
+  });
+</script>
 </body>
 </html>
