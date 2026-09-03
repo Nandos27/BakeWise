@@ -632,6 +632,61 @@
             </div>
           </div>
 
+          <!-- TRANSACTION QUERY ENGINE -->
+<div class="card p-3 mb-4 d-print-none" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label small text-muted">Start Date</label>
+      <input type="date" id="queryStartDate" class="form-control form-control-sm bg-dark text-white border-secondary">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small text-muted">End Date</label>
+      <input type="date" id="queryEndDate" class="form-control form-control-sm bg-dark text-white border-secondary">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small text-muted">Type</label>
+      <select id="queryType" class="form-select form-select-sm bg-dark text-white border-secondary">
+        <option value="ALL">All Transactions</option>
+        <option value="IN">Stock In</option>
+        <option value="OUT">Stock Out</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small text-muted">Ingredient</label>
+      <select id="queryIngredient" class="form-select form-select-sm bg-dark text-white border-secondary">
+        <option value="ALL">All Ingredients</option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-1">
+      <button class="btn btn-sm btn-success w-100 fw-bold" onclick="runTransactionQuery()">Filter</button>
+      <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetTransactionQuery()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUERY RESULTS TABLE -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-bold" id="queryResultsHeader">Historical Transactions (All Records)</span>
+    <span class="badge bg-secondary" id="queryRecordCount">0 records</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Ingredient</th>
+            <th>Quantity</th>
+            <th>Reason / Supplier</th>
+          </tr>
+        </thead>
+        <tbody id="fullTransactionTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
           <!-- Bottom Row: Recent Activity Feed -->
           <div class="row">
             <div class="col-12">
