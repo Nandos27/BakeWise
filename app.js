@@ -108,11 +108,8 @@ const forgotPasswordLink = document.getElementById("forgotPasswordLink");
 if (forgotPasswordLink) {
   forgotPasswordLink.addEventListener("click", (e) => {
     e.preventDefault();
-    
-    // Check if they already typed an email in the login box
     let email = document.getElementById("email") ? document.getElementById("email").value.trim() : "";
     
-    // If the login box is empty, prompt them to type it in
     if (!email) {
       email = prompt("Please enter your account email address to reset your password:");
     }
@@ -143,12 +140,11 @@ onAuthStateChanged(auth, (user) => {
       return;
     }
 
-get(ref(db, `users/${user.uid}`)).then((snapshot) => {
+    get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.val();
         const role = userData.role || "kitchen_staff";
 
-        // 1. Expose role globally
         window.currentUserRole = role;
 
         const greeting = document.getElementById("userGreeting");
@@ -162,7 +158,6 @@ get(ref(db, `users/${user.uid}`)).then((snapshot) => {
           const container = document.getElementById("ingTableContainer");
           if (container) container.className = "col-md-8";
           
-          // 2. TRIGGER PENDING FETCH NOW THAT ROLE IS DEFINED
           if (typeof renderPendingStockCards === "function") {
             renderPendingStockCards();
           }
@@ -173,7 +168,6 @@ get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       }
     });
   } else {
-    // THE BOUNCER: If no user is logged in, kick them out of the dashboard
     if (window.location.pathname.includes("dashboard.html")) {
       window.location.href = "index.html";
     }
@@ -187,7 +181,6 @@ let allIngredients = {};
 let globalStockIn = [];
 let globalStockOut = [];
 
-// Add ingredient form
 const addIngredientForm = document.getElementById("addIngredientForm");
 if (addIngredientForm) {
   addIngredientForm.addEventListener("submit", (e) => {
@@ -219,7 +212,6 @@ const filterCat = document.getElementById("filterCategorySelect");
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
-// Render inventory table
 function renderInventoryTable() {
   const tableBody = document.getElementById("inventoryTableBody");
   const stockInSelect = document.getElementById("stockInIngSelect");
@@ -306,7 +298,6 @@ function renderInventoryTable() {
     });
   }
 
-  // THIS IS THE FIX: Automatically draw the charts when the table updates
   renderDashboardWidgets();
 }
 
@@ -442,7 +433,6 @@ if (stockInForm) {
         submittedBy: auth.currentUser ? auth.currentUser.email : "Staff"
       };
 
-      // Admin & Supervisor write directly; Staff routed to pending queue
       if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
         executeDirectStockIn(payload);
       } else {
@@ -470,7 +460,6 @@ if (stockInForm) {
   });
 }
 
-// Function to render pending requests
 window.renderPendingStockCards = function() {
   const container = document.getElementById("pendingStockCard");
   const table = document.getElementById("pendingStockTableBody");
@@ -513,7 +502,6 @@ window.renderPendingStockCards = function() {
   });
 };
 
-// Real-time hook for pending stock
 onValue(ref(db, 'pending_stock_in/'), () => {
   if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
     window.renderPendingStockCards();
@@ -545,43 +533,6 @@ function executeDirectStockIn(payload) {
   });
 }
 
-// --- ADMIN APPROVAL ACTIONS FOR PENDING STOCK ---
-onValue(ref(db, 'pending_stock_in/'), (snap) => {
-  const container = document.getElementById("pendingStockCard");
-  const table = document.getElementById("pendingStockTableBody");
-  const countBadge = document.getElementById("pendingStockCount");
-  
-  if (!table) return;
-  table.innerHTML = "";
-
-  const isAdminOrSup = window.currentUserRole === "admin" || window.currentUserRole === "supervisor";
-
-  if (isAdminOrSup && snap.exists()) {
-    if (container) container.style.display = "block";
-    const pendingData = snap.val();
-    const keys = Object.keys(pendingData);
-    if (countBadge) countBadge.textContent = `${keys.length} Pending`;
-
-    keys.forEach(key => {
-      const item = pendingData[key];
-      table.innerHTML += `
-        <tr>
-          <td>${item.date}</td>
-          <td><small class="text-info">${item.submittedBy}</small></td>
-          <td class="fw-bold">${item.ingredientName}</td>
-          <td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td>
-          <td>${item.supplier}</td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-success py-0 px-2" onclick="approvePendingStock('${key}')">Approve</button>
-            <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="rejectPendingStock('${key}')">Reject</button>
-          </td>
-        </tr>`;
-    });
-  } else {
-    if (container) container.style.display = "none";
-  }
-});
-
 window.approvePendingStock = async function(key) {
   const snapshot = await get(ref(db, 'pending_stock_in/' + key));
   if (!snapshot.exists()) return;
@@ -597,7 +548,6 @@ window.rejectPendingStock = async function(key) {
   }
 };
 
-    
 // -------------------------------------------------------------
 // MODULE 6: STOCK OUT
 // -------------------------------------------------------------
@@ -684,176 +634,130 @@ window.updateUserRole = (uid, newRole) => {
 };
 
 // -------------------------------------------------------------
-// DASHBOARD WIDGETS FIX
+// DASHBOARD WIDGETS, REPORTS QUERY & FORECAST
 // -------------------------------------------------------------
 function renderDashboardWidgets() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const attentionTable = document.getElementById("attentionTableBody");
-    let attentionHTML = "";
-    
-    // Using the actual database array
-    Object.values(allIngredients).forEach(item => {
-        const isLowStock = item.quantity <= item.minThreshold;
-        let isExpired = false;
-        
-        if (item.expiryDate) {
-            const expDate = new Date(item.expiryDate);
-            if (expDate < today) isExpired = true;
-        }
-
-        if (isLowStock || isExpired) {
-            let issueBadge = isExpired 
-                ? `<span class="badge bg-warning text-dark">Expired</span>`
-                : `<span class="badge bg-danger">Low Stock</span>`;
-            
-            let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
-
-            attentionHTML += `
-                <tr>
-                    <td class="fw-bold">${item.name}</td>
-                    <td>${issueBadge}</td>
-                    <td>${item.quantity} ${item.unit}</td>
-                    <td class="text-muted">${limitText}</td>
-                </tr>`;
-        }
-      populateQueryDropdown();
-      window.runTransactionQuery();
-    });
-    
-    if (!attentionHTML) {
-        attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal!</td></tr>`;
-    }
-    if (attentionTable) attentionTable.innerHTML = attentionHTML;
-
-    // --- 2. RECENT ACTIVITY LOGIC ---
-    const activityTable = document.getElementById("recentActivityBody");
-    if (activityTable) {
-        // Combine both arrays into one big list
-        const allTx = [...globalStockIn, ...globalStockOut];
-        
-        // Sort by date (newest first)
-        allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        // Grab only the top 5
-        const recentTx = allTx.slice(0, 5);
-
-        let activityHTML = "";
-        recentTx.forEach(tx => {
-            const isIn = tx.type === "IN";
-            const typeBadge = isIn ? `<span class="badge bg-success">Stock In</span>` : `<span class="badge bg-secondary">Stock Out</span>`;
-            const qtyColor = isIn ? "text-success" : "text-danger";
-            const sign = isIn ? "+" : "-";
-            const qty = isIn ? tx.addedQty : tx.deductedQty;
-            const detail = isIn ? tx.supplier : tx.reason;
-
-            activityHTML += `
-                <tr>
-                    <td>${tx.date}</td>
-                    <td>${typeBadge}</td>
-                    <td class="fw-bold">${tx.ingredientName}</td>
-                    <td class="fw-bold ${qtyColor}">${sign}${qty} ${tx.unit}</td>
-                    <td class="text-muted">${detail}</td>
-                </tr>`;
-        });
-
-        if (activityHTML === "") {
-            activityHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No recent transactions logged yet.</td></tr>`;
-        }
-        activityTable.innerHTML = activityHTML;
-    }
-
-    // --- 3. CHART.JS LOGIC ---
-    const categoryCounts = {};
-    Object.values(allIngredients).forEach(item => {
-        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
-    });
-
-    const chartCanvas = document.getElementById('categoryChart');
-    if (chartCanvas) {
-        const ctx = chartCanvas.getContext('2d');
-        
-        if (window.inventoryChart) window.inventoryChart.destroy();
-        
-        window.inventoryChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(categoryCounts),
-                datasets: [{
-                    data: Object.values(categoryCounts),
-                    backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
-    // --- 4. MONTHLY RESTOCK FORECAST ALGORITHM ---
-    const forecastTable = document.getElementById("forecastTableBody");
-    if (forecastTable) {
-        let forecastHTML = "";
-        
-        // Get the date 30 days ago
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        // Step 1: Calculate usage per ingredient over the last 30 days
-        const usageStats = {};
-        globalStockOut.forEach(tx => {
-            const txDate = new Date(tx.date);
-            if (txDate >= thirtyDaysAgo) {
-                usageStats[tx.ingredientName] = (usageStats[tx.ingredientName] || 0) + parseFloat(tx.deductedQty);
-            }
-        });
-
-        // Step 2: Build the forecast for each ingredient
-        Object.values(allIngredients).forEach(item => {
-            const usedLast30Days = usageStats[item.name] || 0;
-            
-            // Only forecast if we actually use this ingredient
-            if (usedLast30Days > 0) {
-                // Add 10% safety buffer to the demand
-                const targetStock = usedLast30Days * 1.1; 
-                // Subtract what we currently have
-                let toOrder = targetStock - item.quantity;
-                
-                // If the number is greater than 0, we need to buy more
-                if (toOrder > 0) {
-                    forecastHTML += `
-                        <tr>
-                            <td class="fw-bold">${item.name}</td>
-                            <td>${item.category}</td>
-                            <td>${usedLast30Days.toFixed(1)} ${item.unit}</td>
-                            <td class="text-warning">${item.quantity} ${item.unit}</td>
-                            <td class="text-success fw-bold">+${Math.ceil(toOrder)} ${item.unit}</td>
-                        </tr>`;
-                }
-            }
-        });
-
-        // If stock levels are perfect and nothing needs ordering
-        if (forecastHTML === "") {
-            forecastHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Inventory levels are optimal. No bulk orders required right now.</td></tr>`;
-        }
-        forecastTable.innerHTML = forecastHTML;
-    }
+  // 1. Immediate Attention Table
+  const attentionTable = document.getElementById("attentionTableBody");
+  let attentionHTML = "";
   
-} // <--- This bracket was missing!
+  Object.values(allIngredients).forEach(item => {
+    const isLowStock = item.quantity <= item.minThreshold;
+    let isExpired = false;
+    
+    if (item.expiryDate) {
+      const expDate = new Date(item.expiryDate);
+      if (expDate < today) isExpired = true;
+    }
 
-// Global delete functions
+    if (isLowStock || isExpired) {
+      let issueBadge = isExpired 
+        ? `<span class="badge bg-warning text-dark">Expired</span>`
+        : `<span class="badge bg-danger">Low Stock</span>`;
+      
+      let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
+
+      attentionHTML += `
+        <tr>
+          <td class="fw-bold">${item.name}</td>
+          <td>${issueBadge}</td>
+          <td>${item.quantity} ${item.unit}</td>
+          <td class="text-muted">${limitText}</td>
+        </tr>`;
+    }
+  });
+  
+  if (!attentionHTML) {
+    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal!</td></tr>`;
+  }
+  if (attentionTable) attentionTable.innerHTML = attentionHTML;
+
+  // 2. Chart.js Category Breakdown
+  const categoryCounts = {};
+  Object.values(allIngredients).forEach(item => {
+    categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+  });
+
+  const chartCanvas = document.getElementById('categoryChart');
+  if (chartCanvas) {
+    const ctx = chartCanvas.getContext('2d');
+    if (window.inventoryChart) window.inventoryChart.destroy();
+    
+    window.inventoryChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(categoryCounts),
+        datasets: [{
+          data: Object.values(categoryCounts),
+          backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  // 3. Restock Forecast Algorithm
+  const forecastTable = document.getElementById("forecastTableBody");
+  if (forecastTable) {
+    let forecastHTML = "";
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const usageStats = {};
+    globalStockOut.forEach(tx => {
+      const txDate = new Date(tx.date);
+      if (txDate >= thirtyDaysAgo) {
+        usageStats[tx.ingredientName] = (usageStats[tx.ingredientName] || 0) + parseFloat(tx.deductedQty || 0);
+      }
+    });
+
+    Object.values(allIngredients).forEach(item => {
+      const usedLast30Days = usageStats[item.name] || 0;
+      
+      if (usedLast30Days > 0 || item.quantity <= item.minThreshold) {
+        const estimatedDemand = usedLast30Days > 0 ? (usedLast30Days * 1.1) : (item.minThreshold * 1.5);
+        let toOrder = estimatedDemand - item.quantity;
+        
+        if (toOrder > 0) {
+          forecastHTML += `
+            <tr>
+              <td class="fw-bold">${item.name}</td>
+              <td>${item.category}</td>
+              <td>${usedLast30Days.toFixed(1)} ${item.unit}</td>
+              <td class="text-warning">${item.quantity} ${item.unit}</td>
+              <td class="text-success fw-bold">+${Math.ceil(toOrder)} ${item.unit}</td>
+            </tr>`;
+        }
+      }
+    });
+
+    if (forecastHTML === "") {
+      forecastHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Inventory levels are optimal. No bulk orders required right now.</td></tr>`;
+    }
+    forecastTable.innerHTML = forecastHTML;
+  }
+
+  // 4. Update Query Filter Dropdown & Refresh Audit Records Once
+  populateQueryDropdown();
+  window.runTransactionQuery();
+}
+
+// Global delete helpers
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
 window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
 window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
 
-// Auto-fill today's date in Stock In and Stock Out forms
+// Auto-fill form dates
 document.addEventListener("DOMContentLoaded", () => {
   const today = new Date().toISOString().split("T")[0];
   const stockInDate = document.getElementById("stockInDate");
@@ -863,21 +767,20 @@ document.addEventListener("DOMContentLoaded", () => {
   if (stockOutDate) stockOutDate.value = today;
 });
 
-// --- DYNAMIC TRANSACTION QUERY ENGINE ---
-
-// Populate ingredient selector dynamically
+// Dynamic Transaction Query Engine
 function populateQueryDropdown() {
   const dropdown = document.getElementById("queryIngredient");
-  if (!dropdown || !window.allIngredients) return;
+  if (!dropdown) return;
 
+  const currentSelection = dropdown.value;
   let options = '<option value="ALL">All Ingredients</option>';
-  Object.values(window.allIngredients).forEach(item => {
+  Object.values(allIngredients).forEach(item => {
     options += `<option value="${item.name}">${item.name}</option>`;
   });
   dropdown.innerHTML = options;
+  if (currentSelection) dropdown.value = currentSelection;
 }
 
-// Render query results
 function renderTransactionTable(records) {
   const table = document.getElementById("fullTransactionTableBody");
   const countBadge = document.getElementById("queryRecordCount");
@@ -896,31 +799,28 @@ function renderTransactionTable(records) {
       ? '<span class="badge bg-success">Stock In</span>' 
       : '<span class="badge bg-danger">Stock Out</span>';
     const qtyDisplay = isStockIn
-      ? `<span class="text-success fw-bold">+${tx.addedQty || tx.qty} ${tx.unit}</span>`
-      : `<span class="text-danger fw-bold">-${tx.deductedQty || tx.qty} ${tx.unit}</span>`;
+      ? `<span class="text-success fw-bold">+${tx.addedQty || 0} ${tx.unit}</span>`
+      : `<span class="text-danger fw-bold">-${tx.deductedQty || 0} ${tx.unit}</span>`;
     const detail = tx.supplier || tx.reason || "-";
 
     return `
       <tr>
         <td>${tx.date || "-"}</td>
         <td>${badge}</td>
-        <td class="fw-bold">${tx.ingredientName || tx.name}</td>
+        <td class="fw-bold">${tx.ingredientName}</td>
         <td>${qtyDisplay}</td>
         <td>${detail}</td>
       </tr>`;
   }).join("");
 }
 
-// Filter execution
 window.runTransactionQuery = function() {
   const startDate = document.getElementById("queryStartDate")?.value;
   const endDate = document.getElementById("queryEndDate")?.value;
-  const selectedType = document.getElementById("queryType")?.value;
-  const selectedItem = document.getElementById("queryIngredient")?.value;
+  const selectedType = document.getElementById("queryType")?.value || "ALL";
+  const selectedItem = document.getElementById("queryIngredient")?.value || "ALL";
 
-  const allRecords = [...(window.globalStockIn || []), ...(window.globalStockOut || [])];
-
-  // Sort descending by date
+  const allRecords = [...globalStockIn, ...globalStockOut];
   allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const filtered = allRecords.filter(tx => {
@@ -928,7 +828,7 @@ window.runTransactionQuery = function() {
     const matchStart = !startDate || txDate >= startDate;
     const matchEnd = !endDate || txDate <= endDate;
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
-    const matchItem = (selectedItem === "ALL") || (tx.ingredientName || tx.name) === selectedItem;
+    const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
 
     return matchStart && matchEnd && matchType && matchItem;
   });
@@ -936,7 +836,6 @@ window.runTransactionQuery = function() {
   renderTransactionTable(filtered);
 };
 
-// Reset filters to default state
 window.resetTransactionQuery = function() {
   if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
   if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
@@ -944,3 +843,7 @@ window.resetTransactionQuery = function() {
   if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
   window.runTransactionQuery();
 };
+
+// Wire up the Filter & Reset button events
+document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
+document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
