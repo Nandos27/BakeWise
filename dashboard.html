@@ -178,6 +178,15 @@
       animation: fadeOut 0.2s ease-in forwards;
     }
 
+    /* Supervisor-Approved Ultra-Thin Footer */
+    .sv-footer {
+      border-top: 1px solid #EBE6DC;
+      padding: 0.75rem 0 0.25rem 0;
+      margin-top: 2.5rem;
+      font-size: 0.75rem;
+      color: #8C847A;
+    }
+
     @keyframes fadeOut {
       from { opacity: 1; }
       to { opacity: 0; }
@@ -272,6 +281,11 @@
         box-shadow: none !important;
         margin-bottom: 12px !important;
       }
+
+      .sv-footer {
+        display: none !important;
+      }
+    }
     }  
 </style>
 </head>
@@ -843,6 +857,20 @@
       </div>
 
     </div>
+
+    <!-- COMPACT ACADEMIC COMPLIANCE FOOTER -->
+    <footer class="sv-footer d-flex justify-content-between align-items-center">
+      <div>
+        <span>&copy; 2026 <strong>BakeWise</strong> &bull; Integrated Kitchen Management System</span>
+      </div>
+      <div class="d-flex gap-3 text-muted">
+        <span>Backend: Firebase</span>
+        <span>&bull;</span>
+        <span>Version 1.0</span>
+      </div>
+    </footer>
+
+  </main>
   </main>
 
 </div>
