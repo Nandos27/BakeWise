@@ -11,81 +11,86 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <style>
-    /* 1. Main Background - Artisanal Light Theme */
+    /* 1. Base Theme & Page Shell */
     body {
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
       margin: 0;
       background-color: #F8F7F3; /* Creamy off-white */
       color: #3E362E; /* Dark espresso brown */
       font-family: 'Inter', sans-serif;
     }
 
-    /* Elegant Serif for Headings */
-    h1, h2, h3, h4, h5, h6, .navbar-brand, .card-title {
+    h1, h2, h3, h4, h5, h6, .sidebar-brand, .card-title {
       font-family: 'Playfair Display', serif;
       color: #2C241B !important;
     }
 
-    /* 2. Navigation Bar (Header) */
-    .navbar-bakewise {
-      background-color: #F8F7F3 !important;
-      padding: 1rem 2rem;
+    /* 2. Vertical Sidebar Architecture */
+    .app-wrapper {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
     }
-    .navbar-brand {
-      font-size: 1.5rem;
+
+    .sidebar {
+      width: 250px;
+      background-color: #F0EDE6; /* Slightly deeper warm cream */
+      border-right: 1px solid #EBE6DC;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 1rem;
+      z-index: 1000;
+    }
+
+    .sidebar-brand {
+      font-size: 1.4rem;
       font-weight: 700;
       letter-spacing: 0.5px;
       text-decoration: none;
+      color: #2C241B;
     }
-    .navbar-brand i {
+
+    .sidebar-brand i {
       color: #A05A35; /* Terracotta accent */
     }
-    .nav-center-links .nav-link {
-      color: #3E362E !important;
-      font-weight: 500;
-      margin: 0 10px;
-      transition: color 0.2s ease;
-    }
-    .nav-center-links .nav-link:hover, .nav-center-links .nav-link.active {
-      color: #A05A35 !important;
-      text-decoration: underline;
-      text-underline-offset: 6px;
-    }
-    .user-badge {
-      background-color: #F8F7F3 !important;
-      color: #3E362E !important;
-      border: 1px solid #EBE6DC;
-      border-radius: 20px;
-    }
 
-    /* 3. Module Navigation Tabs (Sub-navigation) */
-    .dashboard-tabs {
-      background-color: transparent !important;
-      border: none;
-      border-bottom: 1px solid #EBE6DC;
-      border-radius: 0 !important;
-      box-shadow: none;
-    }
-    .dashboard-tabs .nav-link {
+    .sidebar .nav-link {
       color: #8C847A !important;
       font-weight: 500;
-      border-radius: 0;
-      transition: all 0.3s ease;
-    }
-    .dashboard-tabs .nav-link:hover {
-      color: #3E362E !important;
-      background: transparent;
-    }
-    .dashboard-tabs .nav-link.active {
-      background-color: transparent !important;
-      color: #A05A35 !important;
-      border-bottom: 2px solid #A05A35;
-      box-shadow: none;
+      padding: 0.65rem 0.9rem;
+      margin-bottom: 0.3rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
     }
 
-    /* 4. Clean Cards */
+    .sidebar .nav-link:hover {
+      color: #3E362E !important;
+      background-color: rgba(160, 90, 53, 0.08);
+    }
+
+    .sidebar .nav-link.active {
+      color: #FFFFFF !important;
+      background-color: #A05A35 !important;
+      font-weight: 600;
+    }
+
+    .main-content {
+      flex-grow: 1;
+      padding: 2rem;
+      min-width: 0;
+      background-color: #F8F7F3;
+      overflow-y: auto;
+    }
+
+    /* 3. Cards */
     .card {
       background: #FFFFFF !important;
       border: 1px solid #EBE6DC !important;
@@ -93,24 +98,27 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
       color: #3E362E !important;
     }
+
     .card-header {
       background-color: #FFFFFF !important;
       border-bottom: 1px solid #EBE6DC !important;
       color: #2C241B !important;
     }
 
-    /* 5. Buttons */
+    /* 4. Buttons */
     .btn-maroon {
-      background-color: #A05A35 !important; /* Terracotta */
+      background-color: #A05A35 !important;
       border-color: #A05A35 !important;
       color: #FFFFFF !important;
       border-radius: 25px;
       padding: 8px 20px;
       transition: all 0.3s ease;
     }
+
     .btn-maroon:hover {
       background-color: #8C4E2D !important;
     }
+
     .btn-outline-maroon {
       color: #A05A35 !important;
       border-color: #A05A35 !important;
@@ -118,30 +126,35 @@
       background: transparent;
       transition: all 0.3s ease;
     }
+
     .btn-outline-maroon:hover {
       background-color: #A05A35 !important;
       color: #FFFFFF !important;
     }
 
-    /* 6. Form Controls & Tables */
+    /* 5. Form Controls & Tables */
     .form-control, .form-select {
       background: #FFFFFF !important;
       border: 1px solid #EBE6DC !important;
       color: #3E362E !important;
       border-radius: 6px;
     }
+
     .form-control:focus, .form-select:focus {
       border-color: #A05A35 !important;
       box-shadow: 0 0 0 0.2rem rgba(160, 90, 53, 0.25) !important;
     }
+
     .form-label {
       color: #6C635A;
       font-weight: 500;
     }
+
     .table {
       color: #3E362E !important;
       border-color: #EBE6DC !important;
     }
+
     .table-light, .table-light th {
       background-color: #F8F7F3 !important;
       color: #2C241B !important;
@@ -149,45 +162,34 @@
       font-weight: 600;
     }
 
-    /* 7. Metric Boxes */
+    /* 6. Metric Boxes */
     .metric-box {
       background-color: #FFFFFF !important;
       border: 1px solid #EBE6DC !important;
       border-radius: 8px;
     }
 
-    /* 8. Footer (Dark) */
-    .footer-bakewise {
-      background-color: #2C241B;
-      color: #EBE6DC;
-      margin-top: auto;
-      padding: 3rem 0;
-    }
-    .footer-bakewise a {
-      color: #EBE6DC;
-      text-decoration: none;
-      transition: color 0.2s ease;
-    }
-    .footer-bakewise a:hover {
-      color: #FFFFFF;
-    }
-
-    /* 9. Exit transition */
+    /* 7. Exit transition */
     body.zoom-out {
       animation: fadeOut 0.2s ease-in forwards;
     }
+
     @keyframes fadeOut {
       from { opacity: 1; }
       to { opacity: 0; }
     }
 
-    /* 10. PRINT STYLING */
+    /* 8. PRINT STYLING */
     @media print {
-      .navbar-bakewise, #moduleTabs, .d-print-none, button[onclick="window.print()"], .footer-bakewise {
+      .sidebar, .d-print-none, button[onclick="window.print()"] {
         display: none !important;
       }
+      .main-content {
+        padding: 0 !important;
+        width: 100% !important;
+      }
       body, .tab-content, .card {
-        background: #ffffff !important;
+        background: #FFFFFF !important;
         box-shadow: none !important;
         border: none !important;
       }
