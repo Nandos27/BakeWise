@@ -183,32 +183,58 @@
       to { opacity: 0; }
     }
 
-    /* 8. Print Styling */
+    /* 8. Print Styling & A4 Page Setup */
     @media print {
-      .sidebar, .d-print-none, button[onclick="window.print()"] {
+      @page {
+        size: A4 portrait;
+        margin: 1.5cm;
+      }
+
+      /* Hide entire sidebar, interface buttons, and search filters */
+      .sidebar,
+      .d-print-none,
+      button,
+      input,
+      select,
+      #pendingStockCard {
         display: none !important;
       }
-      .main-content {
-        padding: 0 !important;
-        width: 100% !important;
-      }
-      body, .tab-content, .card {
-        background: #FFFFFF !important;
+
+      /* Flatten layout to full page width */
+      body, .app-wrapper, .main-content, .tab-content, .card {
+        background: #ffffff !important;
+        color: #000000 !important;
         box-shadow: none !important;
         border: none !important;
-      }
-      .container, .tab-content, .tab-pane {
-        margin: 0 !important;
         padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
       }
-      .card, .row {
+
+      /* Prevent page breaks in the middle of tables or metric cards */
+      .card, .table, tr {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        margin-bottom: 15px !important;
       }
-      canvas { max-width: 100% !important; }
+
+      table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+
+      th, td {
+        border-bottom: 1px solid #dee2e6 !important;
+        padding: 6px 8px !important;
+        font-size: 11pt !important;
+      }
+
+      canvas {
+        max-width: 100% !important;
+        height: auto !important;
+      }
     }
-  </style>
+  
+</style>
 </head>
 <body>
 
