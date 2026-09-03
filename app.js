@@ -143,12 +143,12 @@ onAuthStateChanged(auth, (user) => {
       return;
     }
 
-    get(ref(db, `users/${user.uid}`)).then((snapshot) => {
+get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.val();
         const role = userData.role || "kitchen_staff";
 
-        // Global role assignment
+        // 1. Expose role globally
         window.currentUserRole = role;
 
         const greeting = document.getElementById("userGreeting");
@@ -161,6 +161,11 @@ onAuthStateChanged(auth, (user) => {
           document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
           const container = document.getElementById("ingTableContainer");
           if (container) container.className = "col-md-8";
+          
+          // 2. TRIGGER PENDING FETCH NOW THAT ROLE IS DEFINED
+          if (typeof renderPendingStockCards === "function") {
+            renderPendingStockCards();
+          }
         }
         if (role === "admin") {
           document.querySelectorAll(".super-admin-only").forEach(el => el.classList.remove("d-none"));
@@ -464,6 +469,56 @@ if (stockInForm) {
     renderDashboardWidgets();
   });
 }
+
+// Function to render pending requests
+window.renderPendingStockCards = function() {
+  const container = document.getElementById("pendingStockCard");
+  const table = document.getElementById("pendingStockTableBody");
+  const countBadge = document.getElementById("pendingStockCount");
+  
+  if (!container || !table) return;
+
+  const role = window.currentUserRole;
+  if (role !== "admin" && role !== "supervisor") {
+    container.style.display = "none";
+    return;
+  }
+
+  get(ref(db, 'pending_stock_in/')).then((snap) => {
+    table.innerHTML = "";
+    if (snap.exists()) {
+      container.style.display = "block";
+      const pendingData = snap.val();
+      const keys = Object.keys(pendingData);
+      if (countBadge) countBadge.textContent = `${keys.length} Pending`;
+
+      keys.forEach(key => {
+        const item = pendingData[key];
+        table.innerHTML += `
+          <tr>
+            <td>${item.date || "-"}</td>
+            <td><small class="text-secondary">${item.submittedBy || "Staff"}</small></td>
+            <td class="fw-bold">${item.ingredientName}</td>
+            <td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td>
+            <td>${item.supplier || "-"}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-success py-1 px-2 me-1" onclick="approvePendingStock('${key}')">Approve</button>
+              <button class="btn btn-sm btn-outline-danger py-1 px-2" onclick="rejectPendingStock('${key}')">Reject</button>
+            </td>
+          </tr>`;
+      });
+    } else {
+      container.style.display = "none";
+    }
+  });
+};
+
+// Real-time hook for pending stock
+onValue(ref(db, 'pending_stock_in/'), () => {
+  if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
+    window.renderPendingStockCards();
+  }
+});
 
 function executeDirectStockIn(payload) {
   let ingredientUpdates = { 
