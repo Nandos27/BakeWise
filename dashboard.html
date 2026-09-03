@@ -178,14 +178,23 @@
       animation: fadeOut 0.2s ease-in forwards;
     }
 
-    /* Supervisor-Approved Ultra-Thin Footer */
-    .sv-footer {
-      border-top: 1px solid #EBE6DC;
-      padding: 0.75rem 0 0.25rem 0;
-      margin-top: 2.5rem;
-      font-size: 0.75rem;
-      color: #8C847A;
-    }
+    .main-content {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh;
+  }
+  
+  .tab-content {
+    flex-grow: 1; /* Expands to push footer to the floor on short tabs */
+  }
+  
+  .natural-footer {
+    margin-top: auto; /* Pins to viewport bottom on empty/short screens */
+    padding-top: 1.5rem;
+    border-top: 1px solid #EBE6DC;
+    font-size: 0.75rem;
+    color: #8C847A;
+  }
 
     @keyframes fadeOut {
       from { opacity: 1; }
@@ -282,9 +291,9 @@
         margin-bottom: 12px !important;
       }
 
-      .sv-footer {
-        display: none !important;
-      }
+      .natural-footer { display: none !important; }
+}
+      
     }
     }  
 </style>
