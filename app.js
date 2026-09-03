@@ -591,6 +591,8 @@ function renderDashboardWidgets() {
                     <td class="text-muted">${limitText}</td>
                 </tr>`;
         }
+      populateQueryDropdown();
+      window.runTransactionQuery();
     });
     
     if (!attentionHTML) {
@@ -733,3 +735,85 @@ document.addEventListener("DOMContentLoaded", () => {
   if (stockInDate) stockInDate.value = today;
   if (stockOutDate) stockOutDate.value = today;
 });
+
+// --- DYNAMIC TRANSACTION QUERY ENGINE ---
+
+// Populate ingredient selector dynamically
+function populateQueryDropdown() {
+  const dropdown = document.getElementById("queryIngredient");
+  if (!dropdown || !window.allIngredients) return;
+
+  let options = '<option value="ALL">All Ingredients</option>';
+  Object.values(window.allIngredients).forEach(item => {
+    options += `<option value="${item.name}">${item.name}</option>`;
+  });
+  dropdown.innerHTML = options;
+}
+
+// Render query results
+function renderTransactionTable(records) {
+  const table = document.getElementById("fullTransactionTableBody");
+  const countBadge = document.getElementById("queryRecordCount");
+  if (!table) return;
+
+  if (countBadge) countBadge.textContent = `${records.length} records`;
+
+  if (records.length === 0) {
+    table.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No matching transactions found.</td></tr>`;
+    return;
+  }
+
+  table.innerHTML = records.map(tx => {
+    const isStockIn = tx.type === "IN";
+    const badge = isStockIn 
+      ? '<span class="badge bg-success">Stock In</span>' 
+      : '<span class="badge bg-danger">Stock Out</span>';
+    const qtyDisplay = isStockIn
+      ? `<span class="text-success fw-bold">+${tx.addedQty || tx.qty} ${tx.unit}</span>`
+      : `<span class="text-danger fw-bold">-${tx.deductedQty || tx.qty} ${tx.unit}</span>`;
+    const detail = tx.supplier || tx.reason || "-";
+
+    return `
+      <tr>
+        <td>${tx.date || "-"}</td>
+        <td>${badge}</td>
+        <td class="fw-bold">${tx.ingredientName || tx.name}</td>
+        <td>${qtyDisplay}</td>
+        <td>${detail}</td>
+      </tr>`;
+  }).join("");
+}
+
+// Filter execution
+window.runTransactionQuery = function() {
+  const startDate = document.getElementById("queryStartDate")?.value;
+  const endDate = document.getElementById("queryEndDate")?.value;
+  const selectedType = document.getElementById("queryType")?.value;
+  const selectedItem = document.getElementById("queryIngredient")?.value;
+
+  const allRecords = [...(window.globalStockIn || []), ...(window.globalStockOut || [])];
+
+  // Sort descending by date
+  allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const filtered = allRecords.filter(tx => {
+    const txDate = tx.date;
+    const matchStart = !startDate || txDate >= startDate;
+    const matchEnd = !endDate || txDate <= endDate;
+    const matchType = (selectedType === "ALL") || tx.type === selectedType;
+    const matchItem = (selectedItem === "ALL") || (tx.ingredientName || tx.name) === selectedItem;
+
+    return matchStart && matchEnd && matchType && matchItem;
+  });
+
+  renderTransactionTable(filtered);
+};
+
+// Reset filters to default state
+window.resetTransactionQuery = function() {
+  if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
+  if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
+  if (document.getElementById("queryType")) document.getElementById("queryType").value = "ALL";
+  if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
+  window.runTransactionQuery();
+};
