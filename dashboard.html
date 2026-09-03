@@ -188,13 +188,31 @@
     flex-grow: 1; /* Expands to push footer to the floor on short tabs */
   }
   
-  .natural-footer {
-    margin-top: auto; /* Pins to viewport bottom on empty/short screens */
-    padding-top: 1.5rem;
-    border-top: 1px solid #EBE6DC;
-    font-size: 0.75rem;
-    color: #8C847A;
-  }
+  /* Main workspace behaves as a vertical flex column */
+    .main-content {
+      flex-grow: 1;
+      padding: 2.25rem 2.5rem 1.5rem 2.5rem;
+      min-width: 0;
+      background-color: #F8F7F3;
+      overflow-y: auto;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 100vh;
+    }
+
+    /* Tab content container expands to absorb leftover empty space */
+    #dashboardTabContent {
+      flex-grow: 1;
+    }
+
+    /* Subtle one-line footer auto-pushed to the floor */
+    .sv-footer {
+      margin-top: auto; /* Pushes to bottom on short views */
+      padding-top: 2rem;
+      padding-bottom: 0.5rem;
+      font-size: 0.78rem;
+      color: #8C847A;
+    }
 
     @keyframes fadeOut {
       from { opacity: 1; }
@@ -291,8 +309,10 @@
         margin-bottom: 12px !important;
       }
 
-      .natural-footer { display: none !important; }
-}
+      .sv-footer {
+        display: none !important;
+      }
+    }
       
     }
     }  
