@@ -148,6 +148,17 @@ onAuthStateChanged(auth, (user) => {
         const userData = snapshot.val();
         const role = userData.role || "kitchen_staff";
 
+        get(ref(db, `users/${user.uid}`)).then((snapshot) => {
+        if (snapshot.exists()) {
+        const userData = snapshot.val();
+        const role = userData.role || "kitchen_staff";
+
+        // Expose role globally
+        window.currentUserRole = role;
+
+        const greeting = document.getElementById("userGreeting");
+        if (greeting) greeting.innerText = `Welcome, ${userData.fullName}!`;
+
         const greeting = document.getElementById("userGreeting");
         if (greeting) greeting.innerText = `Welcome, ${userData.fullName}!`;
         
