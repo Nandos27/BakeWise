@@ -183,57 +183,96 @@
       to { opacity: 0; }
     }
 
-    /* 8. Print Styling & A4 Page Setup */
+    /* 8. Print Styling - Tight 1-Page Layout */
     @media print {
       @page {
         size: A4 portrait;
-        margin: 1.5cm;
+        margin: 1cm; /* Tight margins to prevent spilling to page 2 */
       }
 
-      /* Hide entire sidebar, interface buttons, and search filters */
+      /* Hide interactive navigation, buttons, and filters */
       .sidebar,
       .d-print-none,
       button,
       input,
       select,
-      #pendingStockCard {
+      #pendingStockCard,
+      .footer-bakewise {
         display: none !important;
       }
 
-      /* Flatten layout to full page width */
-      body, .app-wrapper, .main-content, .tab-content, .card {
+      /* Force background colors and borders to render in print */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      body, .app-wrapper, .main-content, .tab-content {
         background: #ffffff !important;
-        color: #000000 !important;
-        box-shadow: none !important;
-        border: none !important;
+        color: #2C241B !important;
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
       }
 
-      /* Prevent page breaks in the middle of tables or metric cards */
-      .card, .table, tr {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+      /* Keep metric boxes in a clean 4-column horizontal row */
+      .row.text-center.mb-4.g-3 {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 10px !important;
+        margin-bottom: 1rem !important;
+      }
+      .row.text-center.mb-4.g-3 > div {
+        flex: 1 1 25% !important;
+        max-width: 25% !important;
+        padding: 0 !important;
+      }
+      .metric-box {
+        padding: 8px !important;
+        border: 1px solid #EBE6DC !important;
+      }
+      .metric-box h3 {
+        font-size: 1.4rem !important;
       }
 
-      table {
-        width: 100% !important;
-        border-collapse: collapse !important;
+      /* Keep Category Chart and Attention box side-by-side */
+      .row.g-4.mb-4 {
+        display: flex !important;
+        flex-direction: row !important;
+        margin-bottom: 1rem !important;
+      }
+      .row.g-4.mb-4 > .col-md-5 {
+        width: 45% !important;
+        flex: 0 0 45% !important;
+      }
+      .row.g-4.mb-4 > .col-md-7 {
+        width: 55% !important;
+        flex: 0 0 55% !important;
       }
 
-      th, td {
-        border-bottom: 1px solid #dee2e6 !important;
-        padding: 6px 8px !important;
-        font-size: 11pt !important;
+      /* Shrink canvas chart so it doesn't push down content */
+      canvas#categoryChart {
+        max-height: 180px !important;
+        max-width: 180px !important;
+        margin: 0 auto;
       }
 
-      canvas {
-        max-width: 100% !important;
-        height: auto !important;
+      /* Compact table typography */
+      .table {
+        font-size: 8.5pt !important;
+        margin-bottom: 0.5rem !important;
       }
-    }
-  
+      .table th, .table td {
+        padding: 4px 6px !important;
+      }
+
+      .card {
+        border: 1px solid #EBE6DC !important;
+        box-shadow: none !important;
+        margin-bottom: 12px !important;
+      }
+    }  
 </style>
 </head>
 <body>
