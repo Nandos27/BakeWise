@@ -854,7 +854,7 @@ document.getElementById("queryResetBtn")?.addEventListener("click", window.reset
 
 
 // -------------------------------------------------------------
-// MODULE 13: DIRECT EMAIL PURCHASE ORDERS
+// MODULE 13: DIRECT EMAIL PURCHASE ORDERS WITH PDF ATTACHMENT
 // -------------------------------------------------------------
 
 // Populate Email Order Supplier Dropdown
@@ -885,14 +885,15 @@ if (poSupplierSelect) {
   });
 }
 
-// Handle Order Email Submission
+// Handle Order Email Submission with PDF Attachment
 const emailOrderForm = document.getElementById("emailOrderForm");
 if (emailOrderForm) {
-  emailOrderForm.addEventListener("submit", (e) => {
+  emailOrderForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const supplierName = document.getElementById("poSupplierSelect").value;
     const supplierEmail = document.getElementById("poSupplierEmail").value;
+    const poNum = document.getElementById("poNumber").value;
     const orderDetails = document.getElementById("poMessage").value;
     const sendBtn = document.getElementById("sendEmailBtn");
 
@@ -902,27 +903,45 @@ if (emailOrderForm) {
     }
 
     sendBtn.disabled = true;
-    sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sending...`;
+    sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Generating PDF & Sending...`;
 
-    const templateParams = {
-      supplier_name: supplierName,
-      to_email: supplierEmail,
-      order_details: orderDetails,
-      sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
-    };
+    // Populate Hidden PDF Template
+    document.getElementById("pdfPoNumber").innerText = poNum;
+    document.getElementById("pdfDate").innerText = "Date: " + new Date().toLocaleDateString();
+    document.getElementById("pdfSupplierName").innerText = supplierName;
+    document.getElementById("pdfSupplierEmail").innerText = supplierEmail;
+    document.getElementById("pdfOrderDetails").innerText = orderDetails;
 
-    emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams)
-      .then(() => {
-        alert(`Purchase Order successfully emailed to ${supplierName} (${supplierEmail})!`);
-        emailOrderForm.reset();
-        bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
-      })
-      .catch((error) => {
-        alert("Failed to send email: " + (error.text || JSON.stringify(error)));
-      })
-      .finally(() => {
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Order Email`;
-      });
+    const invoiceElement = document.getElementById("invoiceContainer");
+    invoiceElement.style.display = "block";
+
+    try {
+      // Generate PDF Base64 string
+      const pdfBase64 = await html2pdf().from(invoiceElement).outputPdf('datauristring');
+      invoiceElement.style.display = "none";
+
+      const templateParams = {
+        supplier_name: supplierName,
+        to_email: supplierEmail,
+        po_number: poNum,
+        order_details: orderDetails,
+        sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team",
+        content: pdfBase64 // PDF Attachment Base64 data
+      };
+
+      // Send via EmailJS
+      await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams);
+      
+      alert(`Purchase Order Invoice PDF successfully emailed to ${supplierName} (${supplierEmail})!`);
+      emailOrderForm.reset();
+      bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
+
+    } catch (error) {
+      alert("Failed to process or send email: " + (error.text || JSON.stringify(error)));
+      invoiceElement.style.display = "none";
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Generate Invoice & Email PDF`;
+    }
   });
 }
