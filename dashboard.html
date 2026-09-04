@@ -932,13 +932,13 @@
     </div>
   </div>
 </div>
-
-  <!-- PURCHASE ORDER EMAIL & INVOICE MODAL -->
+  
+<!-- PURCHASE ORDER EMAIL & INVOICE MODAL -->
 <div class="modal fade" id="emailOrderModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title card-title fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i> Send Purchase Order & PDF Invoice</h5>
+        <h5 class="modal-title card-title fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i> Send Purchase Order & Generate PDF</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -961,9 +961,15 @@
             <label class="form-label">Order Details / Items Needed</label>
             <textarea id="poMessage" class="form-control" rows="4" placeholder="e.g. Please supply:&#10;- Wheat Flour: 50 kg&#10;- Unsalted Butter: 20 kg" required></textarea>
           </div>
-          <button type="submit" id="sendEmailBtn" class="btn btn-maroon w-100 fw-bold mt-2">
-            <i class="bi bi-send me-1"></i> Generate Invoice & Email PDF
-          </button>
+          
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" id="downloadPdfBtn" class="btn btn-outline-secondary w-50 fw-bold">
+              <i class="bi bi-download me-1"></i> Download PDF
+            </button>
+            <button type="submit" id="sendEmailBtn" class="btn btn-maroon w-50 fw-bold">
+              <i class="bi bi-send me-1"></i> Send Email Order
+            </button>
+          </div>
         </form>
       </div>
     </div>
