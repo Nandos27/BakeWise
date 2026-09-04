@@ -6,9 +6,17 @@
   <title>BakeWise - Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- Elegant Fonts for artisanal bakery look -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- EmailJS SDK -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script type="text/javascript">
+     (function(){
+        // Replace with your actual Public Key from EmailJS settings
+        emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
+     })();
+  </script>
   
   <style>
     /* 1. Base Theme & Page Shell */
@@ -353,6 +361,11 @@
         </button>
       </li>
       <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="modal" data-bs-target="#emailOrderModal">
+        <i class="bi bi-envelope-at"></i> Email Order
+       </button>
+      </li>
+      <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockin">
           <i class="bi bi-box-arrow-in-down"></i> Stock In
         </button>
@@ -554,6 +567,7 @@
                     <tr>
                       <th>Supplier</th>
                       <th>Contact</th>
+                      <th>Email</th>
                       <th>Phone</th>
                       <th>Action</th>
                     </tr>
@@ -565,6 +579,8 @@
           </div>
         </div>
       </div>
+
+      
 
       <!-- MODULE 5: STOCK IN -->
       <div class="tab-pane fade" id="mod-stockin">
@@ -913,6 +929,37 @@
             <input type="text" id="editUnit" class="form-control" required>
           </div>
           <button type="submit" class="btn btn-maroon w-100 fw-bold">Update Ingredient</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- PURCHASE ORDER EMAIL MODAL -->
+<div class="modal fade" id="emailOrderModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title card-title fw-bold"><i class="bi bi-envelope me-1"></i> Send Direct Purchase Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="emailOrderForm">
+          <div class="mb-2">
+            <label class="form-label">Select Supplier</label>
+            <select id="poSupplierSelect" class="form-select" required></select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Supplier Email</label>
+            <input type="email" id="poSupplierEmail" class="form-control" readonly required placeholder="Select a supplier above">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Order Details / Items Needed</label>
+            <textarea id="poMessage" class="form-control" rows="5" placeholder="e.g. Please send:&#10;- Wheat Flour: 50 kg&#10;- Unsalted Butter: 20 kg" required></textarea>
+          </div>
+          <button type="submit" id="sendEmailBtn" class="btn btn-maroon w-100 fw-bold">
+            <i class="bi bi-send me-1"></i> Send Order Email
+          </button>
         </form>
       </div>
     </div>
