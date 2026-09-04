@@ -968,9 +968,8 @@ if (emailOrderForm) {
       sent_by: (typeof auth !== "undefined" && auth.currentUser) ? auth.currentUser.email : "BakeWise Team"
     };
 
-    emailjs.send("service_6funyvl", "template_kxksovu", templateParams, {
-      publicKey: "-4JJ6fidQdrZhI3cx"
-    })
+    // Public key removed here (handled by emailjs.init inside HTML)
+    emailjs.send("service_6funyvl", "template_kxksovu", templateParams)
       .then(() => {
         alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
         emailOrderForm.reset();
