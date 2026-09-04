@@ -851,3 +851,78 @@ window.resetTransactionQuery = function() {
 // Wire up the Filter & Reset button events
 document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
 document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
+
+
+// -------------------------------------------------------------
+// MODULE 13: DIRECT EMAIL PURCHASE ORDERS
+// -------------------------------------------------------------
+
+// Populate Email Order Supplier Dropdown
+onValue(ref(db, 'suppliers/'), (snapshot) => {
+  const poSelect = document.getElementById("poSupplierSelect");
+  if (!poSelect) return;
+
+  const currentSelection = poSelect.value;
+  poSelect.innerHTML = `<option value="">Select Supplier</option>`;
+  
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+    Object.keys(data).forEach((key) => {
+      const sup = data[key];
+      poSelect.innerHTML += `<option value="${sup.name}" data-email="${sup.email || ''}">${sup.name}</option>`;
+    });
+  }
+  if (currentSelection) poSelect.value = currentSelection;
+});
+
+// Auto-fill supplier email when selected
+const poSupplierSelect = document.getElementById("poSupplierSelect");
+if (poSupplierSelect) {
+  poSupplierSelect.addEventListener("change", (e) => {
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    const email = selectedOption.getAttribute("data-email");
+    document.getElementById("poSupplierEmail").value = email || "";
+  });
+}
+
+// Handle Order Email Submission
+const emailOrderForm = document.getElementById("emailOrderForm");
+if (emailOrderForm) {
+  emailOrderForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const supplierName = document.getElementById("poSupplierSelect").value;
+    const supplierEmail = document.getElementById("poSupplierEmail").value;
+    const orderDetails = document.getElementById("poMessage").value;
+    const sendBtn = document.getElementById("sendEmailBtn");
+
+    if (!supplierEmail) {
+      alert("Error: Selected supplier has no email address saved!");
+      return;
+    }
+
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sending...`;
+
+    const templateParams = {
+      supplier_name: supplierName,
+      to_email: supplierEmail,
+      order_details: orderDetails,
+      sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
+    };
+
+    emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams)
+      .then(() => {
+        alert(`Purchase Order successfully emailed to ${supplierName} (${supplierEmail})!`);
+        emailOrderForm.reset();
+        bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
+      })
+      .catch((error) => {
+        alert("Failed to send email: " + (error.text || JSON.stringify(error)));
+      })
+      .finally(() => {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Order Email`;
+      });
+  });
+}
