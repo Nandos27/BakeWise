@@ -369,6 +369,9 @@ if (addCategoryForm) {
 // -------------------------------------------------------------
 // MODULE 4: SUPPLIERS
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// MODULE 4: SUPPLIERS
+// -------------------------------------------------------------
 const addSupplierForm = document.getElementById("addSupplierForm");
 if (addSupplierForm) {
   addSupplierForm.addEventListener("submit", (e) => {
@@ -376,7 +379,8 @@ if (addSupplierForm) {
     push(ref(db, 'suppliers/'), {
       name: document.getElementById("supName").value,
       contact: document.getElementById("supContact").value,
-      phone: document.getElementById("supPhone").value
+      phone: document.getElementById("supPhone").value,
+      email: document.getElementById("supEmail").value
     }).then(() => {
       alert("Supplier Saved!");
       addSupplierForm.reset();
@@ -396,8 +400,8 @@ if (addSupplierForm) {
       Object.keys(data).forEach((key) => {
         count++;
         const item = data[key];
-        if (supTable) supTable.innerHTML += `<tr><td class="fw-bold">${item.name}</td><td>${item.contact}</td><td>${item.phone}</td><td><button class="btn btn-sm btn-outline-danger" onclick="deleteSupplier('${key}')">Delete</button></td></tr>`;
-        if (stockInSupSelect) stockInSupSelect.innerHTML += `<option value="${item.name}">${item.name}</option>`;
+        if (supTable) supTable.innerHTML += `<tr><td class="fw-bold">${item.name}</td><td>${item.contact}</td><td>${item.email || 'N/A'}</td><td>${item.phone}</td><td><button class="btn btn-sm btn-outline-danger" onclick="deleteSupplier('${key}')">Delete</button></td></tr>`;
+        if (stockInSupSelect) stockInSupSelect.innerHTML += `<option value="${item.name}" data-email="${item.email || ''}">${item.name}</option>`;
       });
     }
     if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = count;
