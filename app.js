@@ -951,18 +951,18 @@ if (emailOrderForm) {
       sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
     };
 
-    emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams)
-      .then(() => {
-        alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
-        emailOrderForm.reset();
-        bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
-      })
-      .catch((error) => {
-        alert("Failed to send email: " + (error.text || JSON.stringify(error)));
-      })
-      .finally(() => {
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
-      });
+    emailjs.send("service_6funyvl", "template_kxksovu", templateParams)
+  .then(() => {
+    alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
+    emailOrderForm.reset();
+    bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
+  })
+  .catch((error) => {
+    alert("Failed to send email: " + (error.text || JSON.stringify(error)));
+  })
+  .finally(() => {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
+  });
   });
 }
