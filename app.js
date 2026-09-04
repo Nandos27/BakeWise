@@ -951,8 +951,8 @@ if (emailOrderForm) {
       sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
     };
 
-    emailjs.send("service_6funyvl", "template_kxksovu", templateParams)
-  .then(() => {
+    emailjs.send("service_6funyvl", "template_kxksovu", templateParams, "L3S087jlvSQ6EG11r")
+    .then(() => {
     alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
     emailOrderForm.reset();
     bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
