@@ -881,7 +881,8 @@ if (poSupplierSelect) {
   poSupplierSelect.addEventListener("change", (e) => {
     const selectedOption = e.target.options[e.target.selectedIndex];
     const email = selectedOption.getAttribute("data-email");
-    document.getElementById("poSupplierEmail").value = email || "";
+    const emailInput = document.getElementById("poSupplierEmail");
+    if (emailInput) emailInput.value = email || "";
   });
 }
 
@@ -889,10 +890,10 @@ if (poSupplierSelect) {
 const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 if (downloadPdfBtn) {
   downloadPdfBtn.addEventListener("click", () => {
-    const supplierName = document.getElementById("poSupplierSelect").value;
-    const supplierEmail = document.getElementById("poSupplierEmail").value;
-    const poNum = document.getElementById("poNumber").value || "PO-1001";
-    const orderDetails = document.getElementById("poMessage").value;
+    const supplierName = document.getElementById("poSupplierSelect")?.value;
+    const supplierEmail = document.getElementById("poSupplierEmail")?.value;
+    const poNum = document.getElementById("poNumber")?.value || "PO-1001";
+    const orderDetails = document.getElementById("poMessage")?.value;
 
     if (!supplierName || !orderDetails) {
       alert("Please select a supplier and enter order details first.");
@@ -900,13 +901,24 @@ if (downloadPdfBtn) {
     }
 
     // Populate Hidden PDF Template
-    document.getElementById("pdfPoNumber").innerText = poNum;
-    document.getElementById("pdfDate").innerText = "Date: " + new Date().toLocaleDateString();
-    document.getElementById("pdfSupplierName").innerText = supplierName;
-    document.getElementById("pdfSupplierEmail").innerText = supplierEmail;
-    document.getElementById("pdfOrderDetails").innerText = orderDetails;
+    const pdfPoNumber = document.getElementById("pdfPoNumber");
+    const pdfDate = document.getElementById("pdfDate");
+    const pdfSupplierName = document.getElementById("pdfSupplierName");
+    const pdfSupplierEmail = document.getElementById("pdfSupplierEmail");
+    const pdfOrderDetails = document.getElementById("pdfOrderDetails");
+
+    if (pdfPoNumber) pdfPoNumber.innerText = poNum;
+    if (pdfDate) pdfDate.innerText = "Date: " + new Date().toLocaleDateString();
+    if (pdfSupplierName) pdfSupplierName.innerText = supplierName;
+    if (pdfSupplierEmail) pdfSupplierEmail.innerText = supplierEmail;
+    if (pdfOrderDetails) pdfOrderDetails.innerText = orderDetails;
 
     const invoiceElement = document.getElementById("invoiceContainer");
+    if (!invoiceElement) {
+      alert("Invoice container element not found.");
+      return;
+    }
+
     invoiceElement.style.display = "block";
 
     const opt = {
@@ -919,6 +931,9 @@ if (downloadPdfBtn) {
 
     html2pdf().set(opt).from(invoiceElement).save().then(() => {
       invoiceElement.style.display = "none";
+    }).catch((err) => {
+      console.error("PDF generation error:", err);
+      invoiceElement.style.display = "none";
     });
   });
 }
@@ -929,10 +944,10 @@ if (emailOrderForm) {
   emailOrderForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    const supplierName = document.getElementById("poSupplierSelect").value;
-    const supplierEmail = document.getElementById("poSupplierEmail").value;
-    const poNum = document.getElementById("poNumber").value;
-    const orderDetails = document.getElementById("poMessage").value;
+    const supplierName = document.getElementById("poSupplierSelect")?.value;
+    const supplierEmail = document.getElementById("poSupplierEmail")?.value;
+    const poNum = document.getElementById("poNumber")?.value || "PO-1001";
+    const orderDetails = document.getElementById("poMessage")?.value;
     const sendBtn = document.getElementById("sendEmailBtn");
 
     if (!supplierEmail) {
@@ -940,28 +955,41 @@ if (emailOrderForm) {
       return;
     }
 
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sending...`;
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sending...`;
+    }
 
     const templateParams = {
       supplier_name: supplierName,
       to_email: supplierEmail,
       po_number: poNum,
       order_details: orderDetails,
-      sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
+      sent_by: (typeof auth !== "undefined" && auth.currentUser) ? auth.currentUser.email : "BakeWise Team"
     };
-    
-emailjs.send("service_6funyvl", "template_kxksovu", templateParams, "-4JJ6fidQdrZhI3cx")
-  .then(() => {
-    alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
-    emailOrderForm.reset();
-    bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
-  })
-  .catch((error) => {
-    alert("Failed to send email: " + (error.text || JSON.stringify(error)));
-  })
-  .finally(() => {
-    sendBtn.disabled = false;
-    sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
+
+    emailjs.send("service_6funyvl", "template_kxksovu", templateParams, {
+      publicKey: "-4JJ6fidQdrZhI3cx"
+    })
+      .then(() => {
+        alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
+        emailOrderForm.reset();
+
+        const modalEl = document.getElementById('emailOrderModal');
+        if (modalEl && typeof bootstrap !== "undefined") {
+          const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+          modalInstance.hide();
+        }
+      })
+      .catch((error) => {
+        console.error("EmailJS Error:", error);
+        alert("Failed to send email: " + (error.text || JSON.stringify(error)));
+      })
+      .finally(() => {
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
+        }
+      });
   });
-  });
+}
