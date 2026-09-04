@@ -854,7 +854,7 @@ document.getElementById("queryResetBtn")?.addEventListener("click", window.reset
 
 
 // -------------------------------------------------------------
-// MODULE 13: DIRECT EMAIL PURCHASE ORDERS WITH PDF ATTACHMENT
+// MODULE 13: DIRECT EMAIL PURCHASE ORDERS & PDF DOWNLOAD
 // -------------------------------------------------------------
 
 // Populate Email Order Supplier Dropdown
@@ -885,10 +885,48 @@ if (poSupplierSelect) {
   });
 }
 
-// Handle Order Email Submission with PDF Attachment
+// 1. Download PDF Locally
+const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+if (downloadPdfBtn) {
+  downloadPdfBtn.addEventListener("click", () => {
+    const supplierName = document.getElementById("poSupplierSelect").value;
+    const supplierEmail = document.getElementById("poSupplierEmail").value;
+    const poNum = document.getElementById("poNumber").value || "PO-1001";
+    const orderDetails = document.getElementById("poMessage").value;
+
+    if (!supplierName || !orderDetails) {
+      alert("Please select a supplier and enter order details first.");
+      return;
+    }
+
+    // Populate Hidden PDF Template
+    document.getElementById("pdfPoNumber").innerText = poNum;
+    document.getElementById("pdfDate").innerText = "Date: " + new Date().toLocaleDateString();
+    document.getElementById("pdfSupplierName").innerText = supplierName;
+    document.getElementById("pdfSupplierEmail").innerText = supplierEmail;
+    document.getElementById("pdfOrderDetails").innerText = orderDetails;
+
+    const invoiceElement = document.getElementById("invoiceContainer");
+    invoiceElement.style.display = "block";
+
+    const opt = {
+      margin:       0.5,
+      filename:     `Invoice_${poNum}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(invoiceElement).save().then(() => {
+      invoiceElement.style.display = "none";
+    });
+  });
+}
+
+// 2. Handle Free Email Submission via EmailJS
 const emailOrderForm = document.getElementById("emailOrderForm");
 if (emailOrderForm) {
-  emailOrderForm.addEventListener("submit", async (e) => {
+  emailOrderForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const supplierName = document.getElementById("poSupplierSelect").value;
@@ -903,45 +941,28 @@ if (emailOrderForm) {
     }
 
     sendBtn.disabled = true;
-    sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Generating PDF & Sending...`;
+    sendBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sending...`;
 
-    // Populate Hidden PDF Template
-    document.getElementById("pdfPoNumber").innerText = poNum;
-    document.getElementById("pdfDate").innerText = "Date: " + new Date().toLocaleDateString();
-    document.getElementById("pdfSupplierName").innerText = supplierName;
-    document.getElementById("pdfSupplierEmail").innerText = supplierEmail;
-    document.getElementById("pdfOrderDetails").innerText = orderDetails;
+    const templateParams = {
+      supplier_name: supplierName,
+      to_email: supplierEmail,
+      po_number: poNum,
+      order_details: orderDetails,
+      sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
+    };
 
-    const invoiceElement = document.getElementById("invoiceContainer");
-    invoiceElement.style.display = "block";
-
-    try {
-      // Generate PDF Base64 string
-      const pdfBase64 = await html2pdf().from(invoiceElement).outputPdf('datauristring');
-      invoiceElement.style.display = "none";
-
-      const templateParams = {
-        supplier_name: supplierName,
-        to_email: supplierEmail,
-        po_number: poNum,
-        order_details: orderDetails,
-        sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team",
-        content: pdfBase64 // PDF Attachment Base64 data
-      };
-
-      // Send via EmailJS
-      await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams);
-      
-      alert(`Purchase Order Invoice PDF successfully emailed to ${supplierName} (${supplierEmail})!`);
-      emailOrderForm.reset();
-      bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
-
-    } catch (error) {
-      alert("Failed to process or send email: " + (error.text || JSON.stringify(error)));
-      invoiceElement.style.display = "none";
-    } finally {
-      sendBtn.disabled = false;
-      sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Generate Invoice & Email PDF`;
-    }
+    emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams)
+      .then(() => {
+        alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
+        emailOrderForm.reset();
+        bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
+      })
+      .catch((error) => {
+        alert("Failed to send email: " + (error.text || JSON.stringify(error)));
+      })
+      .finally(() => {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
+      });
   });
 }
