@@ -16,15 +16,16 @@
       align-items: center;
       justify-content: center;
       font-family: 'Inter', sans-serif;
-      background: url('kitchen-bg-1.jpg') no-repeat center center fixed;
+      background: url('kitchen-bg.jpg') no-repeat center center fixed;
       background-size: cover;
     }
 
+    /* Warmer dark overlay matching the login page */
     body::before {
       content: "";
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(15, 10, 5, 0.5);
       backdrop-filter: blur(8px);
       z-index: -1;
     }
@@ -37,17 +38,19 @@
       min-height: 600px;
       border-radius: 15px;
       overflow: hidden;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
       background-color: transparent;
       animation: fadeIn 0.4s ease-out forwards;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    /* 3. Left Side: Glassmorphism Form Area */
+    /* 3. Left Side: Enhanced Frosted Glassmorphism Area */
     .login-left {
       width: 50%;
-      background: rgba(30, 40, 30, 0.7);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      background: rgba(45, 30, 20, 0.65);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
       padding: 50px 40px;
       display: flex;
       flex-direction: column;
@@ -57,7 +60,7 @@
     /* 4. Right Side: Clear Image */
     .login-right {
       width: 50%;
-      background: url('kitchen-bg.jpg') no-repeat center center;
+      background: url('kitchen-bg-2.jpeg') no-repeat center center;
       background-size: cover;
     }
 
@@ -85,16 +88,21 @@
       font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: 0.5px;
+      transition: color 0.3s;
     }
 
     .nav-links .active {
-      color: #4caf50;
+      color: #D35400;
     }
 
     .nav-links .inactive {
       color: #b0b0b0;
-      border-bottom: 1px solid #666;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
       padding-bottom: 3px;
+    }
+
+    .nav-links .inactive:hover {
+      color: #ffffff;
     }
 
     /* 6. Greeting Text */
@@ -121,14 +129,14 @@
 
     .custom-input-group input {
       width: 100%;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: #ffffff;
       padding: 14px 20px;
       border-radius: 5px;
       font-size: 0.9rem;
       outline: none;
-      transition: background 0.3s, border 0.3s;
+      transition: background 0.3s, border 0.3s, box-shadow 0.3s;
     }
 
     .custom-input-group input::placeholder {
@@ -136,8 +144,9 @@
     }
 
     .custom-input-group input:focus {
-      background: rgba(255, 255, 255, 0.25);
-      border: 1px solid #4caf50;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid #D35400;
+      box-shadow: 0 0 8px rgba(211, 84, 0, 0.4);
     }
 
     .custom-input-group .form-text {
@@ -148,7 +157,7 @@
 
     /* 8. Submit Button */
     .btn-login {
-      background-color: #2e7d32;
+      background-color: #D35400;
       color: white;
       border: none;
       padding: 14px 40px;
@@ -157,27 +166,18 @@
       border-radius: 4px;
       cursor: pointer;
       width: fit-content;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, transform 0.1s;
       letter-spacing: 1px;
       margin-top: 8px;
+      box-shadow: 0 4px 15px rgba(211, 84, 0, 0.3);
     }
 
     .btn-login:hover {
-      background-color: #1b5e20;
+      background-color: #E67E22;
     }
 
-    /* 10. Bottom Logo */
-    .bottom-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: 'Oswald', sans-serif; /* Matches the Welcome heading */
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-top: auto; 
-      padding-top: 40px; 
-      letter-spacing: 0.5px;
+    .btn-login:active {
+      transform: scale(0.98);
     }
 
     /* Mobile Responsiveness */
@@ -193,8 +193,8 @@
         height: 200px;
         order: -1;
       }
-      .bottom-logo {
-        display: none;
+      .login-left {
+        border-right: none;
       }
     }
 
@@ -251,9 +251,6 @@
 
         <button type="submit" class="btn-login">CREATE ACCOUNT</button>
       </form>
-
-      <!-- Branding Logo & Text -->
-      <div class="bottom-logo"><i class="bi bi-egg-fried"></i> BakeWise</div>
 
     </div>
 
