@@ -16,49 +16,57 @@
       align-items: center;
       justify-content: center;
       font-family: 'Inter', sans-serif;
-      background: url('kitchen-bg-1.jpg') no-repeat center center fixed;
+      background: url('kitchen-bg.jpg') no-repeat center center fixed;
       background-size: cover;
     }
 
+    /* Slightly warmer dark overlay to complement the brown */
     body::before {
       content: "";
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(8px);
+      background: rgba(15, 10, 5, 0.5); 
+      backdrop-filter: blur(0px); 
       z-index: -1;
     }
 
-    /* 2. Main Card Container (FIXED: removed fixed height) */
+    /* 2. Main Card Container */
     .login-container {
       display: flex;
       width: 100%;
       max-width: 1000px;
-      min-height: 600px; /* Allows it to grow if needed */
+      min-height: 600px; 
       border-radius: 15px;
       overflow: hidden;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7); 
       background-color: transparent;
       animation: fadeIn 0.4s ease-out forwards;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    /* 3. Left Side: Glassmorphism Form Area */
+    /* 3. Left Side: Enhanced Frosted Glassmorphism Area */
     .login-left {
       width: 50%;
-      background: rgba(30, 40, 30, 0.7);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      background: rgba(45, 30, 20, 0.65); 
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08); 
       padding: 50px 40px;
       display: flex;
       flex-direction: column;
       color: #ffffff;
     }
 
-    /* 4. Right Side: Clear Image */
+    /* 4. Right Side: Image Container */
     .login-right {
       width: 50%;
-      background: url('kitchen-bg.jpg') no-repeat center center;
+      background-color: rgba(211, 84, 0, 0.1); 
+      background: url('kitchen-bg-2.jpeg') no-repeat center center;
       background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
     }
 
     /* 5. Top Navigation Links */
@@ -85,16 +93,22 @@
       font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: 0.5px;
+      transition: color 0.3s;
     }
 
+    /* Updated to Orange */
     .nav-links .active {
-      color: #4caf50;
+      color: #D35400; 
     }
 
     .nav-links .inactive {
       color: #b0b0b0;
-      border-bottom: 1px solid #666;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
       padding-bottom: 3px;
+    }
+
+    .nav-links .inactive:hover {
+      color: #ffffff;
     }
 
     /* 6. Greeting Text */
@@ -121,23 +135,25 @@
 
     .custom-input-group input {
       width: 100%;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: #ffffff;
       padding: 16px 20px;
       border-radius: 5px;
       font-size: 0.9rem;
       outline: none;
-      transition: background 0.3s, border 0.3s;
+      transition: background 0.3s, border 0.3s, box-shadow 0.3s;
     }
 
     .custom-input-group input::placeholder {
       color: #c4c4c4;
     }
 
+    /* Glow effect matching the orange theme */
     .custom-input-group input:focus {
-      background: rgba(255, 255, 255, 0.25);
-      border: 1px solid #4caf50;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid #D35400;
+      box-shadow: 0 0 8px rgba(211, 84, 0, 0.4);
     }
 
     /* 8. Options Row */
@@ -172,7 +188,7 @@
 
     /* 9. Submit Button */
     .btn-login {
-      background-color: #2e7d32;
+      background-color: #D35400;
       color: white;
       border: none;
       padding: 14px 40px;
@@ -181,26 +197,52 @@
       border-radius: 4px;
       cursor: pointer;
       width: fit-content;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, transform 0.1s;
       letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(211, 84, 0, 0.3);
     }
 
     .btn-login:hover {
-      background-color: #1b5e20;
+      background-color: #E67E22;
     }
 
-    /* 10. Bottom Logo */
+    .btn-login:active {
+      transform: scale(0.98);
+    }
+
+    /* 10. Bottom Logo (Reverted text back to white for visibility) */
     .bottom-logo {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-family: 'Oswald', sans-serif; /* Matches the Welcome heading */
+      font-family: 'Oswald', sans-serif;
       font-size: 1.5rem;
       font-weight: 700;
       color: #ffffff;
       margin-top: auto; 
       padding-top: 40px; 
       letter-spacing: 0.5px;
+      cursor: pointer;
+      width: fit-content;
+    }
+
+    .bakery-pie-icon {
+      width: 32px;
+      height: 32px;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .bakery-pie-icon .pie-slice {
+      transition: transform 0.3s ease;
+      transform-origin: center;
+    }
+
+    .bottom-logo:hover .bakery-pie-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+    
+    .bottom-logo:hover .pie-slice {
+      transform: translate(3px, -3px); 
     }
 
     /* Mobile Responsiveness */
@@ -218,6 +260,9 @@
       }
       .bottom-logo {
         display: none;
+      }
+      .login-left {
+        border-right: none;
       }
     }
 
@@ -274,8 +319,20 @@
         <button type="submit" class="btn-login">LOGIN</button>
       </form>
 
-      <!-- Branding Logo & Text -->
-      <div class="bottom-logo"><i class="bi bi-egg-fried"></i> BakeWise</div>
+      <!-- Branding Logo (Bottom Corner) -->
+      <div class="bottom-logo">
+        <svg class="bakery-pie-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="11" fill="#4a3123" />
+          <circle cx="12" cy="12" r="9" fill="#D35400" />
+          <line x1="12" y1="12" x2="5" y2="19" stroke="#4a3123" stroke-width="1.5" />
+          <line x1="12" y1="12" x2="3" y2="12" stroke="#4a3123" stroke-width="1.5" />
+          <g class="pie-slice">
+            <path d="M12 12 L21 12 A9 9 0 0 0 12 3 Z" fill="#E67E22" />
+            <path d="M12 12 L22 12 A10 10 0 0 0 12 2 Z" fill="none" stroke="#2D1E14" stroke-width="2"/>
+          </g>
+        </svg>
+        BakeWise
+      </div>
 
     </div>
 
