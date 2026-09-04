@@ -950,9 +950,9 @@ if (emailOrderForm) {
       order_details: orderDetails,
       sent_by: auth.currentUser ? auth.currentUser.email : "BakeWise Team"
     };
-
-    emailjs.send("service_6funyvl", "template_kxksovu", templateParams, "L3S087jlvSQ6EG11r")
-    .then(() => {
+    
+emailjs.send("service_6funyvl", "template_kxksovu", templateParams, "-4JJ6fidQdrZhI3cx")
+  .then(() => {
     alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
     emailOrderForm.reset();
     bootstrap.Modal.getInstance(document.getElementById('emailOrderModal')).hide();
@@ -963,6 +963,5 @@ if (emailOrderForm) {
   .finally(() => {
     sendBtn.disabled = false;
     sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
-  });
   });
 }
