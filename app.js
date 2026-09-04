@@ -964,3 +964,4 @@ emailjs.send("service_6funyvl", "template_kxksovu", templateParams, "-4JJ6fidQdr
     sendBtn.disabled = false;
     sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
   });
+  })
