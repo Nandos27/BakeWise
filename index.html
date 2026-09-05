@@ -245,59 +245,39 @@
       transform: translate(3px, -3px); 
     }
 
-    /* Mobile Responsiveness */
+  /* Mobile Responsiveness */
     @media (max-width: 768px) {
+      body {
+        padding: 20px; /* Adds breathing room around the edges */
+      }
       .login-container {
         flex-direction: column;
         height: auto;
-      }
-      .login-left, .login-right {
-        width: 100%;
-      }
-      .login-right {
-        height: 200px;
-        order: -1; 
-      }
-      .bottom-logo {
-        display: none;
+        min-height: auto;
       }
       .login-left {
+        width: 100%;
+        padding: 40px 20px; /* Reduces side padding so inputs aren't squeezed */
         border-right: none;
+        border-radius: 15px; /* Keeps the glassmorphism edges rounded */
+      }
+      .login-right {
+        display: none; /* Completely hides the cropped background image on phones */
+      }
+      .top-nav {
+        margin-bottom: 30px;
+      }
+      .greeting h1 {
+        font-size: 2rem; /* Slightly scales down the welcome text */
+      }
+      .bottom-logo {
+        display: flex; /* Brings your BakeWise logo back for mobile branding */
+        width: 100%;
+        justify-content: center;
+        margin-top: 30px;
+        padding-top: 0;
       }
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Mobile by default (phones & small tablets) */
-.login-container {
-  display: flex;
-  flex-direction: column;
-  width: 90%;
-  max-width: 450px;
-  margin: 20px auto;
-}
-
-/* Hide the big side-image on mobile screens so the form fits nicely */
-.login-image, .image-section { /* use the actual class name from your code */
-  display: none;
-}
-
-/* Desktop & large screens */
-@media (min-width: 768px) {
-  .login-container {
-    flex-direction: row;
-    max-width: 900px;
-    width: 100%;
-  }
-
-  .login-image, .image-section {
-    display: block;
-    width: 50%;
-  }
-}
     
   </style>
 </head>
