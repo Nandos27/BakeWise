@@ -1,4 +1,7 @@
 // Firebase Imports
+function formatDecimal(num) {
+  if (num === null || num === undefined || isNaN(num)) return "0";
+  return parseFloat(Number(num).toFixed(3)).toString();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getAuth, 
@@ -216,6 +219,7 @@ function renderInventoryTable() {
   const tableBody = document.getElementById("inventoryTableBody");
   const stockInSelect = document.getElementById("stockInIngSelect");
   const stockOutSelect = document.getElementById("stockOutIngSelect");
+  
 
   if (tableBody) tableBody.innerHTML = "";
   if (stockInSelect) stockInSelect.innerHTML = `<option value="">Select Ingredient</option>`;
@@ -269,8 +273,8 @@ function renderInventoryTable() {
         <tr class="${isLowStock ? 'table-danger' : ''}">
           <td class="fw-bold">${item.name}</td>
           <td><span class="badge bg-secondary">${item.category}</span></td>
-          <td class="fw-bold">${item.quantity} ${item.unit}</td>
-          <td>${item.minThreshold} ${item.unit}</td>
+          <td class="fw-bold">${formatDecimal(item.quantity)} ${item.unit}</td>
+          <td>${formatDecimal(item.minThreshold)} ${item.unit}</td>
           <td>${item.expiryDate || 'N/A'}</td>
           <td>${statusBadges}</td>
           <td class="admin-only d-none">
@@ -668,7 +672,7 @@ function renderDashboardWidgets() {
         <tr>
           <td class="fw-bold">${item.name}</td>
           <td>${issueBadge}</td>
-          <td>${item.quantity} ${item.unit}</td>
+          <td>${formatDecimal(item.quantity)} ${item.unit}</td>
           <td class="text-muted">${limitText}</td>
         </tr>`;
     }
@@ -737,9 +741,9 @@ function renderDashboardWidgets() {
             <tr>
               <td class="fw-bold">${item.name}</td>
               <td>${item.category}</td>
-              <td>${usedLast30Days.toFixed(1)} ${item.unit}</td>
-              <td class="text-warning">${item.quantity} ${item.unit}</td>
-              <td class="text-success fw-bold">+${Math.ceil(toOrder)} ${item.unit}</td>
+              <td>${formatDecimal(usedLast30Days)} ${item.unit}</td>
+              <td class="text-warning">${formatDecimal(item.quantity)} ${item.unit}</td>
+              <td class="text-success fw-bold">+${formatDecimal(toOrder)} ${item.unit}</td>
             </tr>`;
         }
       }
@@ -803,8 +807,8 @@ function renderTransactionTable(records) {
       ? '<span class="badge bg-success">Stock In</span>' 
       : '<span class="badge bg-danger">Stock Out</span>';
     const qtyDisplay = isStockIn
-      ? `<span class="text-success fw-bold">+${tx.addedQty || 0} ${tx.unit}</span>`
-      : `<span class="text-danger fw-bold">-${tx.deductedQty || 0} ${tx.unit}</span>`;
+      ? `<span class="text-success fw-bold">+${formatDecimal(tx.addedQty)} ${tx.unit}</span>`
+      : `<span class="text-danger fw-bold">-${formatDecimal(tx.deductedQty)} ${tx.unit}</span>`;
     const detail = tx.supplier || tx.reason || "-";
 
     return `
