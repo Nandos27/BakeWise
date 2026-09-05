@@ -998,28 +998,23 @@ if (emailOrderForm) {
 // -------------------------------------------------------------
 
 let globalRecipes = {};
-let allIngredients = {}; // Stores ingredients from Firebase
-
-// 1. Listen to Ingredients Database Node to keep dropdown options fresh
-onValue(ref(db, 'ingredients/'), (snapshot) => {
-  allIngredients = snapshot.exists() ? snapshot.val() : {};
-  updateAllIngredientDropdowns();
-});
 
 // Helper function to build <option> elements from current inventory
 function getIngredientOptionsHtml(selectedKey = "") {
   let optionsHtml = `<option value="">Select Ingredient</option>`;
   
-  Object.keys(allIngredients).forEach((key) => {
-    const item = allIngredients[key];
-    const isSelected = key === selectedKey ? "selected" : "";
-    optionsHtml += `<option value="${key}" ${isSelected}>${item.name} (${item.unit || 'unit'})</option>`;
-  });
+  if (typeof allIngredients !== "undefined" && allIngredients) {
+    Object.keys(allIngredients).forEach((key) => {
+      const item = allIngredients[key];
+      const isSelected = key === selectedKey ? "selected" : "";
+      optionsHtml += `<option value="${key}" ${isSelected}>${item.name} (${item.unit || 'unit'})</option>`;
+    });
+  }
 
   return optionsHtml;
 }
 
-// Update options for all existing dynamic dropdown rows without resetting selected values
+// Update options for all existing dynamic dropdown rows
 function updateAllIngredientDropdowns() {
   const selects = document.querySelectorAll(".recipe-ing-select");
   selects.forEach((select) => {
@@ -1028,7 +1023,13 @@ function updateAllIngredientDropdowns() {
   });
 }
 
-// 2. Dynamic row generation for ingredient picker
+// Attach listener to update recipe dropdowns whenever ingredients update
+onValue(ref(db, 'ingredients/'), (snapshot) => {
+  // Syncs options automatically when inventory changes
+  updateAllIngredientDropdowns();
+});
+
+// Dynamic row generation for ingredient picker
 const recipeIngContainer = document.getElementById("recipeIngredientsContainer");
 const addIngRowBtn = document.getElementById("addIngredientRowBtn");
 
@@ -1062,14 +1063,14 @@ if (addIngRowBtn) {
   addIngRowBtn.addEventListener("click", createIngredientRow);
 }
 
-// Automatically create 1 initial empty row when opening the page
+// Create initial empty row if container is empty
 document.addEventListener("DOMContentLoaded", () => {
   if (recipeIngContainer && recipeIngContainer.children.length === 0) {
     createIngredientRow();
   }
 });
 
-// 3. Save New Recipe
+// Save New Recipe
 const createRecipeForm = document.getElementById("createRecipeForm");
 if (createRecipeForm) {
   createRecipeForm.addEventListener("submit", (e) => {
@@ -1118,12 +1119,12 @@ if (createRecipeForm) {
       alert(`Recipe "${recipeName}" saved successfully!`);
       createRecipeForm.reset();
       if (recipeIngContainer) recipeIngContainer.innerHTML = "";
-      createIngredientRow(); // Reset back to 1 fresh row
+      createIngredientRow();
     }).catch((err) => alert("Error saving recipe: " + err.message));
   });
 }
 
-// 4. Listen to Saved Recipes Node
+// Listen to Saved Recipes Node
 onValue(ref(db, 'recipes/'), (snapshot) => {
   globalRecipes = snapshot.exists() ? snapshot.val() : {};
   renderRecipesUI();
@@ -1139,12 +1140,10 @@ function renderRecipesUI() {
   Object.keys(globalRecipes).forEach((key) => {
     const recipe = globalRecipes[key];
 
-    // Populate Production Dropdown
     if (bakeSelect) {
       bakeSelect.innerHTML += `<option value="${key}">${recipe.name}</option>`;
     }
 
-    // Populate Masterbook Table
     if (recipeTable) {
       const ingredientsSummary = (recipe.ingredients || []).map(i => 
         `<span class="badge bg-light text-dark border me-1 mb-1">${i.ingredientName}: ${i.amountPerUnit} ${i.unit}</span>`
@@ -1168,7 +1167,7 @@ window.deleteRecipe = function(key) {
   }
 };
 
-// 5. Batch Baking Execution & Automatic Stock Deduction
+// Batch Baking Execution & Automatic Stock Deduction
 const bakeBatchForm = document.getElementById("bakeBatchForm");
 if (bakeBatchForm) {
   bakeBatchForm.addEventListener("submit", (e) => {
@@ -1184,7 +1183,6 @@ if (bakeBatchForm) {
     const recipe = globalRecipes[recipeKey];
     if (!recipe || !recipe.ingredients) return;
 
-    // Check stock availability
     let missingStock = [];
     recipe.ingredients.forEach(item => {
       const currentStock = allIngredients[item.ingredientKey]?.quantity || 0;
@@ -1199,7 +1197,6 @@ if (bakeBatchForm) {
       return;
     }
 
-    // Deduct stock and write stock_out logs
     const today = new Date().toISOString().split("T")[0];
     const updatePromises = recipe.ingredients.map(item => {
       const currentStock = allIngredients[item.ingredientKey].quantity;
