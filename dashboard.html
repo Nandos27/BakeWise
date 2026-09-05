@@ -186,16 +186,15 @@
     }
 
     .main-content {
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 100vh;
-  }
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 100vh;
+    }
   
-  .tab-content {
-    flex-grow: 1; /* Expands to push footer to the floor on short tabs */
-  }
+    .tab-content {
+      flex-grow: 1; 
+    }
   
-  /* Main workspace behaves as a vertical flex column */
     .main-content {
       flex-grow: 1;
       padding: 2.25rem 2.5rem 1.5rem 2.5rem;
@@ -207,14 +206,12 @@
       min-height: 100vh;
     }
 
-    /* Tab content container expands to absorb leftover empty space */
     #dashboardTabContent {
       flex-grow: 1;
     }
 
-    /* Subtle one-line footer auto-pushed to the floor */
     .sv-footer {
-      margin-top: auto; /* Pushes to bottom on short views */
+      margin-top: auto; 
       padding-top: 2rem;
       padding-bottom: 0.5rem;
       font-size: 0.78rem;
@@ -226,30 +223,19 @@
       to { opacity: 0; }
     }
 
-    /* 8. Print Styling - Tight 1-Page Layout */
+    /* 8. Print Styling */
     @media print {
       @page {
         size: A4 portrait;
-        margin: 1cm; /* Tight margins to prevent spilling to page 2 */
+        margin: 1cm;
       }
-
-      /* Hide interactive navigation, buttons, and filters */
-      .sidebar,
-      .d-print-none,
-      button,
-      input,
-      select,
-      #pendingStockCard,
-      .footer-bakewise {
+      .sidebar, .d-print-none, button, input, select, #pendingStockCard, .footer-bakewise {
         display: none !important;
       }
-
-      /* Force background colors and borders to render in print */
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-
       body, .app-wrapper, .main-content, .tab-content {
         background: #ffffff !important;
         color: #2C241B !important;
@@ -257,8 +243,6 @@
         margin: 0 !important;
         width: 100% !important;
       }
-
-      /* Keep metric boxes in a clean 4-column horizontal row */
       .row.text-center.mb-4.g-3 {
         display: flex !important;
         flex-direction: row !important;
@@ -278,8 +262,6 @@
       .metric-box h3 {
         font-size: 1.4rem !important;
       }
-
-      /* Keep Category Chart and Attention box side-by-side */
       .row.g-4.mb-4 {
         display: flex !important;
         flex-direction: row !important;
@@ -293,15 +275,11 @@
         width: 55% !important;
         flex: 0 0 55% !important;
       }
-
-      /* Shrink canvas chart so it doesn't push down content */
       canvas#categoryChart {
         max-height: 180px !important;
         max-width: 180px !important;
         margin: 0 auto;
       }
-
-      /* Compact table typography */
       .table {
         font-size: 8.5pt !important;
         margin-bottom: 0.5rem !important;
@@ -309,92 +287,103 @@
       .table th, .table td {
         padding: 4px 6px !important;
       }
-
       .card {
         border: 1px solid #EBE6DC !important;
         box-shadow: none !important;
         margin-bottom: 12px !important;
       }
-
       .sv-footer {
         display: none !important;
       }
     }
 
-    /* 9. Mobile Responsiveness */
+    /* 9. Mobile Responsiveness - App-Like View */
     @media (max-width: 768px) {
-      /* Lock the body width to prevent iPhone horizontal wobble */
       body, html {
         overflow-x: hidden;
         width: 100vw;
       }
-
-      /* Stack the sidebar and main content vertically */
+      
       .app-wrapper {
         flex-direction: column;
         overflow-x: hidden;
+        /* Padding added to bottom so content isn't hidden behind the fixed bottom nav */
+        padding-bottom: 90px; 
       }
-
-      /* Adjust sidebar to fit the top of the screen */
+      
       .sidebar {
         width: 100%;
         height: auto;
         position: relative;
-        padding: 1rem;
+        padding: 1rem 1rem 0 1rem;
         border-right: none;
-        border-bottom: 1px solid #EBE6DC;
-        z-index: 10;
+        background: transparent;
+      }
+      
+      /* Hide role badge and desktop footer cleanly on mobile */
+      #userRoleBadge, .sidebar-footer, hr {
+        display: none !important;
       }
 
-      /* Convert the vertical menu into a horizontal swipeable row */
+      /* BOTTOM APP NAVIGATION BAR */
       #moduleTabs {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #2C241B; /* Dark background to mimic app bar */
+        display: flex;
         flex-direction: row !important;
         flex-wrap: nowrap;
         overflow-x: auto;
-        padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-        scrollbar-width: none; /* Hides scrollbar on Firefox */
+        padding: 12px 10px;
+        z-index: 1050;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
       }
       
-      /* Hides scrollbar on Safari/Chrome */
       #moduleTabs::-webkit-scrollbar {
         display: none;
       }
-
-      /* Prevent buttons from squishing */
+      
       .sidebar .nav-item {
         flex: 0 0 auto;
-        margin-right: 8px;
-      }
-
-      .sidebar .nav-link {
-        white-space: nowrap;
-        margin-bottom: 0;
-      }
-
-      /* Hide the bottom logout block on the sidebar to save space */
-      .sidebar > div:last-child {
-        display: none; 
+        margin: 0 4px;
       }
       
-      /* Add a smaller logout link to the top header instead */
-      .sidebar-brand::after {
-        content: "Logout";
-        float: right;
-        font-size: 0.9rem;
-        color: #dc3545;
-        font-family: 'Inter', sans-serif;
-        cursor: pointer;
-        font-weight: bold;
+      /* Stacked Icon + Text for Bottom Nav */
+      .sidebar .nav-link {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+        padding: 10px;
+        color: #8C847A !important;
+        font-size: 0.65rem;
+        width: 76px;
+        text-align: center;
+        border-radius: 14px;
       }
-
-      /* Reduce heavy desktop padding so forms fit nicely */
+      
+      .sidebar .nav-link i {
+        font-size: 1.4rem;
+        margin: 0 !important;
+      }
+      
+      .sidebar .nav-link.active {
+        background-color: #A05A35 !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 10px rgba(160, 90, 53, 0.4);
+      }
+      
       .main-content {
         padding: 1rem !important;
         width: 100%;
       }
       
-      /* Fix the layout columns */
       .col-md-5, .col-md-7, .col-md-3, .col-md-4, .col-md-12 {
         width: 100% !important;
       }
@@ -405,77 +394,82 @@
 
 <div class="app-wrapper">
 
-  <!-- VERTICAL NAVIGATION SIDEBAR -->
+  <!-- VERTICAL NAVIGATION SIDEBAR (Turns to Header/Bottom Bar on Mobile) -->
   <aside class="sidebar">
-    <div class="px-2 mb-3">
+    <div class="d-flex justify-content-between align-items-center px-2 mb-3">
       <a class="sidebar-brand d-flex align-items-center gap-2" href="#">
         <i class="bi bi-pie-chart-fill"></i> BakeWise
       </a>
-      <span class="badge mt-2 text-capitalize px-3 py-1" style="background-color: #EBE6DC; color: #3E362E;" id="userRoleBadge">
-        Role: Loading...
-      </span>
+      
+      <!-- MOBILE LOGOUT BUTTON (Only visible on small screens) -->
+      <button class="btn btn-link text-danger p-0 fs-4 d-md-none" id="mobileLogoutBtn">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
     </div>
+    
+    <span class="badge mt-2 text-capitalize px-3 py-1" style="background-color: #EBE6DC; color: #3E362E;" id="userRoleBadge">
+      Role: Loading...
+    </span>
 
     <hr class="mt-1 mb-3" style="border-color: #EBE6DC;">
 
-    <!-- Navigation Buttons connected to tab IDs -->
+    <!-- Navigation Buttons connected to tab IDs (Turns to Bottom Nav on Mobile) -->
     <ul class="nav nav-pills flex-column mb-auto" id="moduleTabs" role="tablist">
       <li class="nav-item">
         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#mod-ing">
-          <i class="bi bi-box-seam"></i> Ingredients & Stock
+          <i class="bi bi-box-seam"></i> <span>Stock</span>
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-recipes">
-          <i class="bi bi-journal-bookmark-fill"></i> Recipes & Production
+          <i class="bi bi-journal-bookmark-fill"></i> <span>Recipes</span>
         </button>
       </li>
       <li class="nav-item admin-only d-none">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-cat">
-          <i class="bi bi-tags"></i> Categories
+          <i class="bi bi-tags"></i> <span>Categories</span>
         </button>
       </li>
       <li class="nav-item admin-only d-none">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-sup">
-          <i class="bi bi-truck"></i> Suppliers
+          <i class="bi bi-truck"></i> <span>Suppliers</span>
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="modal" data-bs-target="#emailOrderModal">
-        <i class="bi bi-envelope-at"></i> Email Order
-       </button>
+          <i class="bi bi-envelope-at"></i> <span>Order</span>
+        </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockin">
-          <i class="bi bi-box-arrow-in-down"></i> Stock In
+          <i class="bi bi-box-arrow-in-down"></i> <span>Stock In</span>
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-stockout">
-          <i class="bi bi-box-arrow-up"></i> Stock Out
+          <i class="bi bi-box-arrow-up"></i> <span>Stock Out</span>
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-forecast">
-          <i class="bi bi-graph-up-arrow"></i> Forecast
+          <i class="bi bi-graph-up-arrow"></i> <span>Forecast</span>
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-report">
-          <i class="bi bi-file-earmark-text"></i> Reports
+          <i class="bi bi-file-earmark-text"></i> <span>Reports</span>
         </button>
       </li>
       <li class="nav-item super-admin-only d-none">
         <button class="nav-link text-danger" data-bs-toggle="tab" data-bs-target="#mod-users">
-          <i class="bi bi-people"></i> Manage Roles
+          <i class="bi bi-people"></i> <span>Roles</span>
         </button>
       </li>
     </ul>
 
-    <hr style="border-color: #EBE6DC;">
-
-    <!-- User Information & Exit Session -->
-    <div class="px-2">
+    <!-- User Information & Exit Session (Hidden on Mobile) -->
+    <div class="sidebar-footer mt-auto px-2">
+      <hr style="border-color: #EBE6DC;">
       <div class="small fw-semibold mb-2 text-truncate" id="userGreeting" style="color: #3E362E;">Welcome!</div>
       <button class="btn btn-sm btn-outline-danger w-100 fw-bold" id="logoutBtn">
         <i class="bi bi-box-arrow-left me-1"></i> Logout
@@ -486,7 +480,7 @@
   <!-- MAIN WORKSPACE -->
   <main class="main-content">
     
-    <!-- PENDING STOCK APPROVALS (Pinned at top of workspace for Admin/Supervisor) -->
+    <!-- PENDING STOCK APPROVALS -->
     <div class="card p-3 mb-4 shadow-sm" id="pendingStockCard" style="display: none; border-left: 4px solid #ffc107 !important; background: rgba(255, 193, 7, 0.08) !important;">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h5 class="fw-bold text-warning mb-0" style="font-family: 'Playfair Display', serif;">
@@ -513,10 +507,10 @@
 
     <!-- TAB WORKSPACE CONTENT -->
     <div class="tab-content" id="dashboardTabContent"> 
+      
       <!-- MODULE: RECIPES & BAKE PRODUCTION -->
       <div class="tab-pane fade" id="mod-recipes">
         <div class="row g-4">
-    
           <!-- LEFT COLUMN: Create Recipe Form -->
           <div class="col-md-5">
             <div class="card p-3 border-0 shadow-sm">
@@ -526,69 +520,64 @@
                   <label class="form-label">Recipe Name</label>
                   <input type="text" id="recipeName" class="form-control" placeholder="e.g. Chocolate Cake" required>
                 </div>
-          
-          <label class="form-label fw-bold">Required Ingredients per 1 Batch / Item</label>
-          <div id="recipeIngredientsContainer" class="mb-3">
-            <!-- Dynamic ingredient rows will be appended here -->
+                <label class="form-label fw-bold">Required Ingredients per 1 Batch / Item</label>
+                <div id="recipeIngredientsContainer" class="mb-3">
+                  <!-- Dynamic ingredient rows will be appended here -->
+                </div>
+                <button type="button" id="addIngredientRowBtn" class="btn btn-outline-secondary btn-sm mb-3 w-100">
+                  <i class="bi bi-plus-circle me-1"></i> Add Ingredient Field
+                </button>
+                <button type="submit" class="btn btn-maroon w-100 fw-bold">Save Recipe</button>
+              </form>
+            </div>
           </div>
 
-          <button type="button" id="addIngredientRowBtn" class="btn btn-outline-secondary btn-sm mb-3 w-100">
-            <i class="bi bi-plus-circle me-1"></i> Add Ingredient Field
-          </button>
+          <!-- RIGHT COLUMN: Saved Recipes & Production Baking Section -->
+          <div class="col-md-7">
+            <div class="card p-3 border-0 shadow-sm mb-4">
+              <h5 class="card-title mb-3"><i class="bi bi-egg-fried me-1"></i> Record Production Batch</h5>
+              <form id="bakeBatchForm" class="row g-2 align-items-end">
+                <div class="col-md-6">
+                  <label class="form-label">Select Recipe</label>
+                  <select id="bakeRecipeSelect" class="form-select" required>
+                    <option value="">Select Recipe...</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Quantity Baked</label>
+                  <input type="number" step="1" min="1" id="bakeBatchQty" class="form-control" placeholder="e.g. 3" required>
+                </div>
+                <div class="col-md-3">
+                  <button type="submit" class="btn btn-danger w-100 fw-bold">
+                    <i class="bi bi-dash-circle me-1"></i> Bake & Deduct
+                  </button>
+                </div>
+              </form>
+            </div>
 
-          <button type="submit" class="btn btn-maroon w-100 fw-bold">Save Recipe</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- RIGHT COLUMN: Saved Recipes & Production Baking Section -->
-    <div class="col-md-7">
-      <div class="card p-3 border-0 shadow-sm mb-4">
-        <h5 class="card-title mb-3"><i class="bi bi-egg-fried me-1"></i> Record Production Batch</h5>
-        <form id="bakeBatchForm" class="row g-2 align-items-end">
-          <div class="col-md-6">
-            <label class="form-label">Select Recipe</label>
-            <select id="bakeRecipeSelect" class="form-select" required>
-              <option value="">Select Recipe...</option>
-            </select>
+            <div class="card p-3 border-0 shadow-sm">
+              <h5 class="card-title mb-3">Saved Recipe Masterbook</h5>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Recipe Name</th>
+                      <th>Ingredients & Amounts per Unit</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recipeTableBody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label">Quantity Baked</label>
-            <input type="number" step="1" min="1" id="bakeBatchQty" class="form-control" placeholder="e.g. 3" required>
-          </div>
-          <div class="col-md-3">
-            <button type="submit" class="btn btn-danger w-100 fw-bold">
-              <i class="bi bi-dash-circle me-1"></i> Bake & Deduct
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div class="card p-3 border-0 shadow-sm">
-        <h5 class="card-title mb-3">Saved Recipe Masterbook</h5>
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>Recipe Name</th>
-                <th>Ingredients & Amounts per Unit</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="recipeTableBody"></tbody>
-          </table>
         </div>
       </div>
-    </div>
-
-  </div>
-</div>
-      
       
       <!-- MODULE 2, 7, 8, 9, 10: INGREDIENT & CURRENT STOCK -->
       <div class="tab-pane fade show active" id="mod-ing">
         <div class="row g-4">
-          <!-- Form to add ingredient (Supervisors/Admin only) -->
+          <!-- Form to add ingredient -->
           <div class="col-md-4 admin-only d-none">
             <div class="card p-3 border-0 shadow-sm">
               <h5 class="card-title mb-3">Add New Ingredient</h5>
@@ -627,8 +616,6 @@
             <div class="card p-3 border-0 shadow-sm">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="card-title m-0">Current Inventory List</h5>
-                
-                <!-- Search and Filter -->
                 <div class="d-flex gap-2">
                   <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search ingredient...">
                   <select id="filterCategorySelect" class="form-select form-select-sm">
@@ -636,7 +623,6 @@
                   </select>
                 </div>
               </div>
-
               <div class="table-responsive">
                 <table class="table table-hover align-middle">
                   <thead class="table-light">
@@ -730,8 +716,6 @@
           </div>
         </div>
       </div>
-
-      
 
       <!-- MODULE 5: STOCK IN -->
       <div class="tab-pane fade" id="mod-stockin">
@@ -963,7 +947,6 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -1005,7 +988,6 @@
               </div>
             </div>
           </div>
-          
         </div>
       </div>
 
@@ -1044,8 +1026,6 @@
     </footer>
 
   </main>
-  </main>
-
 </div>
 
 <!-- EDIT INGREDIENT MODAL -->
@@ -1168,9 +1148,23 @@
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
+    const mobileLogoutBtn = document.getElementById("mobileLogoutBtn");
+    
+    // Desktop Logout logic
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => {
         document.body.classList.add("zoom-out");
+      });
+    }
+    
+    // Connect Mobile Logout to Desktop Logout action
+    if (mobileLogoutBtn) {
+      mobileLogoutBtn.addEventListener("click", () => {
+        document.body.classList.add("zoom-out");
+        // Programmatically click the main button so your backend logic in app.js still fires
+        if (logoutBtn) {
+          logoutBtn.click();
+        }
       });
     }
   });
