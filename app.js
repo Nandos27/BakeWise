@@ -1025,7 +1025,6 @@ function updateAllIngredientDropdowns() {
 
 // Attach listener to update recipe dropdowns whenever ingredients update
 onValue(ref(db, 'ingredients/'), (snapshot) => {
-  // Syncs options automatically when inventory changes
   updateAllIngredientDropdowns();
 });
 
@@ -1062,13 +1061,6 @@ function createIngredientRow() {
 if (addIngRowBtn) {
   addIngRowBtn.addEventListener("click", createIngredientRow);
 }
-
-// Create initial empty row if container is empty
-document.addEventListener("DOMContentLoaded", () => {
-  if (recipeIngContainer && recipeIngContainer.children.length === 0) {
-    createIngredientRow();
-  }
-});
 
 // Save New Recipe
 const createRecipeForm = document.getElementById("createRecipeForm");
