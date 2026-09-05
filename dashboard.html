@@ -349,6 +349,11 @@
           <i class="bi bi-box-seam"></i> Ingredients & Stock
         </button>
       </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-recipes">
+          <i class="bi bi-journal-bookmark-fill"></i> Recipes & Production
+        </button>
+      </li>
       <li class="nav-item admin-only d-none">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mod-cat">
           <i class="bi bi-tags"></i> Categories
@@ -431,7 +436,78 @@
     </div>
 
     <!-- TAB WORKSPACE CONTENT -->
-    <div class="tab-content" id="dashboardTabContent">
+    <div class="tab-content" id="dashboardTabContent"> 
+      <!-- MODULE: RECIPES & BAKE PRODUCTION -->
+      <div class="tab-pane fade" id="mod-recipes">
+        <div class="row g-4">
+    
+          <!-- LEFT COLUMN: Create Recipe Form -->
+          <div class="col-md-5">
+            <div class="card p-3 border-0 shadow-sm">
+              <h5 class="card-title mb-3">Create New Recipe</h5>
+              <form id="createRecipeForm">
+                <div class="mb-3">
+                  <label class="form-label">Recipe Name</label>
+                  <input type="text" id="recipeName" class="form-control" placeholder="e.g. Chocolate Cake" required>
+                </div>
+          
+          <label class="form-label fw-bold">Required Ingredients per 1 Batch / Item</label>
+          <div id="recipeIngredientsContainer" class="mb-3">
+            <!-- Dynamic ingredient rows will be appended here -->
+          </div>
+
+          <button type="button" id="addIngredientRowBtn" class="btn btn-outline-secondary btn-sm mb-3 w-100">
+            <i class="bi bi-plus-circle me-1"></i> Add Ingredient Field
+          </button>
+
+          <button type="submit" class="btn btn-maroon w-100 fw-bold">Save Recipe</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Saved Recipes & Production Baking Section -->
+    <div class="col-md-7">
+      <div class="card p-3 border-0 shadow-sm mb-4">
+        <h5 class="card-title mb-3"><i class="bi bi-egg-fried me-1"></i> Record Production Batch</h5>
+        <form id="bakeBatchForm" class="row g-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label">Select Recipe</label>
+            <select id="bakeRecipeSelect" class="form-select" required>
+              <option value="">Select Recipe...</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantity Baked</label>
+            <input type="number" step="1" min="1" id="bakeBatchQty" class="form-control" placeholder="e.g. 3" required>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-danger w-100 fw-bold">
+              <i class="bi bi-dash-circle me-1"></i> Bake & Deduct
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card p-3 border-0 shadow-sm">
+        <h5 class="card-title mb-3">Saved Recipe Masterbook</h5>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Recipe Name</th>
+                <th>Ingredients & Amounts per Unit</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="recipeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+      
       
       <!-- MODULE 2, 7, 8, 9, 10: INGREDIENT & CURRENT STOCK -->
       <div class="tab-pane fade show active" id="mod-ing">
