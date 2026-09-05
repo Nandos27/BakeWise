@@ -992,41 +992,65 @@ if (emailOrderForm) {
       });
   });
 }
+
 // -------------------------------------------------------------
 // MODULE: RECIPES & PRODUCTION BATCH LOGIC
 // -------------------------------------------------------------
 
 let globalRecipes = {};
+let allIngredients = {}; // Stores ingredients from Firebase
 
-// 1. Dynamic row generation for ingredient picker
+// 1. Listen to Ingredients Database Node to keep dropdown options fresh
+onValue(ref(db, 'ingredients/'), (snapshot) => {
+  allIngredients = snapshot.exists() ? snapshot.val() : {};
+  updateAllIngredientDropdowns();
+});
+
+// Helper function to build <option> elements from current inventory
+function getIngredientOptionsHtml(selectedKey = "") {
+  let optionsHtml = `<option value="">Select Ingredient</option>`;
+  
+  Object.keys(allIngredients).forEach((key) => {
+    const item = allIngredients[key];
+    const isSelected = key === selectedKey ? "selected" : "";
+    optionsHtml += `<option value="${key}" ${isSelected}>${item.name} (${item.unit || 'unit'})</option>`;
+  });
+
+  return optionsHtml;
+}
+
+// Update options for all existing dynamic dropdown rows without resetting selected values
+function updateAllIngredientDropdowns() {
+  const selects = document.querySelectorAll(".recipe-ing-select");
+  selects.forEach((select) => {
+    const currentVal = select.value;
+    select.innerHTML = getIngredientOptionsHtml(currentVal);
+  });
+}
+
+// 2. Dynamic row generation for ingredient picker
 const recipeIngContainer = document.getElementById("recipeIngredientsContainer");
 const addIngRowBtn = document.getElementById("addIngredientRowBtn");
 
 function createIngredientRow() {
   if (!recipeIngContainer) return;
-  
-  const rowId = Date.now() + Math.random().toString(36).substring(2, 5);
+
+  const rowId = "row-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
   const rowDiv = document.createElement("div");
   rowDiv.className = "row g-2 mb-2 align-items-center recipe-ing-row";
-  rowDiv.id = `row-${rowId}`;
-
-  let options = `<option value="">Select Ingredient</option>`;
-  Object.keys(allIngredients).forEach((key) => {
-    const item = allIngredients[key];
-    options += `<option value="${key}">${item.name} (${item.unit})</option>`;
-  });
+  rowDiv.id = rowId;
 
   rowDiv.innerHTML = `
     <div class="col-7">
       <select class="form-select form-select-sm recipe-ing-select" required>
-        ${options}
+        ${getIngredientOptionsHtml()}
       </select>
     </div>
     <div class="col-4">
       <input type="number" step="0.01" min="0.01" class="form-control form-control-sm recipe-ing-qty" placeholder="Qty per unit" required>
     </div>
     <div class="col-1 text-end">
-      <button type="button" class="btn btn-sm btn-outline-danger border-0 p-0" onclick="document.getElementById('row-${rowId}').remove()">
+      <button type="button" class="btn btn-sm btn-outline-danger border-0 p-0" onclick="document.getElementById('${rowId}').remove()">
         <i class="bi bi-x-circle-fill"></i>
       </button>
     </div>
@@ -1038,7 +1062,14 @@ if (addIngRowBtn) {
   addIngRowBtn.addEventListener("click", createIngredientRow);
 }
 
-// 2. Save New Recipe
+// Automatically create 1 initial empty row when opening the page
+document.addEventListener("DOMContentLoaded", () => {
+  if (recipeIngContainer && recipeIngContainer.children.length === 0) {
+    createIngredientRow();
+  }
+});
+
+// 3. Save New Recipe
 const createRecipeForm = document.getElementById("createRecipeForm");
 if (createRecipeForm) {
   createRecipeForm.addEventListener("submit", (e) => {
@@ -1047,17 +1078,17 @@ if (createRecipeForm) {
     const rows = document.querySelectorAll(".recipe-ing-row");
 
     if (rows.length === 0) {
-      alert("Please add at least one ingredient to the recipe.");
+      alert("Please add at least one ingredient row.");
       return;
     }
 
     const ingredientsList = [];
     let isValid = true;
 
-    rows.forEach(row => {
+    rows.forEach((row) => {
       const select = row.querySelector(".recipe-ing-select");
       const qtyInput = row.querySelector(".recipe-ing-qty");
-      
+
       const ingKey = select.value;
       const amount = parseFloat(qtyInput.value);
 
@@ -1075,7 +1106,7 @@ if (createRecipeForm) {
     });
 
     if (!isValid) {
-      alert("Please complete all ingredient rows with valid quantities.");
+      alert("Please select a valid ingredient and amount for each row.");
       return;
     }
 
@@ -1087,12 +1118,12 @@ if (createRecipeForm) {
       alert(`Recipe "${recipeName}" saved successfully!`);
       createRecipeForm.reset();
       if (recipeIngContainer) recipeIngContainer.innerHTML = "";
-      createIngredientRow(); // Add one initial empty row
-    });
+      createIngredientRow(); // Reset back to 1 fresh row
+    }).catch((err) => alert("Error saving recipe: " + err.message));
   });
 }
 
-// 3. Listen to Recipes Database Node
+// 4. Listen to Saved Recipes Node
 onValue(ref(db, 'recipes/'), (snapshot) => {
   globalRecipes = snapshot.exists() ? snapshot.val() : {};
   renderRecipesUI();
@@ -1115,7 +1146,7 @@ function renderRecipesUI() {
 
     // Populate Masterbook Table
     if (recipeTable) {
-      let ingredientsSummary = recipe.ingredients.map(i => 
+      const ingredientsSummary = (recipe.ingredients || []).map(i => 
         `<span class="badge bg-light text-dark border me-1 mb-1">${i.ingredientName}: ${i.amountPerUnit} ${i.unit}</span>`
       ).join(" ");
 
@@ -1129,11 +1160,6 @@ function renderRecipesUI() {
         </tr>`;
     }
   });
-
-  // Ensure dynamic forms have current options if empty
-  if (recipeIngContainer && recipeIngContainer.children.length === 0) {
-    createIngredientRow();
-  }
 }
 
 window.deleteRecipe = function(key) {
@@ -1142,7 +1168,7 @@ window.deleteRecipe = function(key) {
   }
 };
 
-// 4. Batch Baking Execution & Automatic Stock Deduction
+// 5. Batch Baking Execution & Automatic Stock Deduction
 const bakeBatchForm = document.getElementById("bakeBatchForm");
 if (bakeBatchForm) {
   bakeBatchForm.addEventListener("submit", (e) => {
@@ -1158,7 +1184,7 @@ if (bakeBatchForm) {
     const recipe = globalRecipes[recipeKey];
     if (!recipe || !recipe.ingredients) return;
 
-    // A. Check stock availability for all items first
+    // Check stock availability
     let missingStock = [];
     recipe.ingredients.forEach(item => {
       const currentStock = allIngredients[item.ingredientKey]?.quantity || 0;
@@ -1173,17 +1199,15 @@ if (bakeBatchForm) {
       return;
     }
 
-    // B. Deduct stock and log stock-out records
+    // Deduct stock and write stock_out logs
     const today = new Date().toISOString().split("T")[0];
     const updatePromises = recipe.ingredients.map(item => {
       const currentStock = allIngredients[item.ingredientKey].quantity;
       const totalDeduction = item.amountPerUnit * batchQty;
       const newQty = currentStock - totalDeduction;
 
-      // Update ingredient inventory
       const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), { quantity: newQty });
 
-      // Create Stock Out record
       const recordStockOut = push(ref(db, 'stock_out/'), {
         ingredientName: item.ingredientName,
         deductedQty: totalDeduction,
@@ -1196,7 +1220,7 @@ if (bakeBatchForm) {
     });
 
     Promise.all(updatePromises).then(() => {
-      alert(`Successfully baked ${batchQty}x ${recipe.name}! Inventory deducted.`);
+      alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
       bakeBatchForm.reset();
     }).catch(err => alert("Error updating stock: " + err.message));
   });
