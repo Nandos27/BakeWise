@@ -992,3 +992,212 @@ if (emailOrderForm) {
       });
   });
 }
+// -------------------------------------------------------------
+// MODULE: RECIPES & PRODUCTION BATCH LOGIC
+// -------------------------------------------------------------
+
+let globalRecipes = {};
+
+// 1. Dynamic row generation for ingredient picker
+const recipeIngContainer = document.getElementById("recipeIngredientsContainer");
+const addIngRowBtn = document.getElementById("addIngredientRowBtn");
+
+function createIngredientRow() {
+  if (!recipeIngContainer) return;
+  
+  const rowId = Date.now() + Math.random().toString(36).substring(2, 5);
+  const rowDiv = document.createElement("div");
+  rowDiv.className = "row g-2 mb-2 align-items-center recipe-ing-row";
+  rowDiv.id = `row-${rowId}`;
+
+  let options = `<option value="">Select Ingredient</option>`;
+  Object.keys(allIngredients).forEach((key) => {
+    const item = allIngredients[key];
+    options += `<option value="${key}">${item.name} (${item.unit})</option>`;
+  });
+
+  rowDiv.innerHTML = `
+    <div class="col-7">
+      <select class="form-select form-select-sm recipe-ing-select" required>
+        ${options}
+      </select>
+    </div>
+    <div class="col-4">
+      <input type="number" step="0.01" min="0.01" class="form-control form-control-sm recipe-ing-qty" placeholder="Qty per unit" required>
+    </div>
+    <div class="col-1 text-end">
+      <button type="button" class="btn btn-sm btn-outline-danger border-0 p-0" onclick="document.getElementById('row-${rowId}').remove()">
+        <i class="bi bi-x-circle-fill"></i>
+      </button>
+    </div>
+  `;
+  recipeIngContainer.appendChild(rowDiv);
+}
+
+if (addIngRowBtn) {
+  addIngRowBtn.addEventListener("click", createIngredientRow);
+}
+
+// 2. Save New Recipe
+const createRecipeForm = document.getElementById("createRecipeForm");
+if (createRecipeForm) {
+  createRecipeForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const recipeName = document.getElementById("recipeName").value.trim();
+    const rows = document.querySelectorAll(".recipe-ing-row");
+
+    if (rows.length === 0) {
+      alert("Please add at least one ingredient to the recipe.");
+      return;
+    }
+
+    const ingredientsList = [];
+    let isValid = true;
+
+    rows.forEach(row => {
+      const select = row.querySelector(".recipe-ing-select");
+      const qtyInput = row.querySelector(".recipe-ing-qty");
+      
+      const ingKey = select.value;
+      const amount = parseFloat(qtyInput.value);
+
+      if (!ingKey || isNaN(amount) || amount <= 0) {
+        isValid = false;
+        return;
+      }
+
+      ingredientsList.push({
+        ingredientKey: ingKey,
+        ingredientName: allIngredients[ingKey]?.name || "Unknown",
+        unit: allIngredients[ingKey]?.unit || "",
+        amountPerUnit: amount
+      });
+    });
+
+    if (!isValid) {
+      alert("Please complete all ingredient rows with valid quantities.");
+      return;
+    }
+
+    push(ref(db, 'recipes/'), {
+      name: recipeName,
+      ingredients: ingredientsList,
+      createdAt: new Date().toISOString()
+    }).then(() => {
+      alert(`Recipe "${recipeName}" saved successfully!`);
+      createRecipeForm.reset();
+      if (recipeIngContainer) recipeIngContainer.innerHTML = "";
+      createIngredientRow(); // Add one initial empty row
+    });
+  });
+}
+
+// 3. Listen to Recipes Database Node
+onValue(ref(db, 'recipes/'), (snapshot) => {
+  globalRecipes = snapshot.exists() ? snapshot.val() : {};
+  renderRecipesUI();
+});
+
+function renderRecipesUI() {
+  const recipeTable = document.getElementById("recipeTableBody");
+  const bakeSelect = document.getElementById("bakeRecipeSelect");
+
+  if (recipeTable) recipeTable.innerHTML = "";
+  if (bakeSelect) bakeSelect.innerHTML = `<option value="">Select Recipe...</option>`;
+
+  Object.keys(globalRecipes).forEach((key) => {
+    const recipe = globalRecipes[key];
+
+    // Populate Production Dropdown
+    if (bakeSelect) {
+      bakeSelect.innerHTML += `<option value="${key}">${recipe.name}</option>`;
+    }
+
+    // Populate Masterbook Table
+    if (recipeTable) {
+      let ingredientsSummary = recipe.ingredients.map(i => 
+        `<span class="badge bg-light text-dark border me-1 mb-1">${i.ingredientName}: ${i.amountPerUnit} ${i.unit}</span>`
+      ).join(" ");
+
+      recipeTable.innerHTML += `
+        <tr>
+          <td class="fw-bold">${recipe.name}</td>
+          <td>${ingredientsSummary}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteRecipe('${key}')">Delete</button>
+          </td>
+        </tr>`;
+    }
+  });
+
+  // Ensure dynamic forms have current options if empty
+  if (recipeIngContainer && recipeIngContainer.children.length === 0) {
+    createIngredientRow();
+  }
+}
+
+window.deleteRecipe = function(key) {
+  if (confirm("Are you sure you want to delete this recipe?")) {
+    remove(ref(db, `recipes/${key}`));
+  }
+};
+
+// 4. Batch Baking Execution & Automatic Stock Deduction
+const bakeBatchForm = document.getElementById("bakeBatchForm");
+if (bakeBatchForm) {
+  bakeBatchForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const recipeKey = document.getElementById("bakeRecipeSelect").value;
+    const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
+
+    if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
+      alert("Please select a valid recipe and batch quantity.");
+      return;
+    }
+
+    const recipe = globalRecipes[recipeKey];
+    if (!recipe || !recipe.ingredients) return;
+
+    // A. Check stock availability for all items first
+    let missingStock = [];
+    recipe.ingredients.forEach(item => {
+      const currentStock = allIngredients[item.ingredientKey]?.quantity || 0;
+      const totalNeeded = item.amountPerUnit * batchQty;
+      if (currentStock < totalNeeded) {
+        missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+      }
+    });
+
+    if (missingStock.length > 0) {
+      alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
+      return;
+    }
+
+    // B. Deduct stock and log stock-out records
+    const today = new Date().toISOString().split("T")[0];
+    const updatePromises = recipe.ingredients.map(item => {
+      const currentStock = allIngredients[item.ingredientKey].quantity;
+      const totalDeduction = item.amountPerUnit * batchQty;
+      const newQty = currentStock - totalDeduction;
+
+      // Update ingredient inventory
+      const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), { quantity: newQty });
+
+      // Create Stock Out record
+      const recordStockOut = push(ref(db, 'stock_out/'), {
+        ingredientName: item.ingredientName,
+        deductedQty: totalDeduction,
+        unit: item.unit,
+        reason: `Production: ${batchQty}x ${recipe.name}`,
+        date: today
+      });
+
+      return Promise.all([updateStock, recordStockOut]);
+    });
+
+    Promise.all(updatePromises).then(() => {
+      alert(`Successfully baked ${batchQty}x ${recipe.name}! Inventory deducted.`);
+      bakeBatchForm.reset();
+    }).catch(err => alert("Error updating stock: " + err.message));
+  });
+}
