@@ -993,19 +993,21 @@ if (emailOrderForm) {
   });
 }
 
-// -------------------------------------------------------------
+// =============================================================
 // MODULE: RECIPES & PRODUCTION BATCH LOGIC
-// -------------------------------------------------------------
+// =============================================================
 
 let globalRecipes = {};
 
-// Helper function to build <option> elements from current inventory
+// Helper function to dynamically generate <option> markup from global inventory
 function getIngredientOptionsHtml(selectedKey = "") {
   let optionsHtml = `<option value="">Select Ingredient</option>`;
   
-  if (typeof allIngredients !== "undefined" && allIngredients) {
-    Object.keys(allIngredients).forEach((key) => {
-      const item = allIngredients[key];
+  const ingredientsData = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : null);
+
+  if (ingredientsData) {
+    Object.keys(ingredientsData).forEach((key) => {
+      const item = ingredientsData[key];
       const isSelected = key === selectedKey ? "selected" : "";
       optionsHtml += `<option value="${key}" ${isSelected}>${item.name} (${item.unit || 'unit'})</option>`;
     });
@@ -1014,7 +1016,7 @@ function getIngredientOptionsHtml(selectedKey = "") {
   return optionsHtml;
 }
 
-// Update options for all existing dynamic dropdown rows
+// Function to refresh options in all existing rows
 function updateAllIngredientDropdowns() {
   const selects = document.querySelectorAll(".recipe-ing-select");
   selects.forEach((select) => {
@@ -1023,12 +1025,12 @@ function updateAllIngredientDropdowns() {
   });
 }
 
-// Attach listener to update recipe dropdowns whenever ingredients update
+// Sync dropdown options whenever ingredients node updates
 onValue(ref(db, 'ingredients/'), (snapshot) => {
   updateAllIngredientDropdowns();
 });
 
-// Dynamic row generation for ingredient picker
+// Dynamic ingredient row creation
 const recipeIngContainer = document.getElementById("recipeIngredientsContainer");
 const addIngRowBtn = document.getElementById("addIngredientRowBtn");
 
@@ -1062,7 +1064,7 @@ if (addIngRowBtn) {
   addIngRowBtn.addEventListener("click", createIngredientRow);
 }
 
-// Save New Recipe
+// Save Recipe Handler
 const createRecipeForm = document.getElementById("createRecipeForm");
 if (createRecipeForm) {
   createRecipeForm.addEventListener("submit", (e) => {
@@ -1078,6 +1080,8 @@ if (createRecipeForm) {
     const ingredientsList = [];
     let isValid = true;
 
+    const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
+
     rows.forEach((row) => {
       const select = row.querySelector(".recipe-ing-select");
       const qtyInput = row.querySelector(".recipe-ing-qty");
@@ -1092,8 +1096,8 @@ if (createRecipeForm) {
 
       ingredientsList.push({
         ingredientKey: ingKey,
-        ingredientName: allIngredients[ingKey]?.name || "Unknown",
-        unit: allIngredients[ingKey]?.unit || "",
+        ingredientName: currentInventory[ingKey]?.name || "Unknown",
+        unit: currentInventory[ingKey]?.unit || "",
         amountPerUnit: amount
       });
     });
@@ -1116,7 +1120,7 @@ if (createRecipeForm) {
   });
 }
 
-// Listen to Saved Recipes Node
+// Fetch & Display Saved Recipes
 onValue(ref(db, 'recipes/'), (snapshot) => {
   globalRecipes = snapshot.exists() ? snapshot.val() : {};
   renderRecipesUI();
@@ -1159,7 +1163,7 @@ window.deleteRecipe = function(key) {
   }
 };
 
-// Batch Baking Execution & Automatic Stock Deduction
+// Batch Production & Automatic Stock Deduction
 const bakeBatchForm = document.getElementById("bakeBatchForm");
 if (bakeBatchForm) {
   bakeBatchForm.addEventListener("submit", (e) => {
@@ -1175,9 +1179,11 @@ if (bakeBatchForm) {
     const recipe = globalRecipes[recipeKey];
     if (!recipe || !recipe.ingredients) return;
 
+    const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
+
     let missingStock = [];
     recipe.ingredients.forEach(item => {
-      const currentStock = allIngredients[item.ingredientKey]?.quantity || 0;
+      const currentStock = currentInventory[item.ingredientKey]?.quantity || 0;
       const totalNeeded = item.amountPerUnit * batchQty;
       if (currentStock < totalNeeded) {
         missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
@@ -1191,7 +1197,7 @@ if (bakeBatchForm) {
 
     const today = new Date().toISOString().split("T")[0];
     const updatePromises = recipe.ingredients.map(item => {
-      const currentStock = allIngredients[item.ingredientKey].quantity;
+      const currentStock = currentInventory[item.ingredientKey].quantity;
       const totalDeduction = item.amountPerUnit * batchQty;
       const newQty = currentStock - totalDeduction;
 
