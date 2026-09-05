@@ -1,7 +1,4 @@
 // Firebase Imports
-function formatDecimal(num) {
-  if (num === null || num === undefined || isNaN(num)) return "0";
-  return parseFloat(Number(num).toFixed(3)).toString();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getAuth, 
@@ -14,8 +11,15 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, push, set, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+// Decimal Formatting Helper Function
+function formatDecimal(num) {
+  if (num === null || num === undefined || isNaN(num)) return "0";
+  return parseFloat(Number(num).toFixed(3)).toString();
+}
+
 // Firebase Config
 const firebaseConfig = {
+...
   apiKey: "AIzaSyDJaABTeg8QWibEzf9Q9tFFPd-1GvBbp1k",
   authDomain: "bakery-inventory-system.firebaseapp.com",
   databaseURL: "https://bakery-inventory-system-default-rtdb.asia-southeast1.firebasedatabase.app",
