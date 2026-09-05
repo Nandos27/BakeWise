@@ -19,7 +19,6 @@ function formatDecimal(num) {
 
 // Firebase Config
 const firebaseConfig = {
-
   apiKey: "AIzaSyDJaABTeg8QWibEzf9Q9tFFPd-1GvBbp1k",
   authDomain: "bakery-inventory-system.firebaseapp.com",
   databaseURL: "https://bakery-inventory-system-default-rtdb.asia-southeast1.firebasedatabase.app",
