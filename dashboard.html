@@ -323,6 +323,71 @@
       
     }
     }  
+
+    /* 9. Mobile Responsiveness */
+    @media (max-width: 768px) {
+      /* Stack the sidebar and main content vertically */
+      .app-wrapper {
+        flex-direction: column;
+      }
+
+      /* Adjust sidebar to fit the top of the screen */
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 1rem;
+        border-right: none;
+        border-bottom: 1px solid #EBE6DC;
+        z-index: 10;
+      }
+
+      /* Convert the vertical menu into a horizontal swipeable row */
+      #moduleTabs {
+        flex-direction: row !important;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+      }
+
+      /* Prevent buttons from squishing */
+      .sidebar .nav-item {
+        flex: 0 0 auto;
+        margin-right: 8px;
+      }
+
+      .sidebar .nav-link {
+        white-space: nowrap;
+        margin-bottom: 0;
+      }
+
+      /* Hide the bottom logout block on the sidebar to save space */
+      .sidebar > div:last-child {
+        display: none; 
+      }
+      
+      /* Add a smaller logout link to the top header instead */
+      .sidebar-brand::after {
+        content: "Logout";
+        float: right;
+        font-size: 0.9rem;
+        color: #dc3545;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      /* Reduce heavy desktop padding so forms fit nicely */
+      .main-content {
+        padding: 1rem !important;
+      }
+      
+      /* Fix the Create Recipe form columns */
+      .col-md-5, .col-md-7 {
+        width: 100%;
+      }
+    }
 </style>
 </head>
 <body>
