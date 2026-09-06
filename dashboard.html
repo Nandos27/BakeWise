@@ -297,7 +297,7 @@
       }
     }
 
-    /* 9. Mobile Responsiveness - Expanded to 950px to catch iPhone Landscape modes */
+    /* 9. Mobile Responsiveness */
     @media (max-width: 950px) {
       body, html {
         overflow-x: hidden;
@@ -307,7 +307,6 @@
       .app-wrapper {
         flex-direction: column;
         overflow-x: hidden;
-        /* Padding added to bottom so content isn't hidden behind the fixed bottom nav */
         padding-bottom: 90px; 
       }
       
@@ -335,7 +334,6 @@
         flex-direction: row !important;
         flex-wrap: nowrap;
         overflow-x: auto;
-        /* Safe Area Environs fill the 'notch' space perfectly in landscape */
         padding: 12px max(10px, env(safe-area-inset-right)) 12px max(10px, env(safe-area-inset-left));
         z-index: 1050;
         border-top-left-radius: 20px;
@@ -345,7 +343,6 @@
         scrollbar-width: none;
       }
       
-      /* Flexbox trick to auto-center items if they have extra space (Landscape) */
       #moduleTabs::before, #moduleTabs::after {
         content: "";
         margin: auto;
@@ -394,34 +391,32 @@
       }
     }
 
-    /* Landscape Specific Overrides */
     @media (max-width: 950px) and (orientation: landscape) {
       #moduleTabs {
-        border-radius: 0; /* Looks cleaner flat against the screen edges */
+        border-radius: 0; 
       }
       .scroll-indicator {
-        display: none !important; /* Not needed in landscape */
+        display: none !important; 
       }
     }
 
     /* Scroll Indicator Arrow Styling */
     .scroll-indicator {
       position: fixed;
-      bottom: 0;
-      right: 0;
-      height: 75px;
-      width: 60px;
-      background: linear-gradient(to right, rgba(44,36,27,0), rgba(44,36,27,1) 50%);
+      bottom: 10px;
+      right: 5px;
+      height: 60px;
+      width: 40px;
+      background: transparent; /* No fade */
       z-index: 1060;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      padding-right: 15px;
-      color: #D35400;
-      font-size: 1.5rem;
-      border-top-right-radius: 20px;
+      justify-content: center;
+      color: #D35400; /* Pure orange */
+      font-size: 1.8rem;
       cursor: pointer;
-      transition: opacity 0.3s ease;
+      /* Tiny text-shadow to ensure visibility if hovering over text */
+      text-shadow: -2px 0px 5px rgba(44,36,27, 0.9); 
     }
   </style>
 </head>
@@ -1211,24 +1206,31 @@
 
     // Scroll Indicator Logic
     if (scrollIndicator && moduleTabs) {
-      // Scroll the menu when the arrow is clicked
-      scrollIndicator.addEventListener('click', () => {
-        moduleTabs.scrollBy({ left: 180, behavior: 'smooth' });
-      });
+      let isAtEnd = false;
+      const icon = scrollIndicator.querySelector('i');
 
-      // Hide the arrow when user scrolls to the right end
-      moduleTabs.addEventListener('scroll', () => {
-        // A buffer of 10px accounts for rounding decimal errors
-        if (moduleTabs.scrollWidth - moduleTabs.clientWidth <= moduleTabs.scrollLeft + 10) {
-          scrollIndicator.style.opacity = '0';
-          scrollIndicator.style.pointerEvents = 'none';
+      scrollIndicator.addEventListener('click', () => {
+        if (isAtEnd) {
+          moduleTabs.scrollTo({ left: 0, behavior: 'smooth' }); // Scroll back to start
         } else {
-          scrollIndicator.style.opacity = '1';
-          scrollIndicator.style.pointerEvents = 'auto';
+          moduleTabs.scrollBy({ left: 180, behavior: 'smooth' }); // Scroll forward
         }
       });
 
-      // Trigger the check once on page load just in case it already fits on the screen
+      moduleTabs.addEventListener('scroll', () => {
+        // Buffer of 10px accounts for decimal rounding errors in scroll dimensions
+        if (moduleTabs.scrollWidth - moduleTabs.clientWidth <= moduleTabs.scrollLeft + 10) {
+          isAtEnd = true;
+          icon.classList.remove('bi-chevron-right');
+          icon.classList.add('bi-chevron-left');
+        } else {
+          isAtEnd = false;
+          icon.classList.remove('bi-chevron-left');
+          icon.classList.add('bi-chevron-right');
+        }
+      });
+
+      // Trigger the check once on page load
       setTimeout(() => {
         moduleTabs.dispatchEvent(new Event('scroll'));
       }, 100);
