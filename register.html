@@ -180,21 +180,30 @@
       transform: scale(0.98);
     }
 
-    /* Mobile Responsiveness */
+    /* 9. Mobile Responsiveness */
     @media (max-width: 768px) {
+      body {
+        padding: 20px; /* Gives the form breathing room on the phone screen */
+      }
       .login-container {
         flex-direction: column;
         height: auto;
-      }
-      .login-left, .login-right {
-        width: 100%;
-      }
-      .login-right {
-        height: 200px;
-        order: -1;
+        min-height: auto;
       }
       .login-left {
+        width: 100%;
+        padding: 40px 20px;
         border-right: none;
+        border-radius: 15px; /* Ensures the glass box stays rounded */
+      }
+      .login-right {
+        display: none; /* Hides the side image completely on phones */
+      }
+      .top-nav {
+        margin-bottom: 30px;
+      }
+      .greeting h1 {
+        font-size: 2rem;
       }
     }
 
@@ -223,7 +232,7 @@
       <!-- Greeting -->
       <div class="greeting">
         <h1>CREATE ACCOUNT</h1>
-        <p>JOIN BAKEWISE TO GET STARTED.</p>
+        <p>JOIN BAKEWISE TO GET STARTED NOW.</p>
       </div>
 
       <!-- Alert Box -->
