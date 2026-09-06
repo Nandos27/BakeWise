@@ -7,7 +7,9 @@ import {
   sendEmailVerification, 
   sendPasswordResetEmail, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  setPersistence,
+  browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, push, set, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -47,6 +49,7 @@ function showAlert(element, message, type) {
 // -------------------------------------------------------------
 
 // Login form
+// Updated login block:
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
@@ -55,7 +58,10 @@ if (loginForm) {
     const password = document.getElementById("password").value;
     const alertBox = document.getElementById("errorAlert");
 
-    signInWithEmailAndPassword(auth, email, password)
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        return signInWithEmailAndPassword(auth, email, password);
+      })
       .then((userCredential) => {
         if (!userCredential.user.emailVerified) {
           signOut(auth); 
