@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BakeWise - Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -229,7 +229,7 @@
         size: A4 portrait;
         margin: 1cm;
       }
-      .sidebar, .d-print-none, button, input, select, #pendingStockCard, .footer-bakewise {
+      .sidebar, .d-print-none, button, input, select, #pendingStockCard, .footer-bakewise, .scroll-indicator {
         display: none !important;
       }
       * {
@@ -297,8 +297,8 @@
       }
     }
 
-    /* 9. Mobile Responsiveness - App-Like View */
-    @media (max-width: 768px) {
+    /* 9. Mobile Responsiveness - Expanded to 950px to catch iPhone Landscape modes */
+    @media (max-width: 950px) {
       body, html {
         overflow-x: hidden;
         width: 100vw;
@@ -320,7 +320,6 @@
         background: transparent;
       }
       
-      /* Hide role badge and desktop footer cleanly on mobile */
       #userRoleBadge, .sidebar-footer, hr {
         display: none !important;
       }
@@ -330,19 +329,26 @@
         position: fixed;
         bottom: 0;
         left: 0;
-        width: 100%;
-        background-color: #2C241B; /* Dark background to mimic app bar */
+        width: 100vw;
+        background-color: #2C241B; 
         display: flex;
         flex-direction: row !important;
         flex-wrap: nowrap;
         overflow-x: auto;
-        padding: 12px 10px;
+        /* Safe Area Environs fill the 'notch' space perfectly in landscape */
+        padding: 12px max(10px, env(safe-area-inset-right)) 12px max(10px, env(safe-area-inset-left));
         z-index: 1050;
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.4);
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
+      }
+      
+      /* Flexbox trick to auto-center items if they have extra space (Landscape) */
+      #moduleTabs::before, #moduleTabs::after {
+        content: "";
+        margin: auto;
       }
       
       #moduleTabs::-webkit-scrollbar {
@@ -354,7 +360,6 @@
         margin: 0 4px;
       }
       
-      /* Stacked Icon + Text for Bottom Nav */
       .sidebar .nav-link {
         flex-direction: column;
         justify-content: center;
@@ -387,6 +392,36 @@
       .col-md-5, .col-md-7, .col-md-3, .col-md-4, .col-md-12 {
         width: 100% !important;
       }
+    }
+
+    /* Landscape Specific Overrides */
+    @media (max-width: 950px) and (orientation: landscape) {
+      #moduleTabs {
+        border-radius: 0; /* Looks cleaner flat against the screen edges */
+      }
+      .scroll-indicator {
+        display: none !important; /* Not needed in landscape */
+      }
+    }
+
+    /* Scroll Indicator Arrow Styling */
+    .scroll-indicator {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      height: 75px;
+      width: 60px;
+      background: linear-gradient(to right, rgba(44,36,27,0), rgba(44,36,27,1) 50%);
+      z-index: 1060;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 15px;
+      color: #D35400;
+      font-size: 1.5rem;
+      border-top-right-radius: 20px;
+      cursor: pointer;
+      transition: opacity 0.3s ease;
     }
   </style>
 </head>
@@ -466,6 +501,11 @@
         </button>
       </li>
     </ul>
+
+    <!-- Arrow Indicator for Mobile Scrolling -->
+    <div id="scrollIndicator" class="scroll-indicator d-md-none">
+      <i class="bi bi-chevron-right"></i>
+    </div>
 
     <!-- User Information & Exit Session (Hidden on Mobile) -->
     <div class="sidebar-footer mt-auto px-2">
@@ -1149,6 +1189,8 @@
   document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
     const mobileLogoutBtn = document.getElementById("mobileLogoutBtn");
+    const scrollIndicator = document.getElementById("scrollIndicator");
+    const moduleTabs = document.getElementById("moduleTabs");
     
     // Desktop Logout logic
     if (logoutBtn) {
@@ -1161,11 +1203,35 @@
     if (mobileLogoutBtn) {
       mobileLogoutBtn.addEventListener("click", () => {
         document.body.classList.add("zoom-out");
-        // Programmatically click the main button so your backend logic in app.js still fires
         if (logoutBtn) {
           logoutBtn.click();
         }
       });
+    }
+
+    // Scroll Indicator Logic
+    if (scrollIndicator && moduleTabs) {
+      // Scroll the menu when the arrow is clicked
+      scrollIndicator.addEventListener('click', () => {
+        moduleTabs.scrollBy({ left: 180, behavior: 'smooth' });
+      });
+
+      // Hide the arrow when user scrolls to the right end
+      moduleTabs.addEventListener('scroll', () => {
+        // A buffer of 10px accounts for rounding decimal errors
+        if (moduleTabs.scrollWidth - moduleTabs.clientWidth <= moduleTabs.scrollLeft + 10) {
+          scrollIndicator.style.opacity = '0';
+          scrollIndicator.style.pointerEvents = 'none';
+        } else {
+          scrollIndicator.style.opacity = '1';
+          scrollIndicator.style.pointerEvents = 'auto';
+        }
+      });
+
+      // Trigger the check once on page load just in case it already fits on the screen
+      setTimeout(() => {
+        moduleTabs.dispatchEvent(new Event('scroll'));
+      }, 100);
     }
   });
 </script>
