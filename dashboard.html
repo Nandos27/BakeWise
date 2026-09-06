@@ -638,8 +638,12 @@
                   <input type="date" id="ingExpiry" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Unit of Measure</label>
-                  <input type="text" id="ingUnit" class="form-control" placeholder="kg, grams, L" required>
+                  <label class="form-label">Unit of Measure</label> 
+                  <select id="ingUnit" class="form-select" required>
+                    <option value="" disabled selected>Select unit</option>
+                    <option value="kg">kg</option>
+                    <option value="L">L</option>
+                  </select>
                 </div>
                 <button type="submit" class="btn btn-maroon w-100 fw-bold">Save Ingredient</button>
               </form>
@@ -1092,7 +1096,10 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Unit of Measure</label>
-            <input type="text" id="editUnit" class="form-control" required>
+            <select id="editUnit" class="form-select" required>
+              <option value="kg">kg</option>
+              <option value="L">L</option>
+            </select>
           </div>
           <button type="submit" class="btn btn-maroon w-100 fw-bold">Update Ingredient</button>
         </form>
