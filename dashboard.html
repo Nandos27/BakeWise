@@ -1108,12 +1108,12 @@
   </div>
 </div>
   
-<!-- PURCHASE ORDER EMAIL & INVOICE MODAL -->
+<!-- PURCHASE ORDER EMAIL MODAL -->
 <div class="modal fade" id="emailOrderModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title card-title fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i> Send Purchase Order & Generate PDF</h5>
+        <h5 class="modal-title card-title fw-bold"><i class="bi bi-cart-plus me-1"></i> Send Purchase Order</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -1128,26 +1128,58 @@
               <input type="email" id="poSupplierEmail" class="form-control" readonly required placeholder="Select a supplier above">
             </div>
           </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-2">
+              <label class="form-label">Select Ingredient to Order</label>
+              <select id="poIngredientSelect" class="form-select" required></select>
+            </div>
+            <div class="col-md-6 mb-2">
+              <label class="form-label">Quantity to Order</label>
+              <input type="number" step="0.001" id="poOrderQty" class="form-control" placeholder="e.g. 50" required>
+            </div>
+          </div>
+
           <div class="mb-2">
             <label class="form-label">PO / Invoice Number</label>
             <input type="text" id="poNumber" class="form-control" value="PO-1001" required>
           </div>
           <div class="mb-2">
-            <label class="form-label">Order Details / Items Needed</label>
-            <textarea id="poMessage" class="form-control" rows="4" placeholder="e.g. Please supply:&#10;- Wheat Flour: 50 kg&#10;- Unsalted Butter: 20 kg" required></textarea>
+            <label class="form-label">Order Details / Notes</label>
+            <textarea id="poMessage" class="form-control" rows="3" placeholder="Additional notes or specifications..." required></textarea>
           </div>
           
-          <div class="d-flex gap-2 mt-3">
-            <button type="button" id="downloadPdfBtn" class="btn btn-outline-secondary w-50 fw-bold">
-              <i class="bi bi-download me-1"></i> Download PDF
-            </button>
-            <button type="submit" id="sendEmailBtn" class="btn btn-maroon w-50 fw-bold">
-              <i class="bi bi-send me-1"></i> Send Email Order
+          <div class="mt-3">
+            <button type="submit" id="sendEmailBtn" class="btn btn-maroon w-100 fw-bold">
+              <i class="bi bi-send me-1"></i> Send Order
             </button>
           </div>
         </form>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- PURCHASE ORDER HISTORY TABLE (Place inside your workspace tab or modal) -->
+<div class="card p-3 border-0 shadow-sm mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="card-title m-0">Purchase Order History</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>PO #</th>
+          <th>Date</th>
+          <th>Supplier</th>
+          <th>Ingredient</th>
+          <th>Quantity</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="poHistoryTableBody"></tbody>
+    </table>
   </div>
 </div>
 
