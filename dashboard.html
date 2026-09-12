@@ -754,6 +754,29 @@
             </div>
           </div>
         </div>
+
+        <!-- PURCHASE ORDER HISTORY TABLE -->
+        <div class="card p-3 border-0 shadow-sm mt-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title m-0">Purchase Order History</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>PO #</th>
+                  <th>Date</th>
+                  <th>Supplier</th>
+                  <th>Ingredient</th>
+                  <th>Quantity</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="poHistoryTableBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- MODULE 5: STOCK IN -->
@@ -1160,28 +1183,7 @@
   </div>
 </div>
 
-<!-- PURCHASE ORDER HISTORY TABLE (Place inside your workspace tab or modal) -->
-<div class="card p-3 border-0 shadow-sm mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="card-title m-0">Purchase Order History</h5>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>PO #</th>
-          <th>Date</th>
-          <th>Supplier</th>
-          <th>Ingredient</th>
-          <th>Quantity</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="poHistoryTableBody"></tbody>
-    </table>
-  </div>
-</div>
+
 
 <!-- HIDDEN INVOICE TEMPLATE FOR PDF GENERATION -->
 <div id="invoiceContainer" style="display: none; padding: 30px; font-family: 'Inter', sans-serif; color: #333;">
