@@ -867,10 +867,10 @@ document.getElementById("queryResetBtn")?.addEventListener("click", window.reset
 
 
 // -------------------------------------------------------------
-// MODULE 13: DIRECT EMAIL PURCHASE ORDERS & PDF DOWNLOAD
+// MODULE 13: PURCHASE ORDERS, EMAILJS & AUTOMATED STOCK UPDATE
 // -------------------------------------------------------------
 
-// Populate Email Order Supplier Dropdown
+// 1. Populate Email Order Supplier Dropdown & Auto-fill Email
 onValue(ref(db, 'suppliers/'), (snapshot) => {
   const poSelect = document.getElementById("poSupplierSelect");
   if (!poSelect) return;
@@ -888,7 +888,6 @@ onValue(ref(db, 'suppliers/'), (snapshot) => {
   if (currentSelection) poSelect.value = currentSelection;
 });
 
-// Auto-fill supplier email when selected
 const poSupplierSelect = document.getElementById("poSupplierSelect");
 if (poSupplierSelect) {
   poSupplierSelect.addEventListener("change", (e) => {
@@ -899,59 +898,22 @@ if (poSupplierSelect) {
   });
 }
 
-// 1. Download PDF Locally
-const downloadPdfBtn = document.getElementById("downloadPdfBtn");
-if (downloadPdfBtn) {
-  downloadPdfBtn.addEventListener("click", () => {
-    const supplierName = document.getElementById("poSupplierSelect")?.value;
-    const supplierEmail = document.getElementById("poSupplierEmail")?.value;
-    const poNum = document.getElementById("poNumber")?.value || "PO-1001";
-    const orderDetails = document.getElementById("poMessage")?.value;
+// 2. Populate Ingredient Select Dropdown for PO Form
+onValue(ref(db, 'ingredients/'), (snapshot) => {
+  const poIngSelect = document.getElementById("poIngredientSelect");
+  if (!poIngSelect) return;
 
-    if (!supplierName || !orderDetails) {
-      alert("Please select a supplier and enter order details first.");
-      return;
-    }
-
-    // Populate Hidden PDF Template
-    const pdfPoNumber = document.getElementById("pdfPoNumber");
-    const pdfDate = document.getElementById("pdfDate");
-    const pdfSupplierName = document.getElementById("pdfSupplierName");
-    const pdfSupplierEmail = document.getElementById("pdfSupplierEmail");
-    const pdfOrderDetails = document.getElementById("pdfOrderDetails");
-
-    if (pdfPoNumber) pdfPoNumber.innerText = poNum;
-    if (pdfDate) pdfDate.innerText = "Date: " + new Date().toLocaleDateString();
-    if (pdfSupplierName) pdfSupplierName.innerText = supplierName;
-    if (pdfSupplierEmail) pdfSupplierEmail.innerText = supplierEmail;
-    if (pdfOrderDetails) pdfOrderDetails.innerText = orderDetails;
-
-    const invoiceElement = document.getElementById("invoiceContainer");
-    if (!invoiceElement) {
-      alert("Invoice container element not found.");
-      return;
-    }
-
-    invoiceElement.style.display = "block";
-
-    const opt = {
-      margin:       0.5,
-      filename:     `Invoice_${poNum}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(invoiceElement).save().then(() => {
-      invoiceElement.style.display = "none";
-    }).catch((err) => {
-      console.error("PDF generation error:", err);
-      invoiceElement.style.display = "none";
+  poIngSelect.innerHTML = `<option value="">Select Ingredient</option>`;
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+    Object.keys(data).forEach((key) => {
+      const item = data[key];
+      poIngSelect.innerHTML += `<option value="${key}">${item.name} (${item.unit || 'unit'})</option>`;
     });
-  });
-}
+  }
+});
 
-// 2. Handle Free Email Submission via EmailJS
+// 3. Handle Email Submission via EmailJS & Save to Database
 const emailOrderForm = document.getElementById("emailOrderForm");
 if (emailOrderForm) {
   emailOrderForm.addEventListener("submit", (e) => {
@@ -959,14 +921,26 @@ if (emailOrderForm) {
 
     const supplierName = document.getElementById("poSupplierSelect")?.value;
     const supplierEmail = document.getElementById("poSupplierEmail")?.value;
-    const poNum = document.getElementById("poNumber")?.value || "PO-1001";
-    const orderDetails = document.getElementById("poMessage")?.value;
+    const ingKey = document.getElementById("poIngredientSelect")?.value;
+    const orderQty = parseFloat(document.getElementById("poOrderQty")?.value);
+    const poNum = document.getElementById("poNumber")?.value || "PO-" + Date.now().toString().slice(-4);
+    const orderDetails = document.getElementById("poMessage")?.value || "";
     const sendBtn = document.getElementById("sendEmailBtn");
 
-    if (!supplierEmail) {
-      alert("Error: Selected supplier has no email address saved!");
+    if (!supplierEmail || !ingKey || isNaN(orderQty)) {
+      alert("Please complete all required fields including supplier, ingredient, and quantity.");
       return;
     }
+
+    // Get ingredient metadata from local store or DOM option text
+    const ingSelect = document.getElementById("poIngredientSelect");
+    const selectedIngOption = ingSelect ? ingSelect.options[ingSelect.selectedIndex].text : "Item";
+    const ingName = (typeof allIngredients !== "undefined" && allIngredients[ingKey]?.name) 
+      ? allIngredients[ingKey].name 
+      : selectedIngOption.split(" (")[0];
+    const unit = (typeof allIngredients !== "undefined" && allIngredients[ingKey]?.unit) 
+      ? allIngredients[ingKey].unit 
+      : "";
 
     if (sendBtn) {
       sendBtn.disabled = true;
@@ -977,14 +951,31 @@ if (emailOrderForm) {
       supplier_name: supplierName,
       to_email: supplierEmail,
       po_number: poNum,
-      order_details: orderDetails,
+      order_details: `Item: ${ingName}\nQuantity: ${orderQty} ${unit}\nNotes: ${orderDetails}`,
       sent_by: (typeof auth !== "undefined" && auth.currentUser) ? auth.currentUser.email : "BakeWise Team"
     };
 
-    // Public key removed here (handled by emailjs.init inside HTML)
+    // Send email via EmailJS
     emailjs.send("service_6funyvl", "template_kxksovu", templateParams)
       .then(() => {
-        alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName}!`);
+        // Save Order to Firebase Database with 'Pending' status
+        const newOrder = {
+          poNumber: poNum,
+          supplierName: supplierName,
+          supplierEmail: supplierEmail,
+          ingredientKey: ingKey,
+          ingredientName: ingName,
+          quantity: orderQty,
+          unit: unit,
+          notes: orderDetails,
+          status: "Pending",
+          date: new Date().toISOString().split("T")[0]
+        };
+
+        return push(ref(db, 'purchase_orders/'), newOrder);
+      })
+      .then(() => {
+        alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName} and saved!`);
         emailOrderForm.reset();
 
         const modalEl = document.getElementById('emailOrderModal');
@@ -994,17 +985,151 @@ if (emailOrderForm) {
         }
       })
       .catch((error) => {
-        console.error("EmailJS Error:", error);
-        alert("Failed to send email: " + (error.text || JSON.stringify(error)));
+        console.error("Email/Order Error:", error);
+        alert("Failed to send order: " + (error.text || JSON.stringify(error)));
       })
       .finally(() => {
         if (sendBtn) {
           sendBtn.disabled = false;
-          sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Email Order`;
+          sendBtn.innerHTML = `<i class="bi bi-send me-1"></i> Send Order`;
         }
       });
   });
 }
+
+// 4. Render Purchase Order History Table
+onValue(ref(db, 'purchase_orders/'), (snapshot) => {
+  const tableBody = document.getElementById("poHistoryTableBody");
+  if (!tableBody) return;
+
+  tableBody.innerHTML = "";
+  if (!snapshot.exists()) {
+    tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No purchase orders found.</td></tr>`;
+    return;
+  }
+
+  const orders = snapshot.val();
+  Object.keys(orders).forEach((key) => {
+    const po = orders[key];
+    const isReceived = po.status === "Received";
+
+    const row = `
+      <tr>
+        <td class="fw-bold">${po.poNumber}</td>
+        <td>${po.date}</td>
+        <td>${po.supplierName}</td>
+        <td class="fw-bold">${po.ingredientName}</td>
+        <td>${po.quantity} ${po.unit}</td>
+        <td>
+          <span class="badge ${isReceived ? 'bg-success' : 'bg-warning text-dark'}">
+            ${po.status}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-sm btn-outline-secondary me-1" onclick="downloadOrderPdf('${key}')">
+            <i class="bi bi-download"></i> PDF
+          </button>
+          ${!isReceived ? `
+            <button class="btn btn-sm btn-success" onclick="markOrderReceived('${key}')">
+              <i class="bi bi-check-circle"></i> Order Received
+            </button>
+          ` : `
+            <button class="btn btn-sm btn-light text-muted" disabled>Received</button>
+          `}
+        </td>
+      </tr>`;
+
+    tableBody.innerHTML += row;
+  });
+});
+
+// 5. Action: Download PDF for a specific Purchase Order
+window.downloadOrderPdf = function(orderKey) {
+  get(ref(db, `purchase_orders/${orderKey}`)).then((snap) => {
+    if (!snap.exists()) return;
+    const po = snap.val();
+
+    const pdfPoNumber = document.getElementById("pdfPoNumber");
+    const pdfDate = document.getElementById("pdfDate");
+    const pdfSupplierName = document.getElementById("pdfSupplierName");
+    const pdfSupplierEmail = document.getElementById("pdfSupplierEmail");
+    const pdfOrderDetails = document.getElementById("pdfOrderDetails");
+
+    if (pdfPoNumber) pdfPoNumber.innerText = po.poNumber;
+    if (pdfDate) pdfDate.innerText = "Date: " + po.date;
+    if (pdfSupplierName) pdfSupplierName.innerText = po.supplierName;
+    if (pdfSupplierEmail) pdfSupplierEmail.innerText = po.supplierEmail;
+    if (pdfOrderDetails) pdfOrderDetails.innerText = `Item: ${po.ingredientName}\nQuantity: ${po.quantity} ${po.unit}\nNotes: ${po.notes || 'None'}`;
+
+    const invoiceElement = document.getElementById("invoiceContainer");
+    if (!invoiceElement) {
+      alert("Invoice container element not found.");
+      return;
+    }
+
+    invoiceElement.style.display = "block";
+
+    const opt = {
+      margin: 0.5,
+      filename: `Invoice_${po.poNumber}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(invoiceElement).save().then(() => {
+      invoiceElement.style.display = "none";
+    }).catch((err) => {
+      console.error("PDF generation error:", err);
+      invoiceElement.style.display = "none";
+    });
+  });
+};
+
+// 6. Action: Mark Order Received & Automatically Restock Stock
+window.markOrderReceived = function(orderKey) {
+  get(ref(db, `purchase_orders/${orderKey}`)).then((snap) => {
+    if (!snap.exists()) return;
+    const po = snap.val();
+
+    if (po.status === "Received") {
+      alert("This order has already been marked as received.");
+      return;
+    }
+
+    if (!confirm(`Confirm receipt of ${po.quantity} ${po.unit} of ${po.ingredientName}? This will automatically add it to your live inventory.`)) {
+      return;
+    }
+
+    // Fetch ingredient stock and increment quantity
+    const ingRef = ref(db, `ingredients/${po.ingredientKey}`);
+    get(ingRef).then((ingSnap) => {
+      if (ingSnap.exists()) {
+        const currentQty = parseFloat(ingSnap.val().quantity || 0);
+        const newQty = currentQty + parseFloat(po.quantity);
+
+        // 1. Update ingredient stock level in database
+        update(ingRef, { quantity: newQty });
+
+        // 2. Add entry to stock_in log database
+        push(ref(db, 'stock_in/'), {
+          ingredientName: po.ingredientName,
+          addedQty: po.quantity,
+          unit: po.unit,
+          supplier: po.supplierName,
+          date: new Date().toISOString().split("T")[0]
+        });
+
+        // 3. Update Purchase Order status to "Received"
+        update(ref(db, `purchase_orders/${orderKey}`), { status: "Received" }).then(() => {
+          alert(`Success! Added ${po.quantity} ${po.unit} of ${po.ingredientName} to inventory stock.`);
+        });
+      } else {
+        alert("Ingredient record not found in database.");
+      }
+    });
+  });
+};
 
 // =============================================================
 // MODULE: RECIPES & PRODUCTION BATCH LOGIC
