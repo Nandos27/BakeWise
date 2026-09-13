@@ -379,9 +379,7 @@ if (addCategoryForm) {
   });
 }
 
-// -------------------------------------------------------------
-// MODULE 4: SUPPLIERS
-// -------------------------------------------------------------
+
 // -------------------------------------------------------------
 // MODULE 4: SUPPLIERS
 // -------------------------------------------------------------
@@ -1042,6 +1040,29 @@ onValue(ref(db, 'purchase_orders/'), (snapshot) => {
     tableBody.innerHTML += row;
   });
 });
+// --- Purchase Order History Filtering ---
+function filterPOHistoryTable() {
+  const searchValue = document.getElementById("poSearchInput")?.value.toLowerCase().trim() || "";
+  const statusValue = document.getElementById("poStatusFilter")?.value.toLowerCase() || "";
+  
+  const rows = document.querySelectorAll("#poHistoryTableBody tr");
+
+  rows.forEach(row => {
+    const textContent = row.textContent.toLowerCase();
+    const matchesSearch = textContent.includes(searchValue);
+    const matchesStatus = !statusValue || textContent.includes(statusValue);
+
+    if (matchesSearch && matchesStatus) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
+}
+
+// Event Listeners for PO Search & Filter
+document.getElementById("poSearchInput")?.addEventListener("input", filterPOHistoryTable);
+document.getElementById("poStatusFilter")?.addEventListener("change", filterPOHistoryTable);
 
 // 5. Action: Download PDF for a specific Purchase Order
 window.downloadOrderPdf = function(orderKey) {
