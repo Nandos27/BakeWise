@@ -756,29 +756,35 @@
         </div>
 
         <!-- PURCHASE ORDER HISTORY TABLE -->
-        <div class="card p-3 border-0 shadow-sm mt-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title m-0">Purchase Order History</h5>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>PO #</th>
-                  <th>Date</th>
-                  <th>Supplier</th>
-                  <th>Ingredient</th>
-                  <th>Quantity</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="poHistoryTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
+<div class="card p-3 border-0 shadow-sm mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="card-title m-0">Purchase Order History</h5>
+    <div class="d-flex gap-2">
+      <input type="text" id="poSearchInput" class="form-control form-control-sm" placeholder="Search PO #, Supplier..." style="width: 200px;">
+      <select id="poStatusFilter" class="form-select form-select-sm" style="width: 140px;">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="received">Received</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>PO #</th>
+          <th>Date</th>
+          <th>Supplier</th>
+          <th>Ingredient</th>
+          <th>Quantity</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="poHistoryTableBody"></tbody>
+    </table>
+  </div>
+</div>
       <!-- MODULE 5: STOCK IN -->
       <div class="tab-pane fade" id="mod-stockin">
         <div class="row g-4">
