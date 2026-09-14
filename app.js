@@ -48,13 +48,12 @@ function showAlert(element, message, type) {
 // MODULE 1: LOGIN & REGISTRATION
 // -------------------------------------------------------------
 
-// Login form
-// Updated login block:
+// Login form with 30-Minute Expiry Verification Check
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    const email = document.getElementById("email").value;
+    const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const alertBox = document.getElementById("errorAlert");
 
@@ -62,12 +61,59 @@ if (loginForm) {
       .then(() => {
         return signInWithEmailAndPassword(auth, email, password);
       })
-      .then((userCredential) => {
-        if (!userCredential.user.emailVerified) {
-          signOut(auth); 
-          showAlert(alertBox, "Access Denied: Please verify your email first. Check your inbox!", "danger");
-          return; 
+      .then(async (userCredential) => {
+        const user = userCredential.user;
+
+        // Check if verified
+        if (!user.emailVerified) {
+          const snap = await get(ref(db, `users/${user.uid}`));
+          const userData = snap.exists() ? snap.val() : null;
+          const now = Date.now();
+          const expiresAt = userData?.verificationExpiresAt;
+
+          // Check if 30 minutes elapsed
+          if (expiresAt && now > expiresAt) {
+            await signOut(auth);
+            if (alertBox) {
+              alertBox.className = "alert alert-warning py-2 mb-3";
+              alertBox.innerHTML = `
+                <div><strong>Verification expired:</strong> Your 30-minute verification window has ended.</div>
+                <button type="button" class="btn btn-sm btn-dark mt-2 fw-bold" id="resendVerificationBtn">
+                  <i class="bi bi-arrow-repeat me-1"></i> Resend Fresh Link
+                </button>
+              `;
+              alertBox.classList.remove("d-none");
+
+              // Bind click event to resend verification and reset window
+              document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
+                try {
+                  // Re-authenticate silently to trigger fresh verification
+                  const tempCred = await signInWithEmailAndPassword(auth, email, password);
+                  await sendEmailVerification(tempCred.user);
+                  
+                  // Reset timer for another 30 minutes
+                  const newExpiry = Date.now() + (30 * 60 * 1000);
+                  await update(ref(db, `users/${tempCred.user.uid}`), { verificationExpiresAt: newExpiry });
+                  
+                  await signOut(auth);
+                  alertBox.className = "alert alert-success py-2 mb-3";
+                  alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
+                } catch (resendErr) {
+                  alertBox.className = "alert alert-danger py-2 mb-3";
+                  alertBox.innerText = "Error resending link: " + resendErr.message;
+                }
+              });
+            }
+            return;
+          }
+
+          // Unverified but still within 30 minutes
+          await signOut(auth);
+          showAlert(alertBox, "Access Denied: Please click the verification link in your inbox within 30 minutes.", "danger");
+          return;
         }
+
+        // Successfully verified
         window.location.href = "dashboard.html";
       })
       .catch((error) => showAlert(alertBox, "Login failed: " + error.message, "danger"));
