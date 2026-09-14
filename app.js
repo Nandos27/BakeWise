@@ -95,11 +95,22 @@ if (loginForm) {
 
                 try {
                   console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
-                  // Uses the captured password successfully now
+                  
+                  // 1. Sign in the user
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
                   
-                  // Reset timer for another 30 minutes
+                  // 2. Wait explicitly for the Auth client to fully register the active session
+                  await new Promise((resolve) => {
+                    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+                      if (authUser) {
+                        unsubscribe();
+                        resolve(authUser);
+                      }
+                    });
+                  });
+
+                  // 3. Reset timer for another 30 minutes (now fully authenticated)
                   const newExpiry = Date.now() + (30 * 60 * 1000);
                   await update(ref(db, `users/${tempCred.user.uid}`), { 
                     verificationExpiresAt: newExpiry 
