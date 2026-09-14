@@ -90,6 +90,7 @@ if (loginForm) {
                   // Re-authenticate silently to trigger fresh verification
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
+                  await tempCred.user.getIdToken(true); // Force token refresh for DB rules
                   
                   // Reset timer for another 30 minutes
                   const newExpiry = Date.now() + (30 * 60 * 1000);
