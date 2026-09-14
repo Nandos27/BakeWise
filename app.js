@@ -86,24 +86,30 @@ if (loginForm) {
 
               // Bind click event to resend verification and reset window
               document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
-                try {
-                  // Re-authenticate silently to trigger fresh verification
-                  const tempCred = await signInWithEmailAndPassword(auth, email, password);
-                  await sendEmailVerification(tempCred.user);
-                  await tempCred.user.getIdToken(true); // Force token refresh for DB rules
-                  
-                  // Reset timer for another 30 minutes
-                  const newExpiry = Date.now() + (30 * 60 * 1000);
-                  await update(ref(db, `users/${tempCred.user.uid}`), { verificationExpiresAt: newExpiry });
-                  
-                  await signOut(auth);
-                  alertBox.className = "alert alert-success py-2 mb-3";
-                  alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
-                } catch (resendErr) {
-                  alertBox.className = "alert alert-danger py-2 mb-3";
-                  alertBox.innerText = "Error resending link: " + resendErr.message;
-                }
-              });
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      alertBox.className = "alert alert-danger py-2 mb-3";
+      alertBox.innerText = "Session expired. Please enter your credentials and log in again to resend.";
+      return;
+    }
+
+    // 1. Send fresh verification email using active user object
+    await sendEmailVerification(user);
+    
+    // 2. Extend expiration time in database
+    const newExpiry = Date.now() + (15 * 60 * 1000);
+    await update(ref(db, `users/${user.uid}`), { verificationExpiresAt: newExpiry });
+    
+    // 3. Clean up session and notify
+    await signOut(auth);
+    alertBox.className = "alert alert-success py-2 mb-3";
+    alertBox.innerText = "A fresh verification link has been sent! You have 15 minutes to verify.";
+  } catch (resendErr) {
+    alertBox.className = "alert alert-danger py-2 mb-3";
+    alertBox.innerText = "Error resending link: " + resendErr.message;
+  }
+});
             }
             return;
           }
