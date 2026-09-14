@@ -98,15 +98,12 @@ if (loginForm) {
                   // Uses the captured password successfully now
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
-
-                  // Give the database connection 1.5 seconds to sync the new auth token
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-
-                  console.log("Auth UID:", auth.currentUser?.uid, "Target Path UID:", tempCred.user.uid);
                   
                   // Reset timer for another 30 minutes
                   const newExpiry = Date.now() + (30 * 60 * 1000);
-                  await update(ref(db, `users/${tempCred.user.uid}`), { verificationExpiresAt: newExpiry });
+                  await update(ref(db, `users/${tempCred.user.uid}`), { 
+                    verificationExpiresAt: newExpiry 
+                  });
                   
                   // Wipe password from memory now that resend is done
                   password = null;
