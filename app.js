@@ -74,7 +74,9 @@ if (loginForm) {
 
          // Check if 30 minutes elapsed
           if (expiresAt && now > expiresAt) {
-            // Keep session active so the resend button can use it instantly
+            // Save the user reference so we can use it for the resend click
+            const expiredUser = user; 
+
             if (alertBox) {
               alertBox.className = "alert alert-warning py-2 mb-3";
               alertBox.innerHTML = `
@@ -85,7 +87,7 @@ if (loginForm) {
               `;
               alertBox.classList.remove("d-none");
 
-              // Bind click event to resend verification using the active session
+              // Bind click event to resend verification using the captured reference
               document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
                 const resendBtn = document.getElementById("resendVerificationBtn");
                 if (resendBtn) {
@@ -94,14 +96,13 @@ if (loginForm) {
                 }
 
                 try {
-                  const currentUser = auth.currentUser;
-                  if (!currentUser) throw new Error("Session expired. Please log in again.");
-
-                  await sendEmailVerification(currentUser);
+                  // Re-authenticate briefly or use token refresh to satisfy rules, 
+                  // or sign back in using the captured email and stored password payload
+                  const tempCred = await signInWithEmailAndPassword(auth, email, password);
+                  await sendEmailVerification(tempCred.user);
                   
-                  // Reset timer for another 30 minutes securely using the active auth context
                   const newExpiry = Date.now() + (30 * 60 * 1000);
-                  await update(ref(db, `users/${currentUser.uid}`), { 
+                  await update(ref(db, `users/${tempCred.user.uid}`), { 
                     verificationExpiresAt: newExpiry 
                   });
                   
