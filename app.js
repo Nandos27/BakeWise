@@ -98,6 +98,8 @@ if (loginForm) {
                   // Uses the captured password successfully now
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
+
+                  console.log("Auth UID:", auth.currentUser?.uid, "Target Path UID:", tempCred.user.uid);
                   
                   // Reset timer for another 30 minutes
                   const newExpiry = Date.now() + (30 * 60 * 1000);
