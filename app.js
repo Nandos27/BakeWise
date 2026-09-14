@@ -100,14 +100,19 @@ if (registerForm) {
       .then((userCredential) => {
         sendEmailVerification(userCredential.user).catch(err => console.log(err));
 
+        // Set 30-minute expiration: 30 mins * 60 secs * 1000 ms
+        const expiryTimestamp = Date.now() + (30 * 60 * 1000);
+
         set(ref(db, 'users/' + userCredential.user.uid), {
           fullName: fullName,
           email: email,
-          role: "kitchen_staff"
+          role: "kitchen_staff",
+          createdAt: Date.now(),
+          verificationExpiresAt: expiryTimestamp
         }).then(() => {
           signOut(auth).then(() => {
-            showAlert(alertBox, "Account created! Please check your email to verify before logging in.", "success");
-            setTimeout(() => window.location.href = "index.html", 3000);
+            showAlert(alertBox, "Account created! Security notice: You have 15 minutes to verify your email before the link expires.", "success");
+            setTimeout(() => window.location.href = "index.html", 4000);
           });
         });
       })
