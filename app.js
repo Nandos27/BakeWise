@@ -48,7 +48,7 @@ function showAlert(element, message, type) {
 // MODULE 1: LOGIN & REGISTRATION
 // -------------------------------------------------------------
 
-// Login form with 30-Minute Expiry Verification Check
+// Login form with 30-Minute Expiry Verification Check via Auth Metadata
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
@@ -59,7 +59,6 @@ if (loginForm) {
 
     setPersistence(auth, browserSessionPersistence)
       .then(() => {
-        console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
         return signInWithEmailAndPassword(auth, email, password);
       })
       .then(async (userCredential) => {
@@ -67,16 +66,13 @@ if (loginForm) {
 
         // Check if verified
         if (!user.emailVerified) {
-          const snap = await get(ref(db, `users/${user.uid}`));
-          const userData = snap.exists() ? snap.val() : null;
+          const creationTime = new Date(user.metadata.creationTime).getTime();
           const now = Date.now();
-          const expiresAt = userData?.verificationExpiresAt;
+          const thirtyMinutes = 30 * 60 * 1000;
 
-         // Check if 30 minutes elapsed
-          if (expiresAt && now > expiresAt) {
-            // Save the user reference so we can use it for the resend click
-            const expiredUser = user; 
-
+          // Check if 30 minutes elapsed since account creation
+          if ((now - creationTime) > thirtyMinutes) {
+            await signOut(auth);
             if (alertBox) {
               alertBox.className = "alert alert-warning py-2 mb-3";
               alertBox.innerHTML = `
@@ -87,7 +83,7 @@ if (loginForm) {
               `;
               alertBox.classList.remove("d-none");
 
-              // Bind click event to resend verification using the captured reference
+              // Bind click event to resend verification
               document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
                 const resendBtn = document.getElementById("resendVerificationBtn");
                 if (resendBtn) {
@@ -96,24 +92,17 @@ if (loginForm) {
                 }
 
                 try {
-                  // Re-authenticate briefly or use token refresh to satisfy rules, 
-                  // or sign back in using the captured email and stored password payload
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
-                  
-                  const newExpiry = Date.now() + (30 * 60 * 1000);
-                  await update(ref(db, `users/${tempCred.user.uid}`), { 
-                    verificationExpiresAt: newExpiry 
-                  });
                   
                   password = null;
                   await signOut(auth);
                   
                   alertBox.className = "alert alert-success py-2 mb-3";
-                  alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
-                } catch (resendErr) {
+                  alertBox.innerText = "A fresh verification link has been sent! Check your inbox.";
+                } catch (err) {
                   alertBox.className = "alert alert-danger py-2 mb-3";
-                  alertBox.innerText = "Error resending link: " + resendErr.message;
+                  alertBox.innerText = "Error: " + err.message;
                   if (resendBtn) {
                     resendBtn.disabled = false;
                     resendBtn.innerText = "Resend Fresh Link";
@@ -123,6 +112,24 @@ if (loginForm) {
             }
             return;
           }
+
+          // Unverified but still within 30 minutes
+          password = null;
+          await signOut(auth);
+          showAlert(alertBox, "Access Denied: Please verify your email via the link sent to your inbox.", "danger");
+          return;
+        }
+
+        // Successfully verified
+        password = null;
+        window.location.href = "dashboard.html";
+      })
+      .catch((error) => {
+        password = null;
+        showAlert(alertBox, "Login failed: " + error.message, "danger");
+      });
+  });
+}
 
           // Unverified but still within 30 minutes
           password = null; // Wipe if not needing resend
