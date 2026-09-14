@@ -157,7 +157,7 @@ if (registerForm) {
           verificationExpiresAt: expiryTimestamp
         }).then(() => {
           signOut(auth).then(() => {
-            showAlert(alertBox, "Account created! Security notice: You have 15 minutes to verify your email before the link expires.", "success");
+            showAlert(alertBox, "Account created! Security notice: You have 30 minutes to verify your email before the link expires.", "success");
             setTimeout(() => window.location.href = "index.html", 4000);
           });
         });
