@@ -54,7 +54,7 @@ if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
+    let password = document.getElementById("password").value; // 1. Change 'const' to 'let' here
     const alertBox = document.getElementById("errorAlert");
 
     setPersistence(auth, browserSessionPersistence)
@@ -62,6 +62,8 @@ if (loginForm) {
         return signInWithEmailAndPassword(auth, email, password);
       })
       .then(async (userCredential) => {
+        password = null; // 2. Wipe it from memory right here immediately
+        
         const user = userCredential.user;
 
         // Check if verified
