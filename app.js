@@ -54,7 +54,7 @@ if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const email = document.getElementById("email").value.trim();
-    let password = document.getElementById("password").value; // 1. Change 'const' to 'let' here
+    let password = document.getElementById("password").value;
     const alertBox = document.getElementById("errorAlert");
 
     setPersistence(auth, browserSessionPersistence)
@@ -62,8 +62,6 @@ if (loginForm) {
         return signInWithEmailAndPassword(auth, email, password);
       })
       .then(async (userCredential) => {
-        password = null; // 2. Wipe it from memory right here immediately
-        
         const user = userCredential.user;
 
         // Check if verified
@@ -86,15 +84,16 @@ if (loginForm) {
               `;
               alertBox.classList.remove("d-none");
 
-              // Bind click event using the form's captured email and password variables
+              // Bind click event to resend verification
               document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
                 const resendBtn = document.getElementById("resendVerificationBtn");
                 if (resendBtn) {
                   resendBtn.disabled = true;
                   resendBtn.innerText = "Sending...";
                 }
+
                 try {
-                  // Silently re-authenticate using form credentials
+                  // Uses the captured password successfully now
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
                   
@@ -102,12 +101,19 @@ if (loginForm) {
                   const newExpiry = Date.now() + (30 * 60 * 1000);
                   await update(ref(db, `users/${tempCred.user.uid}`), { verificationExpiresAt: newExpiry });
                   
+                  // Wipe password from memory now that resend is done
+                  password = null;
+                  
                   await signOut(auth);
                   alertBox.className = "alert alert-success py-2 mb-3";
                   alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
                 } catch (resendErr) {
                   alertBox.className = "alert alert-danger py-2 mb-3";
                   alertBox.innerText = "Error resending link: " + resendErr.message;
+                  if (resendBtn) {
+                    resendBtn.disabled = false;
+                    resendBtn.innerText = "Resend Fresh Link";
+                  }
                 }
               });
             }
@@ -115,15 +121,20 @@ if (loginForm) {
           }
 
           // Unverified but still within 30 minutes
+          password = null; // Wipe if not needing resend
           await signOut(auth);
           showAlert(alertBox, "Access Denied: Please click the verification link in your inbox within 30 minutes.", "danger");
           return;
         }
 
         // Successfully verified
+        password = null; // Wipe on success
         window.location.href = "dashboard.html";
       })
-      .catch((error) => showAlert(alertBox, "Login failed: " + error.message, "danger"));
+      .catch((error) => {
+        password = null;
+        showAlert(alertBox, "Login failed: " + error.message, "danger");
+      });
   });
 }
 
