@@ -99,6 +99,9 @@ if (loginForm) {
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
 
+                  // Wait for the auth state to fully propagate to the database client
+                  await auth.authStateReady();
+
                   console.log("Auth UID:", auth.currentUser?.uid, "Target Path UID:", tempCred.user.uid);
                   
                   // Reset timer for another 30 minutes
