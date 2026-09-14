@@ -131,24 +131,6 @@ if (loginForm) {
   });
 }
 
-          // Unverified but still within 30 minutes
-          password = null; // Wipe if not needing resend
-          await signOut(auth);
-          showAlert(alertBox, "Access Denied: Please click the verification link in your inbox within 30 minutes.", "danger");
-          return;
-        }
-
-        // Successfully verified
-        password = null; // Wipe on success
-        window.location.href = "dashboard.html";
-      })
-      .catch((error) => {
-        password = null;
-        showAlert(alertBox, "Login failed: " + error.message, "danger");
-      });
-  });
-}
-
 // Logout button
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
