@@ -72,9 +72,9 @@ if (loginForm) {
           const now = Date.now();
           const expiresAt = userData?.verificationExpiresAt;
 
-          // Check if 30 minutes elapsed
+         // Check if 30 minutes elapsed
           if (expiresAt && now > expiresAt) {
-            await signOut(auth);
+            // Keep session active so the resend button can use it instantly
             if (alertBox) {
               alertBox.className = "alert alert-warning py-2 mb-3";
               alertBox.innerHTML = `
@@ -85,43 +85,40 @@ if (loginForm) {
               `;
               alertBox.classList.remove("d-none");
 
-              // Bind click event to resend verification
-document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
-  const resendBtn = document.getElementById("resendVerificationBtn");
-  if (resendBtn) {
-    resendBtn.disabled = true;
-    resendBtn.innerText = "Sending...";
-  }
+              // Bind click event to resend verification using the active session
+              document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
+                const resendBtn = document.getElementById("resendVerificationBtn");
+                if (resendBtn) {
+                  resendBtn.disabled = true;
+                  resendBtn.innerText = "Sending...";
+                }
 
-  try {
-    console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
-    
-    const tempCred = await signInWithEmailAndPassword(auth, email, password);
-    await sendEmailVerification(tempCred.user);
-    
-    // Tiny delay to let the network socket clear
-    await new Promise(resolve => setTimeout(resolve, 1000));
+                try {
+                  const currentUser = auth.currentUser;
+                  if (!currentUser) throw new Error("Session expired. Please log in again.");
 
-    // Reset timer for another 30 minutes
-    const newExpiry = Date.now() + (30 * 60 * 1000);
-    await update(ref(db, `users/${tempCred.user.uid}`), { 
-      verificationExpiresAt: newExpiry 
-    });
-    
-    password = null;
-    await signOut(auth);
-    
-    alertBox.className = "alert alert-success py-2 mb-3";
-    alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
-  } catch (resendErr) {
-    alertBox.className = "alert alert-danger py-2 mb-3";
-    alertBox.innerText = "Error resending link: " + resendErr.message;
-    if (resendBtn) {
-      resendBtn.disabled = false;
-      resendBtn.innerText = "Resend Fresh Link";
-    }
-  }
-});
+                  await sendEmailVerification(currentUser);
+                  
+                  // Reset timer for another 30 minutes securely using the active auth context
+                  const newExpiry = Date.now() + (30 * 60 * 1000);
+                  await update(ref(db, `users/${currentUser.uid}`), { 
+                    verificationExpiresAt: newExpiry 
+                  });
+                  
+                  password = null;
+                  await signOut(auth);
+                  
+                  alertBox.className = "alert alert-success py-2 mb-3";
+                  alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
+                } catch (resendErr) {
+                  alertBox.className = "alert alert-danger py-2 mb-3";
+                  alertBox.innerText = "Error resending link: " + resendErr.message;
+                  if (resendBtn) {
+                    resendBtn.disabled = false;
+                    resendBtn.innerText = "Resend Fresh Link";
+                  }
+                }
+              });
             }
             return;
           }
