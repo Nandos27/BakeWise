@@ -59,6 +59,7 @@ if (loginForm) {
 
     setPersistence(auth, browserSessionPersistence)
       .then(() => {
+        console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
         return signInWithEmailAndPassword(auth, email, password);
       })
       .then(async (userCredential) => {
@@ -93,6 +94,7 @@ if (loginForm) {
                 }
 
                 try {
+                  console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
                   // Uses the captured password successfully now
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
