@@ -86,51 +86,42 @@ if (loginForm) {
               alertBox.classList.remove("d-none");
 
               // Bind click event to resend verification
-              document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
-                const resendBtn = document.getElementById("resendVerificationBtn");
-                if (resendBtn) {
-                  resendBtn.disabled = true;
-                  resendBtn.innerText = "Sending...";
-                }
+document.getElementById("resendVerificationBtn")?.addEventListener("click", async () => {
+  const resendBtn = document.getElementById("resendVerificationBtn");
+  if (resendBtn) {
+    resendBtn.disabled = true;
+    resendBtn.innerText = "Sending...";
+  }
 
-                try {
-                  console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
-                  
-                  // 1. Sign in the user
-                  const tempCred = await signInWithEmailAndPassword(auth, email, password);
-                  await sendEmailVerification(tempCred.user);
-                  
-                  // 2. Wait explicitly for the Auth client to fully register the active session
-                  await new Promise((resolve) => {
-                    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-                      if (authUser) {
-                        unsubscribe();
-                        resolve(authUser);
-                      }
-                    });
-                  });
+  try {
+    console.log("Debugging login payload -> Email:", email, "Password length:", password ? password.length : "NULL/EMPTY");
+    
+    const tempCred = await signInWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(tempCred.user);
+    
+    // Tiny delay to let the network socket clear
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-                  // 3. Reset timer for another 30 minutes (now fully authenticated)
-                  const newExpiry = Date.now() + (30 * 60 * 1000);
-                  await update(ref(db, `users/${tempCred.user.uid}`), { 
-                    verificationExpiresAt: newExpiry 
-                  });
-                  
-                  // Wipe password from memory now that resend is done
-                  password = null;
-                  
-                  await signOut(auth);
-                  alertBox.className = "alert alert-success py-2 mb-3";
-                  alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
-                } catch (resendErr) {
-                  alertBox.className = "alert alert-danger py-2 mb-3";
-                  alertBox.innerText = "Error resending link: " + resendErr.message;
-                  if (resendBtn) {
-                    resendBtn.disabled = false;
-                    resendBtn.innerText = "Resend Fresh Link";
-                  }
-                }
-              });
+    // Reset timer for another 30 minutes
+    const newExpiry = Date.now() + (30 * 60 * 1000);
+    await update(ref(db, `users/${tempCred.user.uid}`), { 
+      verificationExpiresAt: newExpiry 
+    });
+    
+    password = null;
+    await signOut(auth);
+    
+    alertBox.className = "alert alert-success py-2 mb-3";
+    alertBox.innerText = "A fresh link has been sent to your email! You have 30 minutes to verify.";
+  } catch (resendErr) {
+    alertBox.className = "alert alert-danger py-2 mb-3";
+    alertBox.innerText = "Error resending link: " + resendErr.message;
+    if (resendBtn) {
+      resendBtn.disabled = false;
+      resendBtn.innerText = "Resend Fresh Link";
+    }
+  }
+});
             }
             return;
           }
