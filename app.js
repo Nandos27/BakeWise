@@ -99,8 +99,8 @@ if (loginForm) {
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
 
-                  // Wait for the auth state to fully propagate to the database client
-                  await auth.authStateReady();
+                  // Give the database connection 1.5 seconds to sync the new auth token
+                  await new Promise(resolve => setTimeout(resolve, 1500));
 
                   console.log("Auth UID:", auth.currentUser?.uid, "Target Path UID:", tempCred.user.uid);
                   
