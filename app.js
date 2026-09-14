@@ -157,15 +157,11 @@ if (registerForm) {
       .then((userCredential) => {
         sendEmailVerification(userCredential.user).catch(err => console.log(err));
 
-        // Set 30-minute expiration: 30 mins * 60 secs * 1000 ms
-        const expiryTimestamp = Date.now() + (30 * 60 * 1000);
-
+        // Clean user payload - no extra timestamps needed!
         set(ref(db, 'users/' + userCredential.user.uid), {
           fullName: fullName,
           email: email,
-          role: "kitchen_staff",
-          createdAt: Date.now(),
-          verificationExpiresAt: expiryTimestamp
+          role: "kitchen_staff"
         }).then(() => {
           signOut(auth).then(() => {
             showAlert(alertBox, "Account created! Security notice: You have 30 minutes to verify your email before the link expires.", "success");
