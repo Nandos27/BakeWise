@@ -41,6 +41,29 @@ const filterCat = document.getElementById("filterCategorySelect");
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
+// Make edit modal function globally available for HTML inline onclick handlers
+window.openEditModal = function(key, name, qty, unit, min, expiry) {
+  const editKey = document.getElementById("editKey");
+  const editName = document.getElementById("editName");
+  const editQty = document.getElementById("editQty");
+  const editMin = document.getElementById("editMin");
+  const editExpiry = document.getElementById("editExpiry");
+  const editUnit = document.getElementById("editUnit");
+
+  if (editKey) editKey.value = key;
+  if (editName) editName.value = name;
+  if (editQty) editQty.value = qty;
+  if (editMin) editMin.value = min;
+  if (editExpiry) editExpiry.value = expiry;
+  if (editUnit) editUnit.value = unit;
+
+  const editModalElement = document.getElementById('editModal');
+  if (editModalElement && typeof bootstrap !== "undefined") {
+    const modal = bootstrap.Modal.getInstance(editModalElement) || new bootstrap.Modal(editModalElement);
+    modal.show();
+  }
+};
+
 function renderInventoryTable() {
   const tableBody = document.getElementById("inventoryTableBody");
   const stockInSelect = document.getElementById("stockInIngSelect");
@@ -561,6 +584,33 @@ window.runTransactionQuery = function() {
 
   renderTransactionTable(filtered);
 };
+
+// Handle Edit Form Submission
+const editForm = document.getElementById("editForm");
+if (editForm) {
+  editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const key = document.getElementById("editKey").value;
+    const updatedIng = {
+      name: document.getElementById("editName").value,
+      quantity: parseFloat(document.getElementById("editQty").value),
+      minThreshold: parseFloat(document.getElementById("editMin").value),
+      expiryDate: document.getElementById("editExpiry").value,
+      unit: document.getElementById("editUnit").value
+    };
+
+    update(ref(db, `ingredients/${key}`), updatedIng).then(() => {
+      alert("Ingredient updated successfully!");
+      const editModalElement = document.getElementById('editModal');
+      if (editModalElement && typeof bootstrap !== "undefined") {
+        const modal = bootstrap.Modal.getInstance(editModalElement);
+        if (modal) modal.hide();
+      }
+    }).catch(err => {
+      alert("Error updating ingredient: " + err.message);
+    });
+  });
+}
 
 window.resetTransactionQuery = function() {
   if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
