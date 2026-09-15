@@ -637,188 +637,185 @@ window.rejectPendingStock = async function(key) {
 // -------------------------------------------------------------
 // MODULE 6: BATCH PRODUCTION & MANUAL STOCK OUT
 // -------------------------------------------------------------
+{
+  // Batch Production & Automatic Stock Deduction
+  const bakeBatchForm = document.getElementById("bakeBatchForm");
+  if (bakeBatchForm) {
+    bakeBatchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const recipeKey = document.getElementById("bakeRecipeSelect").value;
+      const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
 
-// Batch Production & Automatic Deduction (With Expiry & Stock Check)
-const bakeBatchForm = document.getElementById("bakeBatchForm");
-if (bakeBatchForm) {
-  bakeBatchForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const recipeKey = document.getElementById("bakeRecipeSelect").value;
-    const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
+      if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
+        alert("Please select a valid recipe and batch quantity.");
+        return;
+      }
 
-    if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
-      alert("Please select a valid recipe and batch quantity.");
-      return;
-    }
+      const recipe = globalRecipes[recipeKey];
+      if (!recipe || !recipe.ingredients) return;
 
-    const recipe = globalRecipes[recipeKey];
-    if (!recipe || !recipe.ingredients) return;
+      const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
 
-    const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
+      let expiredItems = [];
+      let missingStock = [];
 
-    let expiredItems = [];
-    let missingStock = [];
+      // Check availability and expiry status for each ingredient
+      recipe.ingredients.forEach(item => {
+        const ingredient = currentInventory[item.ingredientKey];
+        const currentStock = ingredient?.quantity || 0;
+        const totalNeeded = item.amountPerUnit * batchQty;
 
-    // Check availability and expiry status for each ingredient in the recipe
-    recipe.ingredients.forEach(item => {
-      const ingredient = currentInventory[item.ingredientKey];
-      const currentStock = ingredient?.quantity || 0;
-      const totalNeeded = item.amountPerUnit * batchQty;
-
-      // 1. Check for Expired Ingredients
-      if (ingredient?.expiryDate && currentStock > 0) {
-        const expDate = new Date(ingredient.expiryDate);
-        if (expDate < todayDate) {
-          expiredItems.push(`${item.ingredientName} (Expired on ${ingredient.expiryDate})`);
+        // Check for Expired Ingredients
+        if (ingredient?.expiryDate && currentStock > 0) {
+          const expDate = new Date(ingredient.expiryDate);
+          if (expDate < todayDate) {
+            expiredItems.push(`${item.ingredientName} (Expired on ${ingredient.expiryDate})`);
+          }
         }
+
+        // Check for Insufficient Stock
+        if (currentStock < totalNeeded) {
+          missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+        }
+      });
+
+      if (expiredItems.length > 0) {
+        alert("Cannot bake batch! The following ingredients are flagged as EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
+        return;
       }
 
-      // 2. Check for Insufficient Stock
-      if (currentStock < totalNeeded) {
-        missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+      if (missingStock.length > 0) {
+        alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
+        return;
       }
+
+      const today = new Date().toISOString().split("T")[0];
+      const updatePromises = recipe.ingredients.map(item => {
+        const currentStock = currentInventory[item.ingredientKey].quantity;
+        const totalDeduction = item.amountPerUnit * batchQty;
+        const newQty = currentStock - totalDeduction;
+
+        let ingredientUpdates = { quantity: newQty };
+        if (newQty <= 0) {
+          ingredientUpdates.expiryDate = "";
+        }
+
+        const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), ingredientUpdates);
+
+        const recordStockOut = push(ref(db, 'stock_out/'), {
+          ingredientName: item.ingredientName,
+          deductedQty: totalDeduction,
+          unit: item.unit,
+          reason: `Production: ${batchQty}x ${recipe.name}`,
+          date: today
+        });
+
+        return Promise.all([updateStock, recordStockOut]);
+      });
+
+      Promise.all(updatePromises).then(() => {
+        alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
+        bakeBatchForm.reset();
+      }).catch(err => alert("Error updating stock: " + err.message));
+    });
+  }
+
+  // Manual Stock Out
+  const stockOutForm = document.getElementById("stockOutForm");
+  if (stockOutForm) {
+    stockOutForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ingKey = document.getElementById("stockOutIngSelect").value;
+      const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
+      const reason = document.getElementById("stockOutReason").value;
+      const entryDate = document.getElementById("stockOutDate").value;
+
+      get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+        if (!snap.exists()) return;
+
+        const item = snap.val();
+        if (item.quantity < deductedQty) {
+          return alert("Error: Not enough stock to deduct!");
+        }
+
+        const newQty = item.quantity - deductedQty;
+        
+        let ingredientUpdates = { quantity: newQty };
+        if (newQty <= 0) {
+          ingredientUpdates.expiryDate = "";
+        }
+
+        update(ref(db, `ingredients/${ingKey}`), ingredientUpdates);
+
+        push(ref(db, 'stock_out/'), { 
+          ingredientName: item.name, 
+          deductedQty: deductedQty, 
+          unit: item.unit, 
+          reason: reason, 
+          date: entryDate 
+        }).then(() => { 
+          alert("Stock Out recorded and stock deducted!"); 
+          stockOutForm.reset(); 
+          const today = new Date().toISOString().split("T")[0];
+          const stockOutDateElem = document.getElementById("stockOutDate");
+          if (stockOutDateElem) stockOutDateElem.value = today;
+        });
+      });
     });
 
-    // Block process if any ingredients are expired
-    if (expiredItems.length > 0) {
-      alert("Cannot bake batch! The following ingredients are flagged as EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
-      return;
-    }
-
-    // Block process if stock is insufficient
-    if (missingStock.length > 0) {
-      alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
-      return;
-    }
-
-    // Deduct stock and log stock out records
-    const today = new Date().toISOString().split("T")[0];
-    const updatePromises = recipe.ingredients.map(item => {
-      const currentStock = currentInventory[item.ingredientKey].quantity;
-      const totalDeduction = item.amountPerUnit * batchQty;
-      const newQty = currentStock - totalDeduction;
-
-      // Reset expiry date if stock reaches 0
-      let ingredientUpdates = { quantity: newQty };
-      if (newQty <= 0) {
-        ingredientUpdates.expiryDate = "";
+    onValue(ref(db, 'stock_out/'), (snap) => {
+      const table = document.getElementById("stockOutTableBody");
+      if (table) table.innerHTML = "";
+      globalStockOut = [];
+      if (snap.exists()) {
+        Object.values(snap.val()).forEach((item) => {
+          globalStockOut.push({...item, type: "OUT"});
+          if (table) {
+            table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
+          }
+        });
       }
+      renderDashboardWidgets();
+    });
+  }
 
-      const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), ingredientUpdates);
+  // Manual Discard Action
+  window.discardIngredient = function(key) {
+    const item = allIngredients[key];
+    if (!item) return;
 
-      const recordStockOut = push(ref(db, 'stock_out/'), {
-        ingredientName: item.ingredientName,
-        deductedQty: totalDeduction,
+    if (item.quantity <= 0) {
+      alert(`"${item.name}" already has 0 stock.`);
+      return;
+    }
+
+    if (confirm(`Are you sure you want to discard all remaining stock (${item.quantity} ${item.unit}) of "${item.name}"?`)) {
+      const discardedQty = item.quantity;
+      const today = new Date().toISOString().split("T")[0];
+
+      const updateStock = update(ref(db, `ingredients/${key}`), { 
+        quantity: 0,
+        expiryDate: ""
+      });
+
+      const logStockOut = push(ref(db, 'stock_out/'), {
+        ingredientName: item.name,
+        deductedQty: discardedQty,
         unit: item.unit,
-        reason: `Production: ${batchQty}x ${recipe.name}`,
+        reason: "Expired / Discarded",
         date: today
       });
 
-      return Promise.all([updateStock, recordStockOut]);
-    });
-
-    Promise.all(updatePromises).then(() => {
-      alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
-      bakeBatchForm.reset();
-    }).catch(err => alert("Error updating stock: " + err.message));
-  });
-}
-
-// Manual Stock Out
-const stockOutForm = document.getElementById("stockOutForm");
-if (stockOutForm) {
-  stockOutForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const ingKey = document.getElementById("stockOutIngSelect").value;
-    const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
-    const reason = document.getElementById("stockOutReason").value;
-    const entryDate = document.getElementById("stockOutDate").value;
-
-    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
-      if (!snap.exists()) return;
-
-      const item = snap.val();
-      if (item.quantity < deductedQty) {
-        return alert("Error: Not enough stock to deduct!");
-      }
-
-      const newQty = item.quantity - deductedQty;
-      
-      let ingredientUpdates = { quantity: newQty };
-      if (newQty <= 0) {
-        ingredientUpdates.expiryDate = "";
-      }
-
-      update(ref(db, `ingredients/${ingKey}`), ingredientUpdates);
-
-      push(ref(db, 'stock_out/'), { 
-        ingredientName: item.name, 
-        deductedQty: deductedQty, 
-        unit: item.unit, 
-        reason: reason, 
-        date: entryDate 
-      }).then(() => { 
-        alert("Stock Out recorded and stock deducted!"); 
-        stockOutForm.reset(); 
-        const today = new Date().toISOString().split("T")[0];
-        const stockOutDateElem = document.getElementById("stockOutDate");
-        if (stockOutDateElem) stockOutDateElem.value = today;
-      });
-    });
-  });
-
-  onValue(ref(db, 'stock_out/'), (snap) => {
-    const table = document.getElementById("stockOutTableBody");
-    if (table) table.innerHTML = "";
-    globalStockOut = [];
-    if (snap.exists()) {
-      Object.values(snap.val()).forEach((item) => {
-        globalStockOut.push({...item, type: "OUT"});
-        if (table) {
-          table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
-        }
+      Promise.all([updateStock, logStockOut]).then(() => {
+        alert(`Successfully discarded ${discardedQty} ${item.unit} of "${item.name}".`);
+      }).catch(err => {
+        alert("Error processing discard action: " + err.message);
       });
     }
-    renderDashboardWidgets();
-  });
+  };
 }
-
-// Manual Discard Action
-window.discardIngredient = function(key) {
-  const item = allIngredients[key];
-  if (!item) return;
-
-  if (item.quantity <= 0) {
-    alert(`"${item.name}" already has 0 stock.`);
-    return;
-  }
-
-  if (confirm(`Are you sure you want to discard all remaining stock (${item.quantity} ${item.unit}) of "${item.name}"?`)) {
-    const discardedQty = item.quantity;
-    const today = new Date().toISOString().split("T")[0];
-
-    const updateStock = update(ref(db, `ingredients/${key}`), { 
-      quantity: 0,
-      expiryDate: ""
-    });
-
-    const logStockOut = push(ref(db, 'stock_out/'), {
-      ingredientName: item.name,
-      deductedQty: discardedQty,
-      unit: item.unit,
-      reason: "Expired / Discarded",
-      date: today
-    });
-
-    Promise.all([updateStock, logStockOut]).then(() => {
-      alert(`Successfully discarded ${discardedQty} ${item.unit} of "${item.name}".`);
-    }).catch(err => {
-      alert("Error processing discard action: " + err.message);
-    });
-  }
-};
 // -------------------------------------------------------------
 // MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
 // -------------------------------------------------------------
