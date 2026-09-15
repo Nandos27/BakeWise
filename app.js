@@ -635,7 +635,7 @@ window.rejectPendingStock = async function(key) {
   }
 };
 // -------------------------------------------------------------
-// MODULE 6: STOCK OUT
+// MODULE 6: BATCH PRODUCTION & MANUAL STOCK OUT
 // -------------------------------------------------------------
 
 // Batch Production & Automatic Deduction (With Expiry & Stock Check)
