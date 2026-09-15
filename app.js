@@ -794,6 +794,9 @@ window.rejectPendingStock = async function(key) {
 // -------------------------------------------------------------
 // MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
+// -------------------------------------------------------------
 const userTableBody = document.getElementById("userManagementTableBody");
 if (userTableBody) {
   onValue(ref(db, 'users/'), (snapshot) => {
@@ -812,7 +815,8 @@ if (userTableBody) {
             <td><span class="badge bg-secondary text-capitalize">${u.role.replace('_', ' ')}</span></td>
             <td>
               <button class="btn btn-sm btn-outline-primary me-1" onclick="updateUserRole('${uid}', 'kitchen_staff')">Set Staff</button>
-              <button class="btn btn-sm btn-outline-success" onclick="updateUserRole('${uid}', 'supervisor')">Set Supervisor</button>
+              <button class="btn btn-sm btn-outline-success me-1" onclick="updateUserRole('${uid}', 'supervisor')">Set Supervisor</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${uid}')">Delete</button>
             </td>
           </tr>`;
       });
@@ -827,6 +831,18 @@ window.updateUserRole = (uid, newRole) => {
   }
   update(ref(db, `users/${uid}`), { role: newRole })
     .then(() => alert(`User role updated to ${newRole.replace('_', ' ')}!`));
+};
+
+window.deleteUser = (uid) => {
+  if (confirm("Are you sure you want to delete this user profile?")) {
+    remove(ref(db, `users/${uid}`))
+      .then(() => {
+        alert("User profile deleted successfully!");
+      })
+      .catch((err) => {
+        alert("Error deleting user: " + err.message);
+      });
+  }
 };
 
 // -------------------------------------------------------------
