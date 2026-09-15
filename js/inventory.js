@@ -603,6 +603,13 @@ if (editForm) {
       alert("Ingredient updated successfully!");
       const editModalElement = document.getElementById('editModal');
       if (editModalElement && typeof bootstrap !== "undefined") {
+      // Blur any active focused element inside the modal to fix the aria-hidden warning
+      const activeEl = document.activeElement;
+      if (editModalElement.contains(activeEl)) {
+        activeEl.blur();
+      }
+      if (editModalElement && typeof bootstrap !== "undefined") {
+        
         const modal = bootstrap.Modal.getInstance(editModalElement);
         if (modal) modal.hide();
       }
