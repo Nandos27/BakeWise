@@ -310,7 +310,7 @@ function renderInventoryTable() {
     let isExpired = false;
     let isExpiringSoon = false;
     
-    if (item.expiryDate) {
+    if (item.expiryDate && item.quantity > 0) {
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0); 
       const expDate = new Date(item.expiryDate);
@@ -336,11 +336,17 @@ function renderInventoryTable() {
         statusBadges = `<span class="badge bg-success">OK</span>`;
       }
 
+      // Display expired amount under Stock Level column if expired
+      let quantityDisplay = `${formatDecimal(item.quantity)} ${item.unit}`;
+      if (isExpired) {
+        quantityDisplay += `<br><small class="text-danger fw-bold">(${formatDecimal(item.quantity)} ${item.unit} Expired)</small>`;
+      }
+
       const row = `
         <tr class="${isLowStock ? 'table-danger' : ''}">
           <td class="fw-bold">${item.name}</td>
           <td><span class="badge bg-secondary">${item.category}</span></td>
-          <td class="fw-bold">${formatDecimal(item.quantity)} ${item.unit}</td>
+          <td class="fw-bold">${quantityDisplay}</td>
           <td>${formatDecimal(item.minThreshold)} ${item.unit}</td>
           <td>${item.expiryDate || 'N/A'}</td>
           <td>${statusBadges}</td>
@@ -370,37 +376,6 @@ function renderInventoryTable() {
   }
 
   renderDashboardWidgets();
-}
-
-window.openEditModal = function(key, name, qty, unit, minThreshold, expiryDate) {
-  document.getElementById("editKey").value = key;
-  document.getElementById("editName").value = name;
-  document.getElementById("editQty").value = qty;
-  document.getElementById("editUnit").value = unit;
-  document.getElementById("editMin").value = minThreshold || 0;
-  document.getElementById("editExpiry").value = expiryDate || "";
-
-  new bootstrap.Modal(document.getElementById('editModal')).show();
-};
-
-const editForm = document.getElementById("editForm");
-if (editForm) {
-  editForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const key = document.getElementById("editKey").value;
-    const updatedData = {
-      name: document.getElementById("editName").value,
-      quantity: parseFloat(document.getElementById("editQty").value),
-      minThreshold: parseFloat(document.getElementById("editMin").value),
-      expiryDate: document.getElementById("editExpiry").value,
-      unit: document.getElementById("editUnit").value
-    };
-
-    update(ref(db, 'ingredients/' + key), updatedData).then(() => {
-      alert("Ingredient updated!");
-      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-    });
-  });
 }
 
 // -------------------------------------------------------------
