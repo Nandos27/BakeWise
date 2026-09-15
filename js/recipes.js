@@ -1,6 +1,6 @@
 // js/recipes.js
 import { db, auth } from "./firebase.js";
-import { ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 let globalRecipes = {};
 
