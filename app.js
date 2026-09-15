@@ -235,6 +235,12 @@ onAuthStateChanged(auth, (user) => {
         if (role === "admin") {
           document.querySelectorAll(".super-admin-only").forEach(el => el.classList.remove("d-none"));
         }
+      } else {
+        // Profile was deleted! Force sign out and lock them out.
+        signOut(auth).then(() => {
+          alert("Access Denied: Your user profile has been deleted by an administrator.");
+          window.location.href = "index.html";
+        });
       }
     });
   } else {
@@ -242,7 +248,7 @@ onAuthStateChanged(auth, (user) => {
       window.location.href = "index.html";
     }
   }
-}); 
+});
 
 // -------------------------------------------------------------
 // MODULES 2, 7, 8, 9, 10: INGREDIENTS, SEARCH, LOW STOCK & EXPIRY
