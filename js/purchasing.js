@@ -104,8 +104,14 @@ if (emailOrderForm) {
         alert(`Purchase Order (${poNum}) successfully emailed to ${supplierName} and saved!`);
         emailOrderForm.reset();
 
+        // Close modal safely and blur active element to prevent aria-hidden warnings
         const modalEl = document.getElementById('emailOrderModal');
         if (modalEl && typeof bootstrap !== "undefined") {
+          const activeEl = document.activeElement;
+          if (modalEl.contains(activeEl)) {
+            activeEl.blur();
+          }
+
           const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
           modalInstance.hide();
         }
