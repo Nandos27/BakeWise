@@ -635,10 +635,10 @@ window.rejectPendingStock = async function(key) {
   }
 };
 // -------------------------------------------------------------
-// MODULE 6: BATCH PRODUCTION & MANUAL STOCK OUT
+// MODULE 6: STOCK OUT
 // -------------------------------------------------------------
 
-// Batch Production & Automatic Deduction (With Expiry Check)
+// Batch Production & Automatic Deduction (With Expiry & Stock Check)
 const bakeBatchForm = document.getElementById("bakeBatchForm");
 if (bakeBatchForm) {
   bakeBatchForm.addEventListener("submit", (e) => {
@@ -661,6 +661,7 @@ if (bakeBatchForm) {
     let expiredItems = [];
     let missingStock = [];
 
+    // Check availability and expiry status for each ingredient in the recipe
     recipe.ingredients.forEach(item => {
       const ingredient = currentInventory[item.ingredientKey];
       const currentStock = ingredient?.quantity || 0;
@@ -680,18 +681,19 @@ if (bakeBatchForm) {
       }
     });
 
-    // Block submission if any ingredients are expired
+    // Block process if any ingredients are expired
     if (expiredItems.length > 0) {
       alert("Cannot bake batch! The following ingredients are flagged as EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
       return;
     }
 
-    // Block submission if stock is insufficient
+    // Block process if stock is insufficient
     if (missingStock.length > 0) {
       alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
       return;
     }
 
+    // Deduct stock and log stock out records
     const today = new Date().toISOString().split("T")[0];
     const updatePromises = recipe.ingredients.map(item => {
       const currentStock = currentInventory[item.ingredientKey].quantity;
@@ -817,44 +819,6 @@ window.discardIngredient = function(key) {
     });
   }
 };
-
-// Table Row Render Logic Example (to include in renderInventoryTable)
-function renderInventoryTable() {
-  const tbody = document.getElementById("inventoryTableBody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
-
-  Object.keys(allIngredients).forEach(key => {
-    const item = allIngredients[key];
-    const isLowStock = item.quantity <= item.minThreshold;
-    
-    const itemExpDate = item.expiryDate ? new Date(item.expiryDate) : null;
-    const isExpired = itemExpDate && itemExpDate < todayDate && item.quantity > 0;
-
-    let expiryDisplay = item.expiryDate || 'N/A';
-    if (isExpired) {
-      expiryDisplay = `<span class="badge bg-danger">${item.expiryDate} (EXPIRED)</span>`;
-    }
-
-    const row = `
-      <tr class="${isExpired ? 'table-warning' : (isLowStock ? 'table-danger' : '')}">
-        <td class="fw-bold">${item.name}</td>
-        <td><span class="badge bg-secondary">${item.category || 'General'}</span></td>
-        <td class="fw-bold">${item.quantity} ${item.unit}</td>
-        <td>${item.minThreshold} ${item.unit}</td>
-        <td>${expiryDisplay}</td>
-        <td class="admin-only d-none">
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${key}', '${item.name}', ${item.quantity}, '${item.unit}', ${item.minThreshold}, '${item.expiryDate}')">Edit</button>
-          <button class="btn btn-sm btn-outline-warning me-1" onclick="discardIngredient('${key}')">Discard</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteIngredient('${key}')">Delete</button>
-        </td>
-      </tr>`;
-    tbody.innerHTML += row;
-  });
-}
 // -------------------------------------------------------------
 // MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
 // -------------------------------------------------------------
