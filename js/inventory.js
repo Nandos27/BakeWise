@@ -287,6 +287,23 @@ if (stockInForm) {
   });
 }
 
+// Stock Out Listener to populate globalStockOut (Crucial for Forecast & Query Engine)
+onValue(ref(db, 'stock_out/'), (snap) => {
+  const table = document.getElementById("stockOutTableBody");
+  if (table) table.innerHTML = "";
+  
+  globalStockOut = [];
+  if (snap.exists()) {
+    Object.values(snap.val()).forEach((item) => {
+      globalStockOut.push({ ...item, type: "OUT" });
+      if (table) {
+        table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
+      }
+    });
+  }
+  renderDashboardWidgets();
+});
+
 window.renderPendingStockCards = function() {
   const container = document.getElementById("pendingStockCard");
   const table = document.getElementById("pendingStockTableBody");
@@ -603,13 +620,11 @@ if (editForm) {
       alert("Ingredient updated successfully!");
       const editModalElement = document.getElementById('editModal');
       if (editModalElement && typeof bootstrap !== "undefined") {
-      // Blur any active focused element inside the modal to fix the aria-hidden warning
-      const activeEl = document.activeElement;
-      if (editModalElement.contains(activeEl)) {
-        activeEl.blur();
-      }
-      if (editModalElement && typeof bootstrap !== "undefined") {
-        
+        const activeEl = document.activeElement;
+        if (editModalElement.contains(activeEl)) {
+          activeEl.blur();
+        }
+
         const modal = bootstrap.Modal.getInstance(editModalElement);
         if (modal) modal.hide();
       }
