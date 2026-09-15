@@ -1557,11 +1557,11 @@ window.deleteRecipe = function(key) {
         const currentStock = ingredient?.quantity || 0;
         const totalNeeded = item.amountPerUnit * batchQty;
 
-        // 1. Expiry Check
+        // 1. Expiry Check - Now displays the exact expired quantity
         if (ingredient?.expiryDate && currentStock > 0) {
           const expDate = new Date(ingredient.expiryDate);
           if (expDate < todayDate) {
-            expiredItems.push(`${item.ingredientName} (Expired on ${ingredient.expiryDate})`);
+            expiredItems.push(`${item.ingredientName} (Expired: ${currentStock} ${item.unit} on ${ingredient.expiryDate})`);
           }
         }
 
@@ -1572,7 +1572,7 @@ window.deleteRecipe = function(key) {
       });
 
       if (expiredItems.length > 0) {
-        alert("Cannot bake batch! The following ingredients are EXPIRED:\n\n" + expiredItems.join("\n"));
+        alert("Cannot bake batch! The following ingredients are EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
         return;
       }
 
