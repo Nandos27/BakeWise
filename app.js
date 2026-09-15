@@ -582,12 +582,23 @@ onValue(ref(db, 'pending_stock_in/'), () => {
 });
 
 function executeDirectStockIn(payload) {
+  const currentItem = allIngredients[payload.ingredientKey];
+  const currentQty = currentItem?.quantity || 0;
+  const currentExpiry = currentItem?.expiryDate;
+  
   let ingredientUpdates = { 
-    quantity: (allIngredients[payload.ingredientKey]?.quantity || 0) + payload.addedQty 
+    quantity: currentQty + payload.addedQty 
   };
   
+  // Earliest Expiry Date Retention Logic
   if (payload.newExpiryDate) {
-    ingredientUpdates.expiryDate = payload.newExpiryDate;
+    if (currentQty > 0 && currentExpiry) {
+      const oldExp = new Date(currentExpiry).getTime();
+      const newExp = new Date(payload.newExpiryDate).getTime();
+      ingredientUpdates.expiryDate = (oldExp <= newExp) ? currentExpiry : payload.newExpiryDate;
+    } else {
+      ingredientUpdates.expiryDate = payload.newExpiryDate;
+    }
   }
 
   update(ref(db, `ingredients/${payload.ingredientKey}`), ingredientUpdates);
@@ -600,9 +611,12 @@ function executeDirectStockIn(payload) {
     date: payload.date 
   }).then(() => { 
     alert("Stock In recorded successfully!"); 
-    stockInForm.reset(); 
-    const today = new Date().toISOString().split("T")[0];
-    document.getElementById("stockInDate").value = today;
+    if (stockInForm) {
+      stockInForm.reset(); 
+      const today = new Date().toISOString().split("T")[0];
+      const stockInDateElem = document.getElementById("stockInDate");
+      if (stockInDateElem) stockInDateElem.value = today;
+    }
   });
 }
 
@@ -620,10 +634,97 @@ window.rejectPendingStock = async function(key) {
     await remove(ref(db, 'pending_stock_in/' + key));
   }
 };
+// -------------------------------------------------------------
+// MODULE 6: BATCH PRODUCTION & MANUAL STOCK OUT
+// -------------------------------------------------------------
 
-// -------------------------------------------------------------
-// MODULE 6: STOCK OUT
-// -------------------------------------------------------------
+// Batch Production & Automatic Deduction (With Expiry Check)
+const bakeBatchForm = document.getElementById("bakeBatchForm");
+if (bakeBatchForm) {
+  bakeBatchForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const recipeKey = document.getElementById("bakeRecipeSelect").value;
+    const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
+
+    if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
+      alert("Please select a valid recipe and batch quantity.");
+      return;
+    }
+
+    const recipe = globalRecipes[recipeKey];
+    if (!recipe || !recipe.ingredients) return;
+
+    const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    let expiredItems = [];
+    let missingStock = [];
+
+    recipe.ingredients.forEach(item => {
+      const ingredient = currentInventory[item.ingredientKey];
+      const currentStock = ingredient?.quantity || 0;
+      const totalNeeded = item.amountPerUnit * batchQty;
+
+      // 1. Check for Expired Ingredients
+      if (ingredient?.expiryDate && currentStock > 0) {
+        const expDate = new Date(ingredient.expiryDate);
+        if (expDate < todayDate) {
+          expiredItems.push(`${item.ingredientName} (Expired on ${ingredient.expiryDate})`);
+        }
+      }
+
+      // 2. Check for Insufficient Stock
+      if (currentStock < totalNeeded) {
+        missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+      }
+    });
+
+    // Block submission if any ingredients are expired
+    if (expiredItems.length > 0) {
+      alert("Cannot bake batch! The following ingredients are flagged as EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
+      return;
+    }
+
+    // Block submission if stock is insufficient
+    if (missingStock.length > 0) {
+      alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const updatePromises = recipe.ingredients.map(item => {
+      const currentStock = currentInventory[item.ingredientKey].quantity;
+      const totalDeduction = item.amountPerUnit * batchQty;
+      const newQty = currentStock - totalDeduction;
+
+      // Reset expiry date if stock reaches 0
+      let ingredientUpdates = { quantity: newQty };
+      if (newQty <= 0) {
+        ingredientUpdates.expiryDate = "";
+      }
+
+      const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), ingredientUpdates);
+
+      const recordStockOut = push(ref(db, 'stock_out/'), {
+        ingredientName: item.ingredientName,
+        deductedQty: totalDeduction,
+        unit: item.unit,
+        reason: `Production: ${batchQty}x ${recipe.name}`,
+        date: today
+      });
+
+      return Promise.all([updateStock, recordStockOut]);
+    });
+
+    Promise.all(updatePromises).then(() => {
+      alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
+      bakeBatchForm.reset();
+    }).catch(err => alert("Error updating stock: " + err.message));
+  });
+}
+
+// Manual Stock Out
 const stockOutForm = document.getElementById("stockOutForm");
 if (stockOutForm) {
   stockOutForm.addEventListener("submit", (e) => {
@@ -634,23 +735,35 @@ if (stockOutForm) {
     const entryDate = document.getElementById("stockOutDate").value;
 
     get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
-      if (snap.exists()) {
-        const item = snap.val();
-        if (item.quantity < deductedQty) return alert("Error: Not enough stock to deduct!");
+      if (!snap.exists()) return;
 
-        update(ref(db, `ingredients/${ingKey}`), { quantity: item.quantity - deductedQty });
-
-        push(ref(db, 'stock_out/'), { 
-          ingredientName: item.name, 
-          deductedQty: deductedQty, 
-          unit: item.unit, 
-          reason: reason, 
-          date: entryDate 
-        }).then(() => { 
-          alert("Stock Out recorded and stock deducted!"); 
-          stockOutForm.reset(); 
-        });
+      const item = snap.val();
+      if (item.quantity < deductedQty) {
+        return alert("Error: Not enough stock to deduct!");
       }
+
+      const newQty = item.quantity - deductedQty;
+      
+      let ingredientUpdates = { quantity: newQty };
+      if (newQty <= 0) {
+        ingredientUpdates.expiryDate = "";
+      }
+
+      update(ref(db, `ingredients/${ingKey}`), ingredientUpdates);
+
+      push(ref(db, 'stock_out/'), { 
+        ingredientName: item.name, 
+        deductedQty: deductedQty, 
+        unit: item.unit, 
+        reason: reason, 
+        date: entryDate 
+      }).then(() => { 
+        alert("Stock Out recorded and stock deducted!"); 
+        stockOutForm.reset(); 
+        const today = new Date().toISOString().split("T")[0];
+        const stockOutDateElem = document.getElementById("stockOutDate");
+        if (stockOutDateElem) stockOutDateElem.value = today;
+      });
     });
   });
 
@@ -661,13 +774,87 @@ if (stockOutForm) {
     if (snap.exists()) {
       Object.values(snap.val()).forEach((item) => {
         globalStockOut.push({...item, type: "OUT"});
-        if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
+        if (table) {
+          table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
+        }
       });
     }
     renderDashboardWidgets();
   });
 }
 
+// Manual Discard Action
+window.discardIngredient = function(key) {
+  const item = allIngredients[key];
+  if (!item) return;
+
+  if (item.quantity <= 0) {
+    alert(`"${item.name}" already has 0 stock.`);
+    return;
+  }
+
+  if (confirm(`Are you sure you want to discard all remaining stock (${item.quantity} ${item.unit}) of "${item.name}"?`)) {
+    const discardedQty = item.quantity;
+    const today = new Date().toISOString().split("T")[0];
+
+    const updateStock = update(ref(db, `ingredients/${key}`), { 
+      quantity: 0,
+      expiryDate: ""
+    });
+
+    const logStockOut = push(ref(db, 'stock_out/'), {
+      ingredientName: item.name,
+      deductedQty: discardedQty,
+      unit: item.unit,
+      reason: "Expired / Discarded",
+      date: today
+    });
+
+    Promise.all([updateStock, logStockOut]).then(() => {
+      alert(`Successfully discarded ${discardedQty} ${item.unit} of "${item.name}".`);
+    }).catch(err => {
+      alert("Error processing discard action: " + err.message);
+    });
+  }
+};
+
+// Table Row Render Logic Example (to include in renderInventoryTable)
+function renderInventoryTable() {
+  const tbody = document.getElementById("inventoryTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  Object.keys(allIngredients).forEach(key => {
+    const item = allIngredients[key];
+    const isLowStock = item.quantity <= item.minThreshold;
+    
+    const itemExpDate = item.expiryDate ? new Date(item.expiryDate) : null;
+    const isExpired = itemExpDate && itemExpDate < todayDate && item.quantity > 0;
+
+    let expiryDisplay = item.expiryDate || 'N/A';
+    if (isExpired) {
+      expiryDisplay = `<span class="badge bg-danger">${item.expiryDate} (EXPIRED)</span>`;
+    }
+
+    const row = `
+      <tr class="${isExpired ? 'table-warning' : (isLowStock ? 'table-danger' : '')}">
+        <td class="fw-bold">${item.name}</td>
+        <td><span class="badge bg-secondary">${item.category || 'General'}</span></td>
+        <td class="fw-bold">${item.quantity} ${item.unit}</td>
+        <td>${item.minThreshold} ${item.unit}</td>
+        <td>${expiryDisplay}</td>
+        <td class="admin-only d-none">
+          <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${key}', '${item.name}', ${item.quantity}, '${item.unit}', ${item.minThreshold}, '${item.expiryDate}')">Edit</button>
+          <button class="btn btn-sm btn-outline-warning me-1" onclick="discardIngredient('${key}')">Discard</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteIngredient('${key}')">Delete</button>
+        </td>
+      </tr>`;
+    tbody.innerHTML += row;
+  });
+}
 // -------------------------------------------------------------
 // MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
 // -------------------------------------------------------------
