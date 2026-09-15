@@ -10,7 +10,7 @@ import {
   setPersistence,
   browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { ref, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // Login form with 30-Minute Expiry Verification Check via Auth Metadata
 const loginForm = document.getElementById("loginForm");
@@ -209,3 +209,54 @@ onAuthStateChanged(auth, (user) => {
     }
   }
 });
+
+// -------------------------------------------------------------
+// MODULE 12: USER ROLE MANAGEMENT (ADMIN ONLY)
+// -------------------------------------------------------------
+const userTableBody = document.getElementById("userManagementTableBody");
+if (userTableBody) {
+  onValue(ref(db, 'users/'), (snapshot) => {
+    userTableBody.innerHTML = "";
+    if (snapshot.exists()) {
+      const users = snapshot.val();
+      Object.keys(users).forEach((uid) => {
+        const u = users[uid];
+        
+        if (u.role === "admin") return;
+
+        userTableBody.innerHTML += `
+          <tr>
+            <td>${u.fullName}</td>
+            <td>${u.email}</td>
+            <td><span class="badge bg-secondary text-capitalize">${u.role.replace('_', ' ')}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary me-1" onclick="updateUserRole('${uid}', 'kitchen_staff')">Set Staff</button>
+              <button class="btn btn-sm btn-outline-success me-1" onclick="updateUserRole('${uid}', 'supervisor')">Set Supervisor</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${uid}')">Delete</button>
+            </td>
+          </tr>`;
+      });
+    }
+  });
+}
+
+window.updateUserRole = (uid, newRole) => {
+  if (newRole !== 'kitchen_staff' && newRole !== 'supervisor') {
+    alert("Invalid role selection.");
+    return;
+  }
+  update(ref(db, `users/${uid}`), { role: newRole })
+    .then(() => alert(`User role updated to ${newRole.replace('_', ' ')}!`));
+};
+
+window.deleteUser = (uid) => {
+  if (confirm("Are you sure you want to delete this user profile?")) {
+    remove(ref(db, `users/${uid}`))
+      .then(() => {
+        alert("User profile deleted successfully!");
+      })
+      .catch((err) => {
+        alert("Error deleting user: " + err.message);
+      });
+  }
+};
