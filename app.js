@@ -1529,59 +1529,87 @@ window.deleteRecipe = function(key) {
 };
 
 // Batch Production & Automatic Stock Deduction
-const bakeBatchForm = document.getElementById("bakeBatchForm");
-if (bakeBatchForm) {
-  bakeBatchForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const recipeKey = document.getElementById("bakeRecipeSelect").value;
-    const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
+{
+  const bakeBatchForm = document.getElementById("bakeBatchForm");
+  if (bakeBatchForm) {
+    bakeBatchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const recipeKey = document.getElementById("bakeRecipeSelect").value;
+      const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
 
-    if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
-      alert("Please select a valid recipe and batch quantity.");
-      return;
-    }
-
-    const recipe = globalRecipes[recipeKey];
-    if (!recipe || !recipe.ingredients) return;
-
-    const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
-
-    let missingStock = [];
-    recipe.ingredients.forEach(item => {
-      const currentStock = currentInventory[item.ingredientKey]?.quantity || 0;
-      const totalNeeded = item.amountPerUnit * batchQty;
-      if (currentStock < totalNeeded) {
-        missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+      if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
+        alert("Please select a valid recipe and batch quantity.");
+        return;
       }
-    });
 
-    if (missingStock.length > 0) {
-      alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
-      return;
-    }
+      const recipe = globalRecipes[recipeKey];
+      if (!recipe || !recipe.ingredients) return;
 
-    const today = new Date().toISOString().split("T")[0];
-    const updatePromises = recipe.ingredients.map(item => {
-      const currentStock = currentInventory[item.ingredientKey].quantity;
-      const totalDeduction = item.amountPerUnit * batchQty;
-      const newQty = currentStock - totalDeduction;
+      const currentInventory = window.allIngredients || (typeof allIngredients !== "undefined" ? allIngredients : {});
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
 
-      const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), { quantity: newQty });
+      let expiredItems = [];
+      let missingStock = [];
 
-      const recordStockOut = push(ref(db, 'stock_out/'), {
-        ingredientName: item.ingredientName,
-        deductedQty: totalDeduction,
-        unit: item.unit,
-        reason: `Production: ${batchQty}x ${recipe.name}`,
-        date: today
+      recipe.ingredients.forEach(item => {
+        const ingredient = currentInventory[item.ingredientKey];
+        const currentStock = ingredient?.quantity || 0;
+        const totalNeeded = item.amountPerUnit * batchQty;
+
+        // 1. Expiry Check
+        if (ingredient?.expiryDate && currentStock > 0) {
+          const expDate = new Date(ingredient.expiryDate);
+          if (expDate < todayDate) {
+            expiredItems.push(`${item.ingredientName} (Expired on ${ingredient.expiryDate})`);
+          }
+        }
+
+        // 2. Quantity Check
+        if (currentStock < totalNeeded) {
+          missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+        }
       });
 
-      return Promise.all([updateStock, recordStockOut]);
-    });
+      if (expiredItems.length > 0) {
+        alert("Cannot bake batch! The following ingredients are EXPIRED:\n\n" + expiredItems.join("\n"));
+        return;
+      }
 
-    Promise.all(updatePromises).then(() => {
-      alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
-      bakeBatchForm.reset();
-    }).catch(err => alert("Error updating stock: " + err.message));
-  });
+      if (missingStock.length > 0) {
+        alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
+        return;
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const updatePromises = recipe.ingredients.map(item => {
+        const currentStock = currentInventory[item.ingredientKey].quantity;
+        const totalDeduction = item.amountPerUnit * batchQty;
+        const newQty = currentStock - totalDeduction;
+
+        // Reset expiry if stock reaches 0
+        let ingredientUpdates = { quantity: newQty };
+        if (newQty <= 0) {
+          ingredientUpdates.expiryDate = "";
+        }
+
+        const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), ingredientUpdates);
+
+        const recordStockOut = push(ref(db, 'stock_out/'), {
+          ingredientName: item.ingredientName,
+          deductedQty: totalDeduction,
+          unit: item.unit,
+          reason: `Production: ${batchQty}x ${recipe.name}`,
+          date: today
+        });
+
+        return Promise.all([updateStock, recordStockOut]);
+      });
+
+      Promise.all(updatePromises).then(() => {
+        alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
+        bakeBatchForm.reset();
+      }).catch(err => alert("Error updating stock: " + err.message));
+    });
+  }
 }
