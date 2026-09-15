@@ -10,7 +10,7 @@ import {
   setPersistence,
   browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { ref, set, get, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // Login form with 30-Minute Expiry Verification Check via Auth Metadata
 const loginForm = document.getElementById("loginForm");
@@ -58,10 +58,10 @@ if (loginForm) {
                 try {
                   const tempCred = await signInWithEmailAndPassword(auth, email, password);
                   await sendEmailVerification(tempCred.user);
-                  
+                   
                   password = null;
                   await signOut(auth);
-                  
+                   
                   alertBox.className = "alert alert-success py-2 mb-3";
                   alertBox.innerText = "A fresh verification link has been sent! Check your inbox.";
                 } catch (err) {
@@ -140,7 +140,7 @@ if (forgotPasswordLink) {
   forgotPasswordLink.addEventListener("click", (e) => {
     e.preventDefault();
     let email = document.getElementById("email") ? document.getElementById("email").value.trim() : "";
-    
+     
     if (!email) {
       email = prompt("Please enter your account email address to reset your password:");
     }
@@ -180,7 +180,7 @@ onAuthStateChanged(auth, (user) => {
 
         const greeting = document.getElementById("userGreeting");
         if (greeting) greeting.innerText = `Welcome, ${userData.fullName}!`;
-        
+         
         const roleBadge = document.getElementById("userRoleBadge");
         if (roleBadge) roleBadge.innerText = `Role: ${role.replace('_', ' ')}`;
 
@@ -188,7 +188,7 @@ onAuthStateChanged(auth, (user) => {
           document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
           const container = document.getElementById("ingTableContainer");
           if (container) container.className = "col-md-8";
-          
+           
           if (typeof renderPendingStockCards === "function") {
             renderPendingStockCards();
           }
@@ -221,7 +221,7 @@ if (userTableBody) {
       const users = snapshot.val();
       Object.keys(users).forEach((uid) => {
         const u = users[uid];
-        
+         
         if (u.role === "admin") return;
 
         userTableBody.innerHTML += `
