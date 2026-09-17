@@ -645,10 +645,10 @@ window.resetTransactionQuery = function() {
 document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
 document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
 // ==========================================
-// BakeWise - Print Reporting Utilities
+// BakeWise - Direct PDF Generation Utilities
 // ==========================================
 
-// 1. Print Filtered Inventory & Transaction Report (with Donut Chart)
+// 1. Download Inventory & Transaction Summary PDF (With Donut Chart)
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
@@ -656,91 +656,127 @@ window.printFilteredReport = function() {
   const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
   const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
 
-  // Grab table rows and clean out action buttons
+  // Clean table rows (remove buttons)
   let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
   transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
 
-  // Capture Chart.js canvas as a base64 image string
+  // Convert chart canvas to image if present
   const chartCanvas = document.getElementById("inventoryStatusChart");
-  let chartImageHtml = "";
+  let chartImgHtml = "";
   if (chartCanvas) {
-    const chartImageSrc = chartCanvas.toDataURL("image/png");
-    chartImageHtml = `
-      <div style="text-align: center; margin: 20px 0;">
-        <h3>Inventory Distribution Chart</h3>
-        <img src="${chartImageSrc}" style="max-width: 320px; height: auto;" />
+    const chartDataUrl = chartCanvas.toDataURL("image/png");
+    chartImgHtml = `
+      <div style="text-align: center; margin: 15px 0;">
+        <h4 style="margin-bottom: 5px; color: #555;">Inventory Status Overview</h4>
+        <img src="${chartDataUrl}" style="width: 250px; height: auto;" />
       </div>
     `;
   }
 
-  const printWindow = window.open("", "_blank", "width=900,height=700");
-  
-  if (!printWindow) {
-    alert("Pop-up blocked! Please allow pop-ups for this site to print reports.");
-    return;
-  }
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>BakeWise - Inventory Summary Report</title>
-      <style>
-        body { font-family: 'Arial', sans-serif; padding: 20px; color: #2C241B; }
-        .header { text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; color: #A05A35; }
-        .metrics { display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center; }
-        .metric-card { border: 1px solid #ccc; padding: 10px; width: 22%; border-radius: 5px; }
-        .metric-card h3 { margin: 5px 0 0 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
-        th { background-color: #F8F7F3; }
-        .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #777; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>BakeWise Kitchen Management</h1>
-        <h2>Inventory & Transaction Summary Report</h2>
-        <p>Generated on: ${new Date().toLocaleString()}</p>
+  // Create temporary container element
+  const element = document.createElement("div");
+  element.innerHTML = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
+      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
+        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
+        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Inventory & Transaction Summary Report</h2>
       </div>
 
-      <div class="metrics">
-        <div class="metric-card"><div>Total Items</div><h3>${totalIngredients}</h3></div>
-        <div class="metric-card"><div>Low Stock</div><h3>${lowStock}</h3></div>
-        <div class="metric-card"><div>Expired</div><h3>${expired}</h3></div>
-        <div class="metric-card"><div>Suppliers</div><h3>${suppliers}</h3></div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center;">
+        <div style="border: 1px solid #ddd; padding: 8px; width: 22%; border-radius: 4px;">
+          <div style="font-size: 11px; color: #666;">Total Items</div>
+          <strong style="font-size: 16px;">${totalIngredients}</strong>
+        </div>
+        <div style="border: 1px solid #ddd; padding: 8px; width: 22%; border-radius: 4px;">
+          <div style="font-size: 11px; color: #666;">Low Stock</div>
+          <strong style="font-size: 16px;">${lowStock}</strong>
+        </div>
+        <div style="border: 1px solid #ddd; padding: 8px; width: 22%; border-radius: 4px;">
+          <div style="font-size: 11px; color: #666;">Expired</div>
+          <strong style="font-size: 16px;">${expired}</strong>
+        </div>
+        <div style="border: 1px solid #ddd; padding: 8px; width: 22%; border-radius: 4px;">
+          <div style="font-size: 11px; color: #666;">Suppliers</div>
+          <strong style="font-size: 16px;">${suppliers}</strong>
+        </div>
       </div>
 
-      ${chartImageHtml}
+      ${chartImgHtml}
 
-      <h3>Filtered Transaction History (${recordCount})</h3>
-      <table>
+      <h3 style="font-size: 14px; margin-bottom: 8px;">Filtered Transaction History (${recordCount})</h3>
+      <table style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Ingredient</th>
-            <th>Quantity</th>
-            <th>Reason / Supplier</th>
+          <tr style="background-color: #F8F7F3;">
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Date</th>
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Type</th>
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Ingredient</th>
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Quantity</th>
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Reason / Supplier</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody style="font-size: 11px;">
           ${transactionRows}
         </tbody>
       </table>
 
-      <div class="footer">
+      <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
         BakeWise Integrated Kitchen System &bull; Official Generated Report
       </div>
-    </body>
-    </html>
-  `);
+    </div>
+  `;
 
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 300);
+  const opt = {
+    margin:       10,
+    filename:     'BakeWise_Inventory_Report.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save();
+};
+
+// 2. Download Monthly Purchase Order Forecast PDF
+window.printForecastReport = function() {
+  let forecastRows = document.getElementById("forecastTableBody")?.innerHTML || "";
+  forecastRows = forecastRows.replace(/<button[\s\S]*?<\/button>/gi, '');
+
+  const element = document.createElement("div");
+  element.innerHTML = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
+      <div style="text-align: center; border-bottom: 2px solid #198754; padding-bottom: 10px; margin-bottom: 20px;">
+        <h1 style="margin: 0; color: #198754; font-size: 22px;">BakeWise Kitchen Management</h1>
+        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">30-Day Monthly Purchase Order Forecast</h2>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+          <tr style="background-color: #f8f9fa;">
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Ingredient</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Category</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">30-Day Usage</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Current Stock</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Suggested Order (+10% Buffer)</th>
+          </tr>
+        </thead>
+        <tbody style="font-size: 12px;">
+          ${forecastRows}
+        </tbody>
+      </table>
+
+      <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #888;">
+        BakeWise Integrated Kitchen System &bull; Official Purchase Order Document
+      </div>
+    </div>
+  `;
+
+  const opt = {
+    margin:       10,
+    filename:     'BakeWise_Purchase_Order.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save();
 };
