@@ -648,7 +648,7 @@ document.getElementById("queryResetBtn")?.addEventListener("click", window.reset
 // BakeWise - Direct PDF Generation Utilities
 // ==========================================
 
-// 1. Download Inventory & Transaction Summary PDF (With Donut Chart)
+// 1. Download Inventory & Transaction Summary PDF (With Donut Chart Fix)
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
@@ -660,17 +660,32 @@ window.printFilteredReport = function() {
   let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
   transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
 
-  // Convert chart canvas to image if present
-  const chartCanvas = document.getElementById("inventoryStatusChart");
+  // Safely extract Chart canvas into image (FIXED CANVAS ID TO 'categoryChart')
   let chartImgHtml = "";
+  const chartCanvas = document.getElementById("categoryChart");
+
   if (chartCanvas) {
-    const chartDataUrl = chartCanvas.toDataURL("image/png");
-    chartImgHtml = `
-      <div style="text-align: center; margin: 15px 0;">
-        <h4 style="margin-bottom: 5px; color: #555;">Inventory Status Overview</h4>
-        <img src="${chartDataUrl}" style="width: 250px; height: auto;" />
-      </div>
-    `;
+    try {
+      // Create a temporary canvas to burn in a white background for transparent charts
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = chartCanvas.width;
+      tempCanvas.height = chartCanvas.height;
+      const ctx = tempCanvas.getContext("2d");
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      ctx.drawImage(chartCanvas, 0, 0);
+
+      const chartDataUrl = tempCanvas.toDataURL("image/jpeg", 1.0);
+      chartImgHtml = `
+        <div style="text-align: center; margin: 15px 0;">
+          <h4 style="margin-bottom: 5px; color: #555;">Inventory Category Overview</h4>
+          <img src="${chartDataUrl}" style="width: 250px; height: auto;" />
+        </div>
+      `;
+    } catch (e) {
+      console.error("Could not capture chart canvas:", e);
+    }
   }
 
   // Create temporary container element
@@ -728,51 +743,6 @@ window.printFilteredReport = function() {
   const opt = {
     margin:       10,
     filename:     'BakeWise_Inventory_Report.pdf',
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, logging: false },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-
-  html2pdf().set(opt).from(element).save();
-};
-
-// 2. Download Monthly Purchase Order Forecast PDF
-window.printForecastReport = function() {
-  let forecastRows = document.getElementById("forecastTableBody")?.innerHTML || "";
-  forecastRows = forecastRows.replace(/<button[\s\S]*?<\/button>/gi, '');
-
-  const element = document.createElement("div");
-  element.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-      <div style="text-align: center; border-bottom: 2px solid #198754; padding-bottom: 10px; margin-bottom: 20px;">
-        <h1 style="margin: 0; color: #198754; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">30-Day Monthly Purchase Order Forecast</h2>
-      </div>
-
-      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-        <thead>
-          <tr style="background-color: #f8f9fa;">
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Ingredient</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Category</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">30-Day Usage</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Current Stock</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Suggested Order (+10% Buffer)</th>
-          </tr>
-        </thead>
-        <tbody style="font-size: 12px;">
-          ${forecastRows}
-        </tbody>
-      </table>
-
-      <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #888;">
-        BakeWise Integrated Kitchen System &bull; Official Purchase Order Document
-      </div>
-    </div>
-  `;
-
-  const opt = {
-    margin:       10,
-    filename:     'BakeWise_Purchase_Order.pdf',
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, logging: false },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
