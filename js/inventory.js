@@ -648,7 +648,7 @@ document.getElementById("queryResetBtn")?.addEventListener("click", window.reset
 // BakeWise - Print Reporting Utilities
 // ==========================================
 
-// 1. Print Filtered Inventory & Transaction Report
+// 1. Print Filtered Inventory & Transaction Report (with Donut Chart)
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
@@ -656,9 +656,22 @@ window.printFilteredReport = function() {
   const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
   const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
 
-  // Grab table rows and clean out any action buttons/column HTML if present
+  // Grab table rows and clean out action buttons
   let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
   transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
+
+  // Capture Chart.js canvas as a base64 image string
+  const chartCanvas = document.getElementById("inventoryStatusChart");
+  let chartImageHtml = "";
+  if (chartCanvas) {
+    const chartImageSrc = chartCanvas.toDataURL("image/png");
+    chartImageHtml = `
+      <div style="text-align: center; margin: 20px 0;">
+        <h3>Inventory Distribution Chart</h3>
+        <img src="${chartImageSrc}" style="max-width: 320px; height: auto;" />
+      </div>
+    `;
+  }
 
   const printWindow = window.open("", "_blank", "width=900,height=700");
   
@@ -682,9 +695,6 @@ window.printFilteredReport = function() {
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
         th { background-color: #F8F7F3; }
-        .badge { padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .bg-success { background-color: #198754; color: white; }
-        .bg-danger { background-color: #dc3545; color: white; }
         .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #777; }
       </style>
     </head>
@@ -701,6 +711,8 @@ window.printFilteredReport = function() {
         <div class="metric-card"><div>Expired</div><h3>${expired}</h3></div>
         <div class="metric-card"><div>Suppliers</div><h3>${suppliers}</h3></div>
       </div>
+
+      ${chartImageHtml}
 
       <h3>Filtered Transaction History (${recordCount})</h3>
       <table>
@@ -720,70 +732,6 @@ window.printFilteredReport = function() {
 
       <div class="footer">
         BakeWise Integrated Kitchen System &bull; Official Generated Report
-      </div>
-    </body>
-    </html>
-  `);
-
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 300);
-};
-
-// 2. Print Monthly Forecast Purchase Order Report
-window.printForecastReport = function() {
-  let forecastRows = document.getElementById("forecastTableBody")?.innerHTML || "";
-  forecastRows = forecastRows.replace(/<button[\s\S]*?<\/button>/gi, '');
-
-  const printWindow = window.open("", "_blank", "width=900,height=700");
-
-  if (!printWindow) {
-    alert("Pop-up blocked! Please allow pop-ups for this site to print reports.");
-    return;
-  }
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>BakeWise - Monthly Purchase Order Forecast</title>
-      <style>
-        body { font-family: 'Arial', sans-serif; padding: 20px; color: #2C241B; }
-        .header { text-align: center; border-bottom: 2px solid #198754; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; color: #198754; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
-        th { background-color: #f8f9fa; }
-        .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #777; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>BakeWise Kitchen Management</h1>
-        <h2>30-Day Monthly Purchase Order Forecast</h2>
-        <p>Generated on: ${new Date().toLocaleString()}</p>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Ingredient</th>
-            <th>Category</th>
-            <th>30-Day Usage</th>
-            <th>Current Stock</th>
-            <th>Suggested Order (+10% Buffer)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${forecastRows}
-        </tbody>
-      </table>
-
-      <div class="footer">
-        BakeWise Integrated Kitchen System &bull; Official Purchase Order Document
       </div>
     </body>
     </html>
