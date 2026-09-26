@@ -1296,11 +1296,11 @@
     <i class="bi bi-robot fs-3"></i>
   </button>
 
-  <!-- Floating Chat Window (Hidden by default using d-none) -->
+  <!-- Floating Chat Window -->
   <div id="chatbotWindow" class="card shadow-lg border-0 d-none d-flex flex-column" 
        style="position: absolute; bottom: 70px; right: 0; width: 360px; height: 500px; border-radius: 16px; overflow: hidden;">
     
-    <!-- Chat Header -->
+    <!-- Header -->
     <div class="p-3 text-white d-flex align-items-center justify-content-between" style="background-color: #A05A35;">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-robot fs-4"></i>
@@ -1314,10 +1314,8 @@
       </button>
     </div>
 
-    <!-- Chat Messages Window -->
+    <!-- Messages -->
     <div id="chatMessages" class="p-3 overflow-auto flex-grow-1" style="background-color: #F8F7F3; display: flex; flex-direction: column; gap: 10px;">
-      
-      <!-- Welcome Message -->
       <div class="d-flex gap-2">
         <div class="rounded-circle d-flex align-items-center justify-content-center text-white shrink-0" 
              style="width: 28px; height: 28px; background-color: #A05A35; font-size: 0.8rem;">
@@ -1327,10 +1325,9 @@
           Hello! 🧑‍🍳 I'm your BakeWise AI assistant. Ask me anything about baking science, recipes, or navigating your BakeWise inventory!
         </div>
       </div>
-
     </div>
 
-    <!-- Chat Input Area -->
+    <!-- Form -->
     <form id="chatForm" class="p-2 bg-white border-top d-flex gap-2 align-items-center">
       <input type="text" id="chatInput" class="form-control form-control-sm border-0 bg-light" placeholder="Ask about baking or BakeWise..." required style="font-size: 0.82rem;">
       <button type="submit" id="chatSendBtn" class="btn btn-sm btn-maroon rounded-circle d-flex align-items-center justify-content-center p-0" style="width: 34px; height: 34px; flex-shrink: 0;">
@@ -1340,5 +1337,8 @@
 
   </div>
 </div>
+
+<!-- SCRIPTS MUST BE AFTER THE DOM HTML ELEMENTS -->
+<script type="module" src="js/app.js"></script>
 </body>
 </html>
