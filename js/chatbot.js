@@ -53,8 +53,8 @@ function initChatbot() {
     const loadingId = appendLoading();
 
     try {
-      const apiKey = "AQ.Ab8RN6Jy7SV8DNVK9-Rs04G5E5L3iYkcF94nJKcVjtc0NK5C6Q";
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const token = "AQ.Ab8RN6Jy7SV8DNVK9-Rs04G5E5L3iYkcF94nJKcVjtc0NK5C6Q";
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
       const contents = [
         ...chatHistory.map(m => ({
@@ -67,7 +67,8 @@ function initChatbot() {
       const response = await fetch(url, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           contents: contents,
@@ -96,7 +97,7 @@ function initChatbot() {
     } catch (err) {
       console.error("Gemini Chatbot Error:", err);
       removeLoading(loadingId);
-      appendMessage("bot", "An error occurred while connecting to BakeWise AI. Please check your network connection.");
+      appendMessage("bot", "An error occurred while connecting to BakeWise AI.");
     } finally {
       chatSendBtn.disabled = false;
     }
