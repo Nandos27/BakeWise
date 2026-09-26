@@ -1,7 +1,4 @@
 // js/chatbot.js
-import { GoogleGenAI } from "https://esm.sh/@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: "AQ.Ab8RN6JG8f4THb5-fm4aC5wvvSr03E_359HPsjqF2BAM6R8Nlg" });
 
 const SYSTEM_INSTRUCTION = `
 You are the BakeWise AI Assistant, embedded strictly within the BakeWise platform.
@@ -56,6 +53,9 @@ function initChatbot() {
     const loadingId = appendLoading();
 
     try {
+      const apiKey = "AQ.Ab8RN6JG8f4THb5-fm4aC5wvvSr03E_359HPsjqF2BAM6R8Nlg";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
       const contents = [
         ...chatHistory.map(m => ({
           role: m.role,
@@ -64,17 +64,30 @@ function initChatbot() {
         { role: "user", parts: [{ text: messageText }] }
       ];
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: contents,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2
-        }
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: contents,
+          systemInstruction: {
+            parts: [{ text: SYSTEM_INSTRUCTION }]
+          },
+          generationConfig: {
+            temperature: 0.2
+          }
+        })
       });
 
+      const data = await response.json();
       removeLoading(loadingId);
-      const reply = response.text || "Sorry, I could not process that request.";
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || `API HTTP Error ${response.status}`);
+      }
+
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I could not process that request.";
 
       chatHistory.push({ role: "user", text: messageText });
       chatHistory.push({ role: "model", text: reply });
