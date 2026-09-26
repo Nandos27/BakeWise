@@ -53,7 +53,7 @@ function initChatbot() {
     const loadingId = appendLoading();
 
     try {
-      const apiKey = "AQ.Ab8RN6JG8f4THb5-fm4aC5wvvSr03E_359HPsjqF2BAM6R8Nlg";
+      const apiKey = "AQ.Ab8RN6Jy7SV8DNVK9-Rs04G5E5L3iYkcF94nJKcVjtc0NK5C6Q";
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
       const contents = [
