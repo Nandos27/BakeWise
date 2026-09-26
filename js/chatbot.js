@@ -1,7 +1,7 @@
 // js/chatbot.js
 import { GoogleGenAI } from "https://esm.sh/@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: "AQ.Ab8RN6LeA7W-BuBslVjw0A_l165qX97d3XGlYnLNGdNmkzlo8w" });
+const ai = new GoogleGenAI({ apiKey: "AQ.Ab8RN6JG8f4THb5-fm4aC5wvvSr03E_359HPsjqF2BAM6R8Nlg" });
 
 const SYSTEM_INSTRUCTION = `
 You are the BakeWise AI Assistant, embedded strictly within the BakeWise platform.
