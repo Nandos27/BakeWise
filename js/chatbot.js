@@ -1,10 +1,8 @@
 // js/chatbot.js
 import { GoogleGenAI } from "https://esm.sh/@google/genai";
 
-// 1. Initialize Gemini Client
 const ai = new GoogleGenAI({ apiKey: "AQ.Ab8RN6LeA7W-BuBslVjw0A_l165qX97d3XGlYnLNGdNmkzlo8w" });
 
-// 2. Strict Domain System Instruction
 const SYSTEM_INSTRUCTION = `
 You are the BakeWise AI Assistant, embedded strictly within the BakeWise platform.
 
@@ -22,7 +20,7 @@ SAFETY & DEFENSIVE GUARDRAILS:
 
 let chatHistory = [];
 
-document.addEventListener("DOMContentLoaded", () => {
+function initChatbot() {
   const toggleBtn = document.getElementById("chatbotToggleBtn");
   const closeBtn = document.getElementById("chatbotCloseBtn");
   const chatWindow = document.getElementById("chatbotWindow");
@@ -33,34 +31,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!toggleBtn || !chatWindow) return;
 
-  // Toggle Chatbot Open/Close
-  toggleBtn.addEventListener("click", () => {
+  toggleBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     chatWindow.classList.toggle("d-none");
     if (!chatWindow.classList.contains("d-none")) {
       chatInput.focus();
     }
   });
 
-  closeBtn?.addEventListener("click", () => {
+  closeBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     chatWindow.classList.add("d-none");
   });
 
-  // Handle Send Message
   chatForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const messageText = chatInput.value.trim();
     if (!messageText) return;
 
-    // Append User Message
     appendMessage("user", messageText);
     chatInput.value = "";
     chatSendBtn.disabled = true;
 
-    // Append Loading Indicator
     const loadingId = appendLoading();
 
     try {
-      // Build Content Array from history
       const contents = [
         ...chatHistory.map(m => ({
           role: m.role,
@@ -69,20 +64,18 @@ document.addEventListener("DOMContentLoaded", () => {
         { role: "user", parts: [{ text: messageText }] }
       ];
 
-      // Call Gemini 2.5 Flash Model
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: contents,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2 // Low temperature for higher accuracy and strict guardrails
+          temperature: 0.2
         }
       });
 
       removeLoading(loadingId);
       const reply = response.text || "Sorry, I could not process that request.";
 
-      // Record in local conversation history
       chatHistory.push({ role: "user", text: messageText });
       chatHistory.push({ role: "model", text: reply });
 
@@ -96,11 +89,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Helper: Append Bubble Message
   function appendMessage(sender, text) {
     const isUser = sender === "user";
     const msgDiv = document.createElement("div");
-    msgDiv.className = `d-flex gap-2 ${isUser ? "justify-content-end" : "justify-start"}`;
+    msgDiv.className = `d-flex gap-2 ${isUser ? "justify-content-end" : "justify-content-start"}`;
 
     msgDiv.innerHTML = isUser
       ? `
@@ -157,9 +149,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function formatMarkdownText(str) {
-    // Basic Markdown conversion for bullet points and bolding
     return escapeHtml(str)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
   }
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initChatbot);
+} else {
+  initChatbot();
+}
