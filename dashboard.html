@@ -1286,5 +1286,59 @@
   });
 </script>
 <script type="module" src="js/app.js"></script>
+  <!-- BAKEWISE AI CHATBOT FLOATING WIDGET -->
+<div id="bakewise-chatbot-container" style="position: fixed; bottom: 25px; right: 25px; z-index: 9999; font-family: 'Inter', sans-serif;">
+  
+  <!-- Floating Toggle Button -->
+  <button id="chatbotToggleBtn" class="btn shadow-lg rounded-circle d-flex align-items-center justify-content-center p-0" 
+          style="width: 58px; height: 58px; background-color: #A05A35; color: #FFF; border: none; transition: transform 0.2s;"
+          aria-label="Toggle Chatbot">
+    <i class="bi bi-robot fs-3"></i>
+  </button>
+
+  <!-- Floating Chat Window (Hidden by default) -->
+  <div id="chatbotWindow" class="card shadow-lg border-0 d-none" 
+       style="position: absolute; bottom: 70px; right: 0; width: 360px; height: 500px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;">
+    
+    <!-- Chat Header -->
+    <div class="p-3 text-white d-flex align-items-center justify-content-between" style="background-color: #A05A35;">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-robot fs-4"></i>
+        <div>
+          <h6 class="mb-0 fw-bold" style="font-family: 'Playfair Display', serif; color: #FFF !important;">BakeWise Assistant</h6>
+          <small style="font-size: 0.72rem; color: #EBE6DC;">Baking Science & System Help</small>
+        </div>
+      </div>
+      <button id="chatbotCloseBtn" class="btn btn-sm text-white p-0" style="border: none;">
+        <i class="bi bi-x-lg fs-5"></i>
+      </button>
+    </div>
+
+    <!-- Chat Messages Window -->
+    <div id="chatMessages" class="p-3 overflow-auto flex-grow-1" style="background-color: #F8F7F3; display: flex; flex-direction: column; gap: 10px;">
+      
+      <!-- Welcome Message -->
+      <div class="d-flex gap-2">
+        <div class="rounded-circle d-flex align-items-center justify-content-center text-white shrink-0" 
+             style="width: 28px; height: 28px; background-color: #A05A35; font-size: 0.8rem;">
+          <i class="bi bi-robot"></i>
+        </div>
+        <div class="p-2.5 rounded-3 bg-white border text-dark shadow-sm" style="font-size: 0.82rem; max-width: 80%;">
+          Hello! 🧑‍🍳 I'm your BakeWise AI assistant. Ask me anything about baking science, recipes, or navigating your BakeWise inventory!
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Chat Input Area -->
+    <form id="chatForm" class="p-2 bg-white border-top d-flex gap-2 align-items-center">
+      <input type="text" id="chatInput" class="form-control form-control-sm border-0 bg-light" placeholder="Ask about baking or BakeWise..." required style="font-size: 0.82rem;">
+      <button type="submit" id="chatSendBtn" class="btn btn-sm btn-maroon rounded-circle d-flex align-items-center justify-content-center p-0" style="width: 34px; height: 34px; flex-shrink: 0;">
+        <i class="bi bi-send-fill" style="font-size: 0.75rem;"></i>
+      </button>
+    </form>
+
+  </div>
+</div>
 </body>
 </html>
