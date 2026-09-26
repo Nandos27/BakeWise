@@ -1286,19 +1286,19 @@
   });
 </script>
 <script type="module" src="js/app.js"></script>
-  <!-- BAKEWISE AI CHATBOT FLOATING WIDGET -->
+<!-- BAKEWISE AI CHATBOT FLOATING WIDGET -->
 <div id="bakewise-chatbot-container" style="position: fixed; bottom: 25px; right: 25px; z-index: 9999; font-family: 'Inter', sans-serif;">
   
   <!-- Floating Toggle Button -->
-  <button id="chatbotToggleBtn" class="btn shadow-lg rounded-circle d-flex align-items-center justify-content-center p-0" 
+  <button id="chatbotToggleBtn" type="button" class="btn shadow-lg rounded-circle d-flex align-items-center justify-content-center p-0" 
           style="width: 58px; height: 58px; background-color: #A05A35; color: #FFF; border: none; transition: transform 0.2s;"
           aria-label="Toggle Chatbot">
     <i class="bi bi-robot fs-3"></i>
   </button>
 
-  <!-- Floating Chat Window (Hidden by default) -->
-  <div id="chatbotWindow" class="card shadow-lg border-0 d-none" 
-       style="position: absolute; bottom: 70px; right: 0; width: 360px; height: 500px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;">
+  <!-- Floating Chat Window (Hidden by default using d-none) -->
+  <div id="chatbotWindow" class="card shadow-lg border-0 d-none d-flex flex-column" 
+       style="position: absolute; bottom: 70px; right: 0; width: 360px; height: 500px; border-radius: 16px; overflow: hidden;">
     
     <!-- Chat Header -->
     <div class="p-3 text-white d-flex align-items-center justify-content-between" style="background-color: #A05A35;">
@@ -1309,7 +1309,7 @@
           <small style="font-size: 0.72rem; color: #EBE6DC;">Baking Science & System Help</small>
         </div>
       </div>
-      <button id="chatbotCloseBtn" class="btn btn-sm text-white p-0" style="border: none;">
+      <button id="chatbotCloseBtn" type="button" class="btn btn-sm text-white p-0" style="border: none;">
         <i class="bi bi-x-lg fs-5"></i>
       </button>
     </div>
