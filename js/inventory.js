@@ -335,6 +335,25 @@ window.runTransactionQuery = function() {
   });
 
   renderTransactionTable(filtered);
+
+  // Sync Chart with query results
+  let queryCategoryCounts = {};
+  filtered.forEach(tx => {
+    const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
+    if (matchedIngKey) {
+      const item = allIngredients[matchedIngKey];
+      const cat = item.category || "Uncategorized";
+      if (window.activeChartMetric === "quantity") {
+        queryCategoryCounts[cat] = (queryCategoryCounts[cat] || 0) + parseFloat(tx.addedQty || tx.deductedQty || 0);
+      } else {
+        queryCategoryCounts[cat] = (queryCategoryCounts[cat] || 0) + 1;
+      }
+    }
+  });
+
+  if (Object.keys(queryCategoryCounts).length > 0 && (startDate || endDate || selectedType !== "ALL" || selectedItem !== "ALL")) {
+    renderDynamicCategoryChart(queryCategoryCounts);
+  }
 };
 
 // -------------------------------------------------------------
@@ -409,46 +428,41 @@ function renderDashboardWidgets() {
   window.runTransactionQuery();
 }
 
-// HELPER FOR RENDERING THE CHART DYNAMICALLY WITH CLEAN MATCHING SLICERS
 function renderDynamicCategoryChart(categoryCounts) {
   const chartCanvas = document.getElementById('categoryChart');
   if (!chartCanvas) return;
   
-  let chartCardBody = chartCanvas.closest('.card-body') || chartCanvas.parentElement;
+  let chartCardBody = chartCanvas.closest('.card-body');
   let existingSlicers = document.getElementById("reportSlicersContainer");
   
   if (chartCardBody && !existingSlicers) {
     const slicerWrapper = document.createElement("div");
     slicerWrapper.id = "reportSlicersContainer";
-    slicerWrapper.className = "mb-3 p-2 rounded";
-    slicerWrapper.style.backgroundColor = "#F8F7F3";
-    slicerWrapper.style.border = "1px solid #E5E0D8";
+    slicerWrapper.className = "mb-3 p-2 bg-light border rounded";
     
     slicerWrapper.innerHTML = `
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div class="d-flex align-items-center gap-1">
-          <span style="font-size: 11px; font-weight: bold; color: #555; margin-right: 4px;">Category:</span>
-          <div class="btn-group btn-group-sm" role="group" id="categorySlicerGroup">
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'ALL' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="ALL" style="font-size: 11px; padding: 2px 8px;">All</button>
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Dry' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Dry" style="font-size: 11px; padding: 2px 8px;">Dry</button>
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Wet' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Wet" style="font-size: 11px; padding: 2px 8px;">Wet</button>
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Dairy' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Dairy" style="font-size: 11px; padding: 2px 8px;">Dairy</button>
+      <div class="row g-2 align-items-center">
+        <div class="col-md-7">
+          <span style="font-size: 11px; font-weight: bold; color: #555; display: block; margin-bottom: 2px;">Category Filter:</span>
+          <div class="btn-group btn-group-sm w-100" role="group" id="categorySlicerGroup">
+            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'ALL' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="ALL" style="font-size: 11px;">All</button>
+            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Dry' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Dry" style="font-size: 11px;">Dry</button>
+            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Wet' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Wet" style="font-size: 11px;">Wet</button>
+            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Dairy' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Dairy" style="font-size: 11px;">Dairy</button>
           </div>
         </div>
-        <div class="d-flex align-items-center gap-1">
-          <span style="font-size: 11px; font-weight: bold; color: #555; margin-right: 4px;">View:</span>
-          <div class="btn-group btn-group-sm" role="group" id="metricSlicerGroup">
-            <button type="button" class="btn btn-sm ${window.activeChartMetric === 'count' ? 'btn-dark' : 'btn-outline-secondary'}" data-metric="count" style="font-size: 11px; padding: 2px 8px;">Count</button>
-            <button type="button" class="btn btn-sm ${window.activeChartMetric === 'quantity' ? 'btn-dark' : 'btn-outline-secondary'}" data-metric="quantity" style="font-size: 11px; padding: 2px 8px;">Qty</button>
+        <div class="col-md-5">
+          <span style="font-size: 11px; font-weight: bold; color: #555; display: block; margin-bottom: 2px;">Metric View:</span>
+          <div class="btn-group btn-group-sm w-100" role="group" id="metricSlicerGroup">
+            <button type="button" class="btn btn-sm ${window.activeChartMetric === 'count' ? 'btn-dark' : 'btn-outline-secondary'}" data-metric="count" style="font-size: 11px;">Count</button>
+            <button type="button" class="btn btn-sm ${window.activeChartMetric === 'quantity' ? 'btn-dark' : 'btn-outline-secondary'}" data-metric="quantity" style="font-size: 11px;">Qty</button>
           </div>
         </div>
       </div>
     `;
     
-    // Insert cleanly at the very top of the card body, above the chart wrapper
     chartCardBody.insertBefore(slicerWrapper, chartCardBody.firstChild);
 
-    // Event listeners for Category Slicers
     document.querySelectorAll("#categorySlicerGroup button").forEach(btn => {
       btn.addEventListener("click", (e) => {
         document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
@@ -460,7 +474,6 @@ function renderDynamicCategoryChart(categoryCounts) {
       });
     });
 
-    // Event listeners for Metric Slicers
     document.querySelectorAll("#metricSlicerGroup button").forEach(btn => {
       btn.addEventListener("click", (e) => {
         document.querySelectorAll("#metricSlicerGroup button").forEach(b => {
@@ -522,7 +535,7 @@ window.resetTransactionQuery = function() {
   if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
   window.activeReportCategory = "ALL";
   document.querySelectorAll("#categorySlicerGroup button").forEach((b, idx) => {
-    b.className = idx === 0 ? "btn btn-dark active" : "btn btn-outline-dark";
+    b.className = idx === 0 ? "btn btn-sm btn-dark" : "btn btn-sm btn-outline-secondary";
   });
   window.runTransactionQuery();
   renderDashboardWidgets();
