@@ -548,8 +548,7 @@ document.addEventListener("DOMContentLoaded", () => {
     printBtn.type = "button";
     printBtn.onclick = window.printFilteredReport;
     
-    queryButtonContainer.appendChild(printBtn);
-  }
+    resetBtn.parentNode.insertBefore(printBtn, resetBtn.nextSibling);  }
 });
 
 function populateQueryDropdown() {
