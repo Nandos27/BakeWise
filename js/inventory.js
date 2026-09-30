@@ -451,30 +451,7 @@ function renderDashboardWidgets() {
     categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
   });
 
-  const chartCanvas = document.getElementById('categoryChart');
-  if (chartCanvas) {
-    const ctx = chartCanvas.getContext('2d');
-    if (window.inventoryChart) window.inventoryChart.destroy();
-    
-    window.inventoryChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: Object.keys(categoryCounts),
-        datasets: [{
-          data: Object.values(categoryCounts),
-          backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom' }
-        }
-      }
-    });
-  }
+  renderDynamicCategoryChart(categoryCounts);
 
   const forecastTable = document.getElementById("forecastTableBody");
   if (forecastTable) {
@@ -520,6 +497,34 @@ function renderDashboardWidgets() {
   window.runTransactionQuery();
 }
 
+// HELPER FOR RENDERING THE CHART DYNAMICALLY
+function renderDynamicCategoryChart(categoryCounts) {
+  const chartCanvas = document.getElementById('categoryChart');
+  if (!chartCanvas) return;
+  
+  const ctx = chartCanvas.getContext('2d');
+  if (window.inventoryChart) window.inventoryChart.destroy();
+  
+  window.inventoryChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(categoryCounts),
+      datasets: [{
+        data: Object.values(categoryCounts),
+        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+}
+
 // Global delete helpers
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
 window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
@@ -532,6 +537,19 @@ document.addEventListener("DOMContentLoaded", () => {
   
   if (stockInDate) stockInDate.value = today;
   if (stockOutDate) stockOutDate.value = today;
+
+  // Auto-inject query print button next to query buttons if container exists
+  const queryButtonContainer = document.getElementById("queryFilterBtn")?.parentElement;
+  if (queryButtonContainer && !document.getElementById("queryPrintBtn")) {
+    const printBtn = document.createElement("button");
+    printBtn.id = "queryPrintBtn";
+    printBtn.className = "btn btn-outline-secondary ms-2";
+    printBtn.innerHTML = '<i class="bi bi-printer"></i> Print Report';
+    printBtn.type = "button";
+    printBtn.onclick = window.printFilteredReport;
+    
+    queryButtonContainer.appendChild(printBtn);
+  }
 });
 
 function populateQueryDropdown() {
@@ -600,6 +618,24 @@ window.runTransactionQuery = function() {
   });
 
   renderTransactionTable(filtered);
+
+  // --- DYNAMIC CHART UPDATE BASED ON QUERY ---
+  let dynamicCategoryCounts = {};
+  filtered.forEach(tx => {
+    const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
+    if (matchedIngKey) {
+      const cat = allIngredients[matchedIngKey].category || "Uncategorized";
+      dynamicCategoryCounts[cat] = (dynamicCategoryCounts[cat] || 0) + 1;
+    }
+  });
+
+  if (Object.keys(dynamicCategoryCounts).length === 0) {
+    Object.values(allIngredients).forEach(item => {
+      dynamicCategoryCounts[item.category] = (dynamicCategoryCounts[item.category] || 0) + 1;
+    });
+  }
+
+  renderDynamicCategoryChart(dynamicCategoryCounts);
 };
 
 // Handle Edit Form Submission
@@ -644,11 +680,10 @@ window.resetTransactionQuery = function() {
 
 document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
 document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
+
 // ==========================================
 // BakeWise - Direct PDF Generation Utilities
 // ==========================================
-
-// 1. Download Inventory & Transaction Summary PDF (With Donut Chart Fix)
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
@@ -656,17 +691,14 @@ window.printFilteredReport = function() {
   const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
   const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
 
-  // Clean table rows (remove buttons)
   let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
   transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
 
-  // Safely extract Chart canvas into image (FIXED CANVAS ID TO 'categoryChart')
   let chartImgHtml = "";
   const chartCanvas = document.getElementById("categoryChart");
 
   if (chartCanvas) {
     try {
-      // Create a temporary canvas to burn in a white background for transparent charts
       const tempCanvas = document.createElement("canvas");
       tempCanvas.width = chartCanvas.width;
       tempCanvas.height = chartCanvas.height;
@@ -688,7 +720,6 @@ window.printFilteredReport = function() {
     }
   }
 
-  // Create temporary container element
   const element = document.createElement("div");
   element.innerHTML = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
