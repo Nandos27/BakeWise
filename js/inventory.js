@@ -548,7 +548,7 @@ document.addEventListener("DOMContentLoaded", () => {
     printBtn.type = "button";
     printBtn.onclick = window.printFilteredReport;
     
-    resetBtn.parentNode.insertBefore(printBtn, resetBtn.nextSibling);  }
+    resetBtn.parentNode.insertBefore(printBtn, targetResetButton.nextSibling);  }
 });
 
 function populateQueryDropdown() {
@@ -676,6 +676,36 @@ window.resetTransactionQuery = function() {
   if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
   window.runTransactionQuery();
 };
+// Hook up your filter and reset buttons safely
+const filterBtnElem = document.getElementById("queryFilterBtn") || document.getElementById("filterBtn");
+const resetBtnElem = document.getElementById("queryResetBtn") || document.getElementById("resetBtn");
+
+if (filterBtnElem) {
+  filterBtnElem.addEventListener("click", window.runTransactionQuery);
+}
+if (resetBtnElem) {
+  resetBtnElem.addEventListener("click", window.resetTransactionQuery);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date().toISOString().split("T")[0];
+  if (document.getElementById("stockInDate")) document.getElementById("stockInDate").value = today;
+  if (document.getElementById("stockOutDate")) document.getElementById("stockOutDate").value = today;
+
+  // Auto-inject the Print Report button right next to your Reset/Filter action buttons
+  const targetResetButton = document.getElementById("queryResetBtn") || document.getElementById("resetBtn") || document.querySelector("button.btn-light, button.btn-outline-secondary");
+  
+  if (targetResetButton && !document.getElementById("queryPrintBtn")) {
+    const printBtn = document.createElement("button");
+    printBtn.id = "queryPrintBtn";
+    printBtn.className = "btn btn-outline-secondary ms-2";
+    printBtn.innerHTML = '<i class="bi bi-printer"></i> Print Report';
+    printBtn.type = "button";
+    printBtn.onclick = window.printFilteredReport;
+    
+    targetResetButton.parentNode.insertBefore(printBtn, targetResetButton.nextSibling);
+  }
+});
 
 document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
 document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
