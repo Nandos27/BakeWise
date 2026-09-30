@@ -454,6 +454,7 @@ window.runTransactionQuery = function() {
       }
     });
   }
+};
 
 function renderDashboardWidgets() {
   window.runTransactionQuery();
