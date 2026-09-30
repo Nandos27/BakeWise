@@ -609,19 +609,19 @@ window.runTransactionQuery = function() {
   const endDate = document.getElementById("queryEndDate")?.value;
   const selectedType = document.getElementById("queryType")?.value || "ALL";
   const selectedItem = document.getElementById("queryIngredient")?.value || "ALL";
-  const selectedCategory = document.getElementById("queryCategory")?.value || "ALL"; // <-- NEW SLICER VALUE
+  const selectedCategory = document.getElementById("queryCategory")?.value || "ALL";
 
+  // 1. Filter Transactions Table
   const allRecords = [...globalStockIn, ...globalStockOut];
   allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const filtered = allRecords.filter(tx => {
+  const filteredTransactions = allRecords.filter(tx => {
     const txDate = tx.date;
     const matchStart = !startDate || txDate >= startDate;
     const matchEnd = !endDate || txDate <= endDate;
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
     const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
 
-    // Check if ingredient matches the category slicer
     let matchCategory = true;
     if (selectedCategory !== "ALL") {
       const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
@@ -635,11 +635,69 @@ window.runTransactionQuery = function() {
     return matchStart && matchEnd && matchType && matchItem && matchCategory;
   });
 
-  renderTransactionTable(filtered);
+  renderTransactionTable(filteredTransactions);
 
-  // --- DYNAMIC CHART UPDATE BASED ON QUERY & SLICER ---
+  // 2. --- MAKE TOP METRICS & ATTENTION TABLE DYNAMIC BASED ON CATEGORY SLICER ---
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let dynamicTotalItems = 0;
+  let dynamicLowStock = 0;
+  let dynamicExpired = 0;
+  let attentionHTML = "";
+
+  Object.values(allIngredients).forEach(item => {
+    // Apply Category Slicer filter to ingredients
+    const matchesCategory = (selectedCategory === "ALL") || (item.category === selectedCategory);
+    const matchesItemName = (selectedItem === "ALL") || (item.name === selectedItem);
+
+    if (matchesCategory && matchesItemName) {
+      dynamicTotalItems++;
+
+      const isLowStock = item.quantity <= item.minThreshold;
+      let isExpired = false;
+      
+      if (item.expiryDate) {
+        const expDate = new Date(item.expiryDate);
+        if (expDate < today) isExpired = true;
+      }
+
+      if (isLowStock) dynamicLowStock++;
+      if (isExpired) dynamicExpired++;
+
+      if (isLowStock || isExpired) {
+        let issueBadge = isExpired 
+          ? `<span class="badge bg-warning text-dark">Expired</span>`
+          : `<span class="badge bg-danger">Low Stock</span>`;
+        
+        let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
+
+        attentionHTML += `
+          <tr>
+            <td class="fw-bold">${item.name}</td>
+            <td>${issueBadge}</td>
+            <td>${formatDecimal(item.quantity)} ${item.unit}</td>
+            <td class="text-muted">${limitText}</td>
+          </tr>`;
+      }
+    }
+  });
+
+  if (!attentionHTML) {
+    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
+  }
+
+  // Update Top KPI Cards dynamically
+  if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = dynamicTotalItems;
+  if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = dynamicLowStock;
+  if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = dynamicExpired;
+  
+  const attentionTable = document.getElementById("attentionTableBody");
+  if (attentionTable) attentionTable.innerHTML = attentionHTML;
+
+  // 3. --- DYNAMIC CHART UPDATE ---
   let dynamicCategoryCounts = {};
-  filtered.forEach(tx => {
+  filteredTransactions.forEach(tx => {
     const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
     if (matchedIngKey) {
       const cat = allIngredients[matchedIngKey].category || "Uncategorized";
@@ -680,7 +738,6 @@ window.runTransactionQuery = function() {
     });
   }
 };
-
 // Handle Edit Form Submission
 const editForm = document.getElementById("editForm");
 if (editForm) {
