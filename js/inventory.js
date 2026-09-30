@@ -338,37 +338,44 @@ function renderDashboardWidgets() {
   window.runTransactionQuery();
 }
 
-// HELPER FOR RENDERING THE CHART DYNAMICALLY WITH SLICERS
+// HELPER FOR RENDERING THE CHART DYNAMICALLY WITH CLEAN SLICERS
 function renderDynamicCategoryChart(categoryCounts) {
   const chartCanvas = document.getElementById('categoryChart');
   if (!chartCanvas) return;
   
-  // Inject Slicers UI above the chart if not already present
+  // Clean up and properly position Slicers UI above the chart
   let chartCardBody = chartCanvas.closest('.card-body') || chartCanvas.parentElement;
-  if (chartCardBody && !document.getElementById("reportSlicersContainer")) {
+  let existingSlicers = document.getElementById("reportSlicersContainer");
+  
+  if (chartCardBody && !existingSlicers) {
     const slicerWrapper = document.createElement("div");
     slicerWrapper.id = "reportSlicersContainer";
-    slicerWrapper.className = "mb-3 pb-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2";
+    slicerWrapper.className = "my-3 p-2 bg-light rounded d-flex flex-wrap justify-content-between align-items-center gap-2";
     slicerWrapper.innerHTML = `
-      <div class="btn-group btn-group-sm" role="group" id="categorySlicerGroup">
-        <button type="button" class="btn btn-outline-dark active" data-cat="ALL">All Categories</button>
+      <div style="font-size: 12px; font-weight: bold; color: #555; width: 100%;">Filter Category:</div>
+      <div class="btn-group btn-group-sm w-100" role="group" id="categorySlicerGroup">
+        <button type="button" class="btn btn-outline-dark active" data-cat="ALL">All</button>
         <button type="button" class="btn btn-outline-dark" data-cat="Dry">Dry</button>
         <button type="button" class="btn btn-outline-dark" data-cat="Wet">Wet</button>
         <button type="button" class="btn btn-outline-dark" data-cat="Dairy">Dairy</button>
       </div>
-      <div class="btn-group btn-group-sm" role="group" id="metricSlicerGroup">
-        <button type="button" class="btn btn-sm btn-secondary active" data-metric="count">Count</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-metric="quantity">Qty</button>
+      <div style="font-size: 12px; font-weight: bold; color: #555; width: 100%; margin-top: 5px;">Metric View:</div>
+      <div class="btn-group btn-group-sm w-100" role="group" id="metricSlicerGroup">
+        <button type="button" class="btn btn-sm btn-secondary active" data-metric="count">Item Count</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-metric="quantity">Total Qty</button>
       </div>
     `;
-    chartCardBody.insertBefore(slicerWrapper, chartCanvas);
+    
+    // Insert safely right before the canvas parent or wrapper so it doesn't overlap headers
+    chartCanvas.parentNode.insertBefore(slicerWrapper, chartCanvas);
 
     // Event listeners for Category Slicers
     document.querySelectorAll("#categorySlicerGroup button").forEach(btn => {
       btn.addEventListener("click", (e) => {
-        document.querySelectorAll("#categorySlicerGroup button").forEach(b => b.classList.remove("active", "btn-dark"));
-        document.querySelectorAll("#categorySlicerGroup button").forEach(b => b.className = "btn btn-outline-dark");
-        e.target.classList.add("active", "btn-dark");
+        document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
+          b.className = "btn btn-outline-dark";
+        });
+        e.target.className = "btn btn-dark active";
         window.activeReportCategory = e.target.getAttribute("data-cat");
         renderDashboardWidgets();
       });
@@ -377,14 +384,53 @@ function renderDynamicCategoryChart(categoryCounts) {
     // Event listeners for Metric Slicers
     document.querySelectorAll("#metricSlicerGroup button").forEach(btn => {
       btn.addEventListener("click", (e) => {
-        document.querySelectorAll("#metricSlicerGroup button").forEach(b => b.classList.remove("active", "btn-secondary"));
-        document.querySelectorAll("#metricSlicerGroup button").forEach(b => b.className = "btn btn-sm btn-outline-secondary");
-        e.target.classList.add("active", "btn-secondary");
+        document.querySelectorAll("#metricSlicerGroup button").forEach(b => {
+          b.className = "btn btn-sm btn-outline-secondary";
+        });
+        e.target.className = "btn btn-sm btn-secondary active";
         window.activeChartMetric = e.target.getAttribute("data-metric");
         renderDashboardWidgets();
       });
     });
   }
+
+  const ctx = chartCanvas.getContext('2d');
+  if (window.inventoryChart) window.inventoryChart.destroy();
+  
+  window.inventoryChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(categoryCounts),
+      datasets: [{
+        data: Object.values(categoryCounts),
+        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const clickedCategory = window.inventoryChart.data.labels[index];
+          window.activeReportCategory = clickedCategory;
+          document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
+            if (b.getAttribute("data-cat") === clickedCategory) {
+              b.className = "btn btn-dark active";
+            } else {
+              b.className = "btn btn-outline-dark";
+            }
+          });
+          renderDashboardWidgets();
+        }
+      }
+    }
+  });
+}
 
   const ctx = chartCanvas.getContext('2d');
   if (window.inventoryChart) window.inventoryChart.destroy();
