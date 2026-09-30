@@ -516,7 +516,7 @@ function renderDashboardWidgets() {
   }
 
   populateQueryDropdown();
-  window.runTransactionQuery();
+  window.Query();
 }
 
 // Global delete helpers
@@ -598,6 +598,7 @@ window.runTransactionQuery = function() {
   const endDate = document.getElementById("queryEndDate")?.value;
   const selectedType = document.getElementById("queryType")?.value || "ALL";
   const selectedItem = document.getElementById("queryIngredient")?.value || "ALL";
+  const selectedCategory = document.getElementById("queryCategory")?.value || "ALL"; // <-- NEW SLICER VALUE
 
   const allRecords = [...globalStockIn, ...globalStockOut];
   allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -609,12 +610,23 @@ window.runTransactionQuery = function() {
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
     const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
 
-    return matchStart && matchEnd && matchType && matchItem;
+    // Check if ingredient matches the category slicer
+    let matchCategory = true;
+    if (selectedCategory !== "ALL") {
+      const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
+      if (matchedIngKey) {
+        matchCategory = allIngredients[matchedIngKey].category === selectedCategory;
+      } else {
+        matchCategory = false;
+      }
+    }
+
+    return matchStart && matchEnd && matchType && matchItem && matchCategory;
   });
 
   renderTransactionTable(filtered);
 
-  // --- DYNAMIC CHART UPDATE BASED ON ACTIVE QUERY ---
+  // --- DYNAMIC CHART UPDATE BASED ON QUERY & SLICER ---
   let dynamicCategoryCounts = {};
   filtered.forEach(tx => {
     const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
@@ -626,7 +638,9 @@ window.runTransactionQuery = function() {
 
   if (Object.keys(dynamicCategoryCounts).length === 0) {
     Object.values(allIngredients).forEach(item => {
-      dynamicCategoryCounts[item.category] = (dynamicCategoryCounts[item.category] || 0) + 1;
+      if (selectedCategory === "ALL" || item.category === selectedCategory) {
+        dynamicCategoryCounts[item.category] = (dynamicCategoryCounts[item.category] || 0) + 1;
+      }
     });
   }
 
@@ -693,6 +707,7 @@ window.resetTransactionQuery = function() {
   if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
   if (document.getElementById("queryType")) document.getElementById("queryType").value = "ALL";
   if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
+  if (document.getElementById("queryCategory")) document.getElementById("queryCategory").value = "ALL";
   window.runTransactionQuery();
 };
 
