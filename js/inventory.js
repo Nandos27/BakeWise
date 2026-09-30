@@ -592,6 +592,7 @@ function renderTransactionTable(records) {
   }).join("");
 }
 
+// DYNAMIC TRANSACTION QUERY WITH INSTANT CHART UPDATE
 window.runTransactionQuery = function() {
   const startDate = document.getElementById("queryStartDate")?.value;
   const endDate = document.getElementById("queryEndDate")?.value;
@@ -612,6 +613,47 @@ window.runTransactionQuery = function() {
   });
 
   renderTransactionTable(filtered);
+
+  // --- DYNAMIC CHART UPDATE BASED ON ACTIVE QUERY ---
+  let dynamicCategoryCounts = {};
+  filtered.forEach(tx => {
+    const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
+    if (matchedIngKey) {
+      const cat = allIngredients[matchedIngKey].category || "Uncategorized";
+      dynamicCategoryCounts[cat] = (dynamicCategoryCounts[cat] || 0) + 1;
+    }
+  });
+
+  if (Object.keys(dynamicCategoryCounts).length === 0) {
+    Object.values(allIngredients).forEach(item => {
+      dynamicCategoryCounts[item.category] = (dynamicCategoryCounts[item.category] || 0) + 1;
+    });
+  }
+
+  const chartCanvas = document.getElementById('categoryChart');
+  if (chartCanvas) {
+    const ctx = chartCanvas.getContext('2d');
+    if (window.inventoryChart) window.inventoryChart.destroy();
+    
+    window.inventoryChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(dynamicCategoryCounts),
+        datasets: [{
+          data: Object.values(dynamicCategoryCounts),
+          backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
 };
 
 // Handle Edit Form Submission
@@ -732,7 +774,7 @@ window.printFilteredReport = function() {
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Date</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Type</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Ingredient</th>
-            <th style="proto; border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Quantity</th>
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Quantity</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Reason / Supplier</th>
           </tr>
         </thead>
