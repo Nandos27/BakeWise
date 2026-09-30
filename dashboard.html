@@ -981,15 +981,29 @@
                   <option value="OUT">Stock Out</option>
                 </select>
               </div>
+              <!-- Add this column right next to your Type or Ingredient filter in your HTML -->
+              <div class="col-md-2">
+                <label for="queryCategory" class="form-label text-muted small">Category Slicer</label>
+                <select id="queryCategory" class="form-select">
+                  <option value="ALL">All Categories</option>
+                  <option value="Dry">Dry</option>
+                  <option value="Wet">Wet</option>
+                  <option value="Dairy">Dairy</option>
+                </select>
+              </div>
               <div class="col-md-2">
                 <label class="form-label small text-muted mb-1">Ingredient</label>
                 <select id="queryIngredient" class="form-select form-select-sm">
                   <option value="ALL">All Ingredients</option>
                 </select>
               </div>
-              <div class="col-md-2 d-flex gap-1">
-                <button class="btn btn-sm btn-maroon w-100 fw-bold" onclick="runTransactionQuery()">Filter</button>
-                <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetTransactionQuery()">Reset</button>
+              <!-- Action Buttons Row Including Direct Print Button -->
+              <div class="col-md-12 d-flex gap-2 mt-3 justify-content-end">
+                <button class="btn btn-sm btn-maroon px-4 fw-bold" onclick="runTransactionQuery()">Filter</button>
+                <button class="btn btn-sm btn-outline-secondary px-4" onclick="resetTransactionQuery()">Reset</button>
+                <button id="queryPrintBtn" class="btn btn-sm btn-outline-dark px-4" type="button" onclick="printFilteredReport()">
+                  <i class="bi bi-printer me-1"></i> Print Report
+                </button>
               </div>
             </div>
           </div>
