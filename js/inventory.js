@@ -34,7 +34,7 @@ if (addIngredientForm) {
 
   onValue(ref(db, 'ingredients/'), (snapshot) => {
     allIngredients = snapshot.exists() ? snapshot.val() : {};
-    window.allIngredients = allIngredients; // Expose globally for cross-module use
+    window.allIngredients = allIngredients; 
     renderInventoryTable();
   });
 }
@@ -45,7 +45,6 @@ const filterCat = document.getElementById("filterCategorySelect");
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
-// Make edit modal function globally available for HTML inline onclick handlers
 window.openEditModal = function(key, name, qty, unit, min, expiry) {
   const editKey = document.getElementById("editKey");
   const editName = document.getElementById("editName");
@@ -110,10 +109,8 @@ function renderInventoryTable() {
 
     if (matchesSearch && matchesCategory) {
       let statusBadges = "";
-      
       if (isLowStock) statusBadges += `<span class="badge bg-danger me-1">Low Stock</span>`;
       else if (isAlmostLow) statusBadges += `<span class="badge bg-warning text-dark me-1">Almost Low</span>`;
-      
       if (isExpired) statusBadges += `<span class="badge bg-danger me-1">Expired</span>`;
       else if (isExpiringSoon) statusBadges += `<span class="badge bg-warning text-dark me-1">Expiring Soon</span>`;
       
@@ -159,7 +156,7 @@ function renderInventoryTable() {
 }
 
 // -------------------------------------------------------------
-// MODULE 3: CATEGORIES
+// MODULE 3: CATEGORIES & SUPPLIERS
 // -------------------------------------------------------------
 const addCategoryForm = document.getElementById("addCategoryForm");
 if (addCategoryForm) {
@@ -192,9 +189,6 @@ if (addCategoryForm) {
   });
 }
 
-// -------------------------------------------------------------
-// MODULE 4: SUPPLIERS
-// -------------------------------------------------------------
 const addSupplierForm = document.getElementById("addSupplierForm");
 if (addSupplierForm) {
   addSupplierForm.addEventListener("submit", (e) => {
@@ -232,9 +226,6 @@ if (addSupplierForm) {
   });
 }
 
-// -------------------------------------------------------------
-// MODULE 5: STOCK IN & STOCK OUT LISTENERS
-// -------------------------------------------------------------
 onValue(ref(db, 'stock_in/'), (snap) => {
   const table = document.getElementById("stockInTableBody");
   if (table) table.innerHTML = "";
@@ -264,237 +255,8 @@ onValue(ref(db, 'stock_out/'), (snap) => {
 });
 
 // -------------------------------------------------------------
-// DASHBOARD WIDGETS, FULLY DYNAMIC REPORT & SLICERS
+// TRANSACTION QUERY & DROPDOWN FUNCTIONS (DEFINED FIRST)
 // -------------------------------------------------------------
-function renderDashboardWidgets() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Filter ingredients based on active report category slicer
-  const filteredEntries = Object.entries(allIngredients).filter(([key, item]) => {
-    if (window.activeReportCategory === "ALL") return true;
-    return item.category === window.activeReportCategory;
-  });
-
-  let totalItems = 0, lowStockCount = 0, expiredCount = 0;
-  let attentionHTML = "";
-
-  filteredEntries.forEach(([key, item]) => {
-    totalItems++;
-    const isLowStock = item.quantity <= item.minThreshold;
-    let isExpired = false;
-    
-    if (item.expiryDate) {
-      const expDate = new Date(item.expiryDate);
-      if (expDate < today) isExpired = true;
-    }
-
-    if (isLowStock) lowStockCount++;
-    if (isExpired) expiredCount++;
-
-    if (isLowStock || isExpired) {
-      let issueBadge = isExpired 
-        ? `<span class="badge bg-warning text-dark">Expired</span>`
-        : `<span class="badge bg-danger">Low Stock</span>`;
-      
-      let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
-
-      attentionHTML += `
-        <tr>
-          <td class="fw-bold">${item.name}</td>
-          <td>${issueBadge}</td>
-          <td>${formatDecimal(item.quantity)} ${item.unit}</td>
-          <td class="text-muted">${limitText}</td>
-        </tr>`;
-    }
-  });
-
-  if (!attentionHTML) {
-    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
-  }
-
-  // Update Top KPI Cards dynamically
-  if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
-  if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = lowStockCount;
-  if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = expiredCount;
-  if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = window.globalSupplierCount || 0;
-  
-  const attentionTable = document.getElementById("attentionTableBody");
-  if (attentionTable) attentionTable.innerHTML = attentionHTML;
-
-  // Build Category Counts based on active metric (count vs quantity)
-  const categoryCounts = {};
-  filteredEntries.forEach(([key, item]) => {
-    const cat = item.category || "Uncategorized";
-    if (window.activeChartMetric === "quantity") {
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + parseFloat(item.quantity || 0);
-    } else {
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-    }
-  });
-
-  renderDynamicCategoryChart(categoryCounts);
-  populateQueryDropdown();
-  window.runTransactionQuery();
-}
-
-// HELPER FOR RENDERING THE CHART DYNAMICALLY WITH CLEAN SLICERS
-function renderDynamicCategoryChart(categoryCounts) {
-  const chartCanvas = document.getElementById('categoryChart');
-  if (!chartCanvas) return;
-  
-  // Clean up and properly position Slicers UI above the chart
-  let chartCardBody = chartCanvas.closest('.card-body') || chartCanvas.parentElement;
-  let existingSlicers = document.getElementById("reportSlicersContainer");
-  
-  if (chartCardBody && !existingSlicers) {
-    const slicerWrapper = document.createElement("div");
-    slicerWrapper.id = "reportSlicersContainer";
-    slicerWrapper.className = "my-3 p-2 bg-light rounded d-flex flex-wrap justify-content-between align-items-center gap-2";
-    slicerWrapper.innerHTML = `
-      <div style="font-size: 12px; font-weight: bold; color: #555; width: 100%;">Filter Category:</div>
-      <div class="btn-group btn-group-sm w-100" role="group" id="categorySlicerGroup">
-        <button type="button" class="btn btn-outline-dark active" data-cat="ALL">All</button>
-        <button type="button" class="btn btn-outline-dark" data-cat="Dry">Dry</button>
-        <button type="button" class="btn btn-outline-dark" data-cat="Wet">Wet</button>
-        <button type="button" class="btn btn-outline-dark" data-cat="Dairy">Dairy</button>
-      </div>
-      <div style="font-size: 12px; font-weight: bold; color: #555; width: 100%; margin-top: 5px;">Metric View:</div>
-      <div class="btn-group btn-group-sm w-100" role="group" id="metricSlicerGroup">
-        <button type="button" class="btn btn-sm btn-secondary active" data-metric="count">Item Count</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-metric="quantity">Total Qty</button>
-      </div>
-    `;
-    
-    // Insert safely right before the canvas parent or wrapper so it doesn't overlap headers
-    chartCanvas.parentNode.insertBefore(slicerWrapper, chartCanvas);
-
-    // Event listeners for Category Slicers
-    document.querySelectorAll("#categorySlicerGroup button").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
-          b.className = "btn btn-outline-dark";
-        });
-        e.target.className = "btn btn-dark active";
-        window.activeReportCategory = e.target.getAttribute("data-cat");
-        renderDashboardWidgets();
-      });
-    });
-
-    // Event listeners for Metric Slicers
-    document.querySelectorAll("#metricSlicerGroup button").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        document.querySelectorAll("#metricSlicerGroup button").forEach(b => {
-          b.className = "btn btn-sm btn-outline-secondary";
-        });
-        e.target.className = "btn btn-sm btn-secondary active";
-        window.activeChartMetric = e.target.getAttribute("data-metric");
-        renderDashboardWidgets();
-      });
-    });
-  }
-
-  const ctx = chartCanvas.getContext('2d');
-  if (window.inventoryChart) window.inventoryChart.destroy();
-  
-  window.inventoryChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(categoryCounts),
-      datasets: [{
-        data: Object.values(categoryCounts),
-        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom' }
-      },
-      onClick: (event, elements) => {
-        if (elements.length > 0) {
-          const index = elements[0].index;
-          const clickedCategory = window.inventoryChart.data.labels[index];
-          window.activeReportCategory = clickedCategory;
-          document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
-            if (b.getAttribute("data-cat") === clickedCategory) {
-              b.className = "btn btn-dark active";
-            } else {
-              b.className = "btn btn-outline-dark";
-            }
-          });
-          renderDashboardWidgets();
-        }
-      }
-    }
-  });
-}
-
-  const ctx = chartCanvas.getContext('2d');
-  if (window.inventoryChart) window.inventoryChart.destroy();
-  
-  window.inventoryChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(categoryCounts),
-      datasets: [{
-        data: Object.values(categoryCounts),
-        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom' }
-      },
-      onClick: (event, elements) => {
-        if (elements.length > 0) {
-          const index = elements[0].index;
-          const clickedCategory = window.inventoryChart.data.labels[index];
-          window.activeReportCategory = clickedCategory;
-          // Update slicer button states
-          document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
-            if (b.getAttribute("data-cat") === clickedCategory) {
-              b.className = "btn btn-dark active";
-            } else {
-              b.className = "btn btn-outline-dark";
-            }
-          });
-          renderDashboardWidgets();
-        }
-      }
-    }
-  });
-
-// Global delete helpers
-window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
-window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
-window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
-
-// Guaranteed DOM Initialization & Print Button Injection
-document.addEventListener("DOMContentLoaded", () => {
-  const today = new Date().toISOString().split("T")[0];
-  if (document.getElementById("stockInDate")) document.getElementById("stockInDate").value = today;
-  if (document.getElementById("stockOutDate")) document.getElementById("stockOutDate").value = today;
-
-  // Reliable Print Button Insertion next to Reset/Filter buttons
-  const filterSection = document.getElementById("queryResetBtn")?.parentElement || document.getElementById("queryFilterBtn")?.parentElement || document.querySelector("button.btn-light")?.parentElement;
-  if (filterSection && !document.getElementById("queryPrintBtn")) {
-    const printBtn = document.createElement("button");
-    printBtn.id = "queryPrintBtn";
-    printBtn.className = "btn btn-outline-dark ms-2";
-    printBtn.innerHTML = '<i class="bi bi-printer"></i> Print Report';
-    printBtn.type = "button";
-    printBtn.onclick = window.printFilteredReport;
-    
-    filterSection.appendChild(printBtn);
-  }
-});
-
 function populateQueryDropdown() {
   const dropdown = document.getElementById("queryIngredient");
   if (!dropdown) return;
@@ -559,7 +321,6 @@ window.runTransactionQuery = function() {
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
     const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
 
-    // Also match active report category slicer
     let matchesCategorySlicer = true;
     if (window.activeReportCategory !== "ALL") {
       const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
@@ -576,37 +337,170 @@ window.runTransactionQuery = function() {
   renderTransactionTable(filtered);
 };
 
-// Handle Edit Form Submission
-const editForm = document.getElementById("editForm");
-if (editForm) {
-  editForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const key = document.getElementById("editKey").value;
-    const updatedIng = {
-      name: document.getElementById("editName").value,
-      quantity: parseFloat(document.getElementById("editQty").value),
-      minThreshold: parseFloat(document.getElementById("editMin").value),
-      expiryDate: document.getElementById("editExpiry").value,
-      unit: document.getElementById("editUnit").value
-    };
+// -------------------------------------------------------------
+// DASHBOARD WIDGETS & REPORT RENDERER
+// -------------------------------------------------------------
+function renderDashboardWidgets() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    update(ref(db, `ingredients/${key}`), updatedIng).then(() => {
-      alert("Ingredient updated successfully!");
-      const editModalElement = document.getElementById('editModal');
-      if (editModalElement && typeof bootstrap !== "undefined") {
-        const activeEl = document.activeElement;
-        if (editModalElement.contains(activeEl)) {
-          activeEl.blur();
-        }
+  const filteredEntries = Object.entries(allIngredients).filter(([key, item]) => {
+    if (window.activeReportCategory === "ALL") return true;
+    return item.category === window.activeReportCategory;
+  });
 
-        const modal = bootstrap.Modal.getInstance(editModalElement);
-        if (modal) modal.hide();
-      }
-    }).catch(err => {
-      alert("Error updating ingredient: " + err.message);
+  let totalItems = 0, lowStockCount = 0, expiredCount = 0;
+  let attentionHTML = "";
+
+  filteredEntries.forEach(([key, item]) => {
+    totalItems++;
+    const isLowStock = item.quantity <= item.minThreshold;
+    let isExpired = false;
+    
+    if (item.expiryDate) {
+      const expDate = new Date(item.expiryDate);
+      if (expDate < today) isExpired = true;
+    }
+
+    if (isLowStock) lowStockCount++;
+    if (isExpired) expiredCount++;
+
+    if (isLowStock || isExpired) {
+      let issueBadge = isExpired 
+        ? `<span class="badge bg-warning text-dark">Expired</span>`
+        : `<span class="badge bg-danger">Low Stock</span>`;
+      
+      let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
+
+      attentionHTML += `
+        <tr>
+          <td class="fw-bold">${item.name}</td>
+          <td>${issueBadge}</td>
+          <td>${formatDecimal(item.quantity)} ${item.unit}</td>
+          <td class="text-muted">${limitText}</td>
+        </tr>`;
+    }
+  });
+
+  if (!attentionHTML) {
+    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
+  }
+
+  if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
+  if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = lowStockCount;
+  if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = expiredCount;
+  if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = window.globalSupplierCount || 0;
+  
+  const attentionTable = document.getElementById("attentionTableBody");
+  if (attentionTable) attentionTable.innerHTML = attentionHTML;
+
+  const categoryCounts = {};
+  filteredEntries.forEach(([key, item]) => {
+    const cat = item.category || "Uncategorized";
+    if (window.activeChartMetric === "quantity") {
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + parseFloat(item.quantity || 0);
+    } else {
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    }
+  });
+
+  renderDynamicCategoryChart(categoryCounts);
+  populateQueryDropdown();
+  window.runTransactionQuery();
+}
+
+function renderDynamicCategoryChart(categoryCounts) {
+  const chartCanvas = document.getElementById('categoryChart');
+  if (!chartCanvas) return;
+  
+  let chartCardBody = chartCanvas.closest('.card-body') || chartCanvas.parentElement;
+  let existingSlicers = document.getElementById("reportSlicersContainer");
+  
+  if (chartCardBody && !existingSlicers) {
+    const slicerWrapper = document.createElement("div");
+    slicerWrapper.id = "reportSlicersContainer";
+    slicerWrapper.className = "mb-3 p-2 bg-light rounded border";
+    slicerWrapper.innerHTML = `
+      <div style="font-size: 11px; font-weight: bold; color: #555; margin-bottom: 3px;">Filter Category:</div>
+      <div class="btn-group btn-group-sm w-100 mb-2" role="group" id="categorySlicerGroup">
+        <button type="button" class="btn btn-outline-dark active" data-cat="ALL">All</button>
+        <button type="button" class="btn btn-outline-dark" data-cat="Dry">Dry</button>
+        <button type="button" class="btn btn-outline-dark" data-cat="Wet">Wet</button>
+        <button type="button" class="btn btn-outline-dark" data-cat="Dairy">Dairy</button>
+      </div>
+      <div style="font-size: 11px; font-weight: bold; color: #555; margin-bottom: 3px;">Metric View:</div>
+      <div class="btn-group btn-group-sm w-100" role="group" id="metricSlicerGroup">
+        <button type="button" class="btn btn-sm btn-secondary active" data-metric="count">Count</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-metric="quantity">Qty</button>
+      </div>
+    `;
+    
+    chartCardBody.insertBefore(slicerWrapper, chartCardBody.firstChild);
+
+    document.querySelectorAll("#categorySlicerGroup button").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
+          b.className = "btn btn-outline-dark";
+        });
+        e.target.className = "btn btn-dark active";
+        window.activeReportCategory = e.target.getAttribute("data-cat");
+        renderDashboardWidgets();
+      });
     });
+
+    document.querySelectorAll("#metricSlicerGroup button").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        document.querySelectorAll("#metricSlicerGroup button").forEach(b => {
+          b.className = "btn btn-sm btn-outline-secondary";
+        });
+        e.target.className = "btn btn-sm btn-secondary active";
+        window.activeChartMetric = e.target.getAttribute("data-metric");
+        renderDashboardWidgets();
+      });
+    });
+  }
+
+  const ctx = chartCanvas.getContext('2d');
+  if (window.inventoryChart) window.inventoryChart.destroy();
+  
+  window.inventoryChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(categoryCounts),
+      datasets: [{
+        data: Object.values(categoryCounts),
+        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const clickedCategory = window.inventoryChart.data.labels[index];
+          window.activeReportCategory = clickedCategory;
+          document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
+            if (b.getAttribute("data-cat") === clickedCategory) {
+              b.className = "btn btn-dark active";
+            } else {
+              b.className = "btn btn-outline-dark";
+            }
+          });
+          renderDashboardWidgets();
+        }
+      }
+    }
   });
 }
+
+window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
+window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
+window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
 
 window.resetTransactionQuery = function() {
   if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
@@ -624,9 +518,27 @@ window.resetTransactionQuery = function() {
 document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
 document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
 
-// ==========================================
-// BakeWise - Direct PDF Generation Utilities
-// ==========================================
+// DOM LOADED & PRINT BUTTON INJECTION FIX
+document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date().toISOString().split("T")[0];
+  if (document.getElementById("stockInDate")) document.getElementById("stockInDate").value = today;
+  if (document.getElementById("stockOutDate")) document.getElementById("stockOutDate").value = today;
+
+  const targetResetButton = document.getElementById("queryResetBtn") || document.getElementById("resetBtn") || document.querySelector("button.btn-light, button.btn-outline-secondary");
+  
+  if (targetResetButton && !document.getElementById("queryPrintBtn")) {
+    const printBtn = document.createElement("button");
+    printBtn.id = "queryPrintBtn";
+    printBtn.className = "btn btn-outline-dark ms-2";
+    printBtn.innerHTML = '<i class="bi bi-printer"></i> Print Report';
+    printBtn.type = "button";
+    printBtn.onclick = window.printFilteredReport;
+    
+    targetResetButton.parentNode.insertBefore(printBtn, targetResetButton.nextSibling);
+  }
+});
+
+// PDF Export Utility
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
@@ -668,7 +580,7 @@ window.printFilteredReport = function() {
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
       <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
         <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Inventory & Transaction Summary Report (${window.activeReportCategory})</h2>
+        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Inventory Summary Report (${window.activeReportCategory})</h2>
       </div>
 
       <div style="display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center;">
