@@ -175,10 +175,15 @@ if (addCategoryForm) {
     const listGroup = document.getElementById("categoryListGroup");
     const ingSelect = document.getElementById("ingCategorySelect");
     const filterSelect = document.getElementById("filterCategorySelect");
+    const queryCatSelect = document.getElementById("queryCategory"); // <-- Target the query slicer
 
     if (listGroup) listGroup.innerHTML = "";
     if (ingSelect) ingSelect.innerHTML = `<option value="">Select Category</option>`;
     if (filterSelect) filterSelect.innerHTML = `<option value="">All Categories</option>`;
+    
+    // Preserve current selection if user already picked one
+    const currentQueryCat = queryCatSelect ? queryCatSelect.value : "ALL";
+    if (queryCatSelect) queryCatSelect.innerHTML = `<option value="ALL">All Categories</option>`;
 
     if (snapshot.exists()) {
       const data = snapshot.val();
@@ -187,7 +192,13 @@ if (addCategoryForm) {
         if (listGroup) listGroup.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${cat.name} <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${key}')">Delete</button></li>`;
         if (ingSelect) ingSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
         if (filterSelect) filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+        
+        // Dynamically populate the query category slicer from Firebase!
+        if (queryCatSelect) {
+          queryCatSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+        }
       });
+      if (queryCatSelect) queryCatSelect.value = currentQueryCat;
     }
   });
 }
@@ -707,7 +718,7 @@ window.resetTransactionQuery = function() {
   if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
   if (document.getElementById("queryType")) document.getElementById("queryType").value = "ALL";
   if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
-  if (document.getElementById("queryCategory")) document.getElementById("queryCategory").value = "ALL";
+  if (document.getElementById("queryCategory")) document.getElementById("queryCategory").value = "ALL"; // Reset slicer
   window.runTransactionQuery();
 };
 
