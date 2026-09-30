@@ -424,10 +424,15 @@ window.runTransactionQuery = function() {
     const ctx = chartCanvas.getContext('2d');
     if (window.inventoryChart) window.inventoryChart.destroy();
     
+    // Map labels to include counts directly so they are always visible!
+    const labelsWithValues = Object.keys(dynamicCategoryCounts).map(cat => {
+      return `${cat} (${dynamicCategoryCounts[cat]})`;
+    });
+
     window.inventoryChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: Object.keys(dynamicCategoryCounts),
+        labels: labelsWithValues, // <-- Shows category name + exact count permanently in the legend
         datasets: [{
           data: Object.values(dynamicCategoryCounts),
           backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
@@ -438,12 +443,17 @@ window.runTransactionQuery = function() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom' }
+          legend: { 
+            position: 'bottom',
+            labels: {
+              boxWidth: 12,
+              font: { size: 11 }
+            }
+          }
         }
       }
     });
   }
-};
 
 function renderDashboardWidgets() {
   window.runTransactionQuery();
