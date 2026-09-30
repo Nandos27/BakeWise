@@ -6,10 +6,6 @@ export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
 
-// Global Slicer States for Reports Tab
-window.activeReportCategory = "ALL";
-window.activeChartMetric = "count"; // "count" or "quantity"
-
 // -------------------------------------------------------------
 // MODULE 2: INGREDIENTS
 // -------------------------------------------------------------
@@ -34,7 +30,7 @@ if (addIngredientForm) {
 
   onValue(ref(db, 'ingredients/'), (snapshot) => {
     allIngredients = snapshot.exists() ? snapshot.val() : {};
-    window.allIngredients = allIngredients; 
+    window.allIngredients = allIngredients; // Expose globally for cross-module use
     renderInventoryTable();
   });
 }
@@ -45,6 +41,7 @@ const filterCat = document.getElementById("filterCategorySelect");
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
+// Make edit modal function globally available for HTML inline onclick handlers
 window.openEditModal = function(key, name, qty, unit, min, expiry) {
   const editKey = document.getElementById("editKey");
   const editName = document.getElementById("editName");
@@ -109,8 +106,10 @@ function renderInventoryTable() {
 
     if (matchesSearch && matchesCategory) {
       let statusBadges = "";
+      
       if (isLowStock) statusBadges += `<span class="badge bg-danger me-1">Low Stock</span>`;
       else if (isAlmostLow) statusBadges += `<span class="badge bg-warning text-dark me-1">Almost Low</span>`;
+      
       if (isExpired) statusBadges += `<span class="badge bg-danger me-1">Expired</span>`;
       else if (isExpiringSoon) statusBadges += `<span class="badge bg-warning text-dark me-1">Expiring Soon</span>`;
       
@@ -144,6 +143,10 @@ function renderInventoryTable() {
     if (stockOutSelect) stockOutSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
   });
 
+  if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
+  if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = lowStockCount;
+  if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = expiredCount;
+
   if (auth.currentUser) {
     get(ref(db, `users/${auth.currentUser.uid}`)).then((snap) => {
       if (snap.exists() && (snap.val().role === 'supervisor' || snap.val().role === 'admin')) {
@@ -156,7 +159,7 @@ function renderInventoryTable() {
 }
 
 // -------------------------------------------------------------
-// MODULE 3: CATEGORIES & SUPPLIERS
+// MODULE 3: CATEGORIES
 // -------------------------------------------------------------
 const addCategoryForm = document.getElementById("addCategoryForm");
 if (addCategoryForm) {
@@ -189,6 +192,9 @@ if (addCategoryForm) {
   });
 }
 
+// -------------------------------------------------------------
+// MODULE 4: SUPPLIERS
+// -------------------------------------------------------------
 const addSupplierForm = document.getElementById("addSupplierForm");
 if (addSupplierForm) {
   addSupplierForm.addEventListener("submit", (e) => {
@@ -221,27 +227,70 @@ if (addSupplierForm) {
         if (stockInSupSelect) stockInSupSelect.innerHTML += `<option value="${item.name}" data-email="${item.email || ''}">${item.name}</option>`;
       });
     }
-    window.globalSupplierCount = count;
     if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = count;
   });
 }
 
-onValue(ref(db, 'stock_in/'), (snap) => {
-  const table = document.getElementById("stockInTableBody");
-  if (table) table.innerHTML = "";
-  globalStockIn = [];
-  if (snap.exists()) {
-    Object.values(snap.val()).forEach((item) => {
-      globalStockIn.push({...item, type: "IN"});
-      if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td><td>${item.supplier}</td></tr>`;
+// -------------------------------------------------------------
+// MODULE 5: STOCK IN (WITH STAFF APPROVAL WORKFLOW)
+// -------------------------------------------------------------
+const stockInForm = document.getElementById("stockInForm");
+if (stockInForm) {
+  stockInForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const ingKey = document.getElementById("stockInIngSelect").value;
+    const addedQty = parseFloat(document.getElementById("stockInQty").value);
+    const supplierName = document.getElementById("stockInSupSelect").value;
+    const entryDate = document.getElementById("stockInDate").value;
+    const newExpiryField = document.getElementById("stockInNewExpiry");
+    const newExpiryDate = newExpiryField ? newExpiryField.value : "";
+
+    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+      if (!snap.exists()) return;
+      const item = snap.val();
+
+      const payload = {
+        ingredientKey: ingKey,
+        ingredientName: item.name,
+        addedQty: addedQty,
+        unit: item.unit,
+        supplier: supplierName,
+        date: entryDate,
+        newExpiryDate: newExpiryDate,
+        submittedBy: auth.currentUser ? auth.currentUser.email : "Staff"
+      };
+
+      if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
+        executeDirectStockIn(payload);
+      } else {
+        push(ref(db, 'pending_stock_in/'), payload).then(() => {
+          alert("Stock In submitted for Admin verification.");
+          stockInForm.reset();
+          const today = new Date().toISOString().split("T")[0];
+          document.getElementById("stockInDate").value = today;
+        });
+      }
     });
-  }
-  renderDashboardWidgets();
-});
+  });
+
+  onValue(ref(db, 'stock_in/'), (snap) => {
+    const table = document.getElementById("stockInTableBody");
+    if (table) table.innerHTML = "";
+    globalStockIn = [];
+    if (snap.exists()) {
+      Object.values(snap.val()).forEach((item) => {
+        globalStockIn.push({...item, type: "IN"});
+        if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td><td>${item.supplier}</td></tr>`;
+      });
+    }
+    renderDashboardWidgets();
+  });
+}
 
 onValue(ref(db, 'stock_out/'), (snap) => {
   const table = document.getElementById("stockOutTableBody");
   if (table) table.innerHTML = "";
+  
   globalStockOut = [];
   if (snap.exists()) {
     Object.values(snap.val()).forEach((item) => {
@@ -254,9 +303,249 @@ onValue(ref(db, 'stock_out/'), (snap) => {
   renderDashboardWidgets();
 });
 
+window.renderPendingStockCards = function() {
+  const container = document.getElementById("pendingStockCard");
+  const table = document.getElementById("pendingStockTableBody");
+  const countBadge = document.getElementById("pendingStockCount");
+  
+  if (!container || !table) return;
+
+  const role = window.currentUserRole;
+  if (role !== "admin" && role !== "supervisor") {
+    container.style.display = "none";
+    return;
+  }
+
+  get(ref(db, 'pending_stock_in/')).then((snap) => {
+    table.innerHTML = "";
+    if (snap.exists()) {
+      container.style.display = "block";
+      const pendingData = snap.val();
+      const keys = Object.keys(pendingData);
+      if (countBadge) countBadge.textContent = `${keys.length} Pending`;
+
+      keys.forEach(key => {
+        const item = pendingData[key];
+        table.innerHTML += `
+          <tr>
+            <td>${item.date || "-"}</td>
+            <td><small class="text-secondary">${item.submittedBy || "Staff"}</small></td>
+            <td class="fw-bold">${item.ingredientName}</td>
+            <td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td>
+            <td>${item.supplier || "-"}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-success py-1 px-2 me-1" onclick="approvePendingStock('${key}')">Approve</button>
+              <button class="btn btn-sm btn-outline-danger py-1 px-2" onclick="rejectPendingStock('${key}')">Reject</button>
+            </td>
+          </tr>`;
+      });
+    } else {
+      container.style.display = "none";
+    }
+  });
+};
+
+onValue(ref(db, 'pending_stock_in/'), () => {
+  if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
+    window.renderPendingStockCards();
+  }
+});
+
+function executeDirectStockIn(payload) {
+  const currentItem = allIngredients[payload.ingredientKey];
+  const currentQty = currentItem?.quantity || 0;
+  const currentExpiry = currentItem?.expiryDate;
+  
+  let ingredientUpdates = { 
+    quantity: currentQty + payload.addedQty 
+  };
+  
+  if (payload.newExpiryDate) {
+    if (currentQty > 0 && currentExpiry) {
+      const oldExp = new Date(currentExpiry).getTime();
+      const newExp = new Date(payload.newExpiryDate).getTime();
+      ingredientUpdates.expiryDate = (oldExp <= newExp) ? currentExpiry : payload.newExpiryDate;
+    } else {
+      ingredientUpdates.expiryDate = payload.newExpiryDate;
+    }
+  }
+
+  update(ref(db, `ingredients/${payload.ingredientKey}`), ingredientUpdates);
+  
+  push(ref(db, 'stock_in/'), { 
+    ingredientName: payload.ingredientName, 
+    addedQty: payload.addedQty, 
+    unit: payload.unit, 
+    supplier: payload.supplier, 
+    date: payload.date 
+  }).then(() => { 
+    alert("Stock In recorded successfully!"); 
+    if (stockInForm) {
+      stockInForm.reset(); 
+      const today = new Date().toISOString().split("T")[0];
+      const stockInDateElem = document.getElementById("stockInDate");
+      if (stockInDateElem) stockInDateElem.value = today;
+    }
+  });
+}
+
+window.approvePendingStock = async function(key) {
+  const snapshot = await get(ref(db, 'pending_stock_in/' + key));
+  if (!snapshot.exists()) return;
+
+  const item = snapshot.val();
+  executeDirectStockIn(item);
+  await remove(ref(db, 'pending_stock_in/' + key));
+};
+
+window.rejectPendingStock = async function(key) {
+  if (confirm("Reject and delete this entry?")) {
+    await remove(ref(db, 'pending_stock_in/' + key));
+  }
+};
+
 // -------------------------------------------------------------
-// TRANSACTION QUERY & DROPDOWN FUNCTIONS (DEFINED FIRST)
+// DASHBOARD WIDGETS, REPORTS QUERY & FORECAST
 // -------------------------------------------------------------
+function renderDashboardWidgets() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const attentionTable = document.getElementById("attentionTableBody");
+  let attentionHTML = "";
+  
+  Object.values(allIngredients).forEach(item => {
+    const isLowStock = item.quantity <= item.minThreshold;
+    let isExpired = false;
+    
+    if (item.expiryDate) {
+      const expDate = new Date(item.expiryDate);
+      if (expDate < today) isExpired = true;
+    }
+
+    if (isLowStock || isExpired) {
+      let issueBadge = isExpired 
+        ? `<span class="badge bg-warning text-dark">Expired</span>`
+        : `<span class="badge bg-danger">Low Stock</span>`;
+      
+      let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
+
+      attentionHTML += `
+        <tr>
+          <td class="fw-bold">${item.name}</td>
+          <td>${issueBadge}</td>
+          <td>${formatDecimal(item.quantity)} ${item.unit}</td>
+          <td class="text-muted">${limitText}</td>
+        </tr>`;
+    }
+  });
+  
+  if (!attentionHTML) {
+    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal!</td></tr>`;
+  }
+  if (attentionTable) attentionTable.innerHTML = attentionHTML;
+
+  const categoryCounts = {};
+  Object.values(allIngredients).forEach(item => {
+    categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+  });
+
+  const chartCanvas = document.getElementById('categoryChart');
+  if (chartCanvas) {
+    const ctx = chartCanvas.getContext('2d');
+    if (window.inventoryChart) window.inventoryChart.destroy();
+    
+    window.inventoryChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(categoryCounts),
+        datasets: [{
+          data: Object.values(categoryCounts),
+          backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  const forecastTable = document.getElementById("forecastTableBody");
+  if (forecastTable) {
+    let forecastHTML = "";
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const usageStats = {};
+    globalStockOut.forEach(tx => {
+      const txDate = new Date(tx.date);
+      if (txDate >= thirtyDaysAgo) {
+        usageStats[tx.ingredientName] = (usageStats[tx.ingredientName] || 0) + parseFloat(tx.deductedQty || 0);
+      }
+    });
+
+    Object.values(allIngredients).forEach(item => {
+      const usedLast30Days = usageStats[item.name] || 0;
+      
+      if (usedLast30Days > 0 || item.quantity <= item.minThreshold) {
+        const estimatedDemand = usedLast30Days > 0 ? (usedLast30Days * 1.1) : (item.minThreshold * 1.5);
+        let toOrder = estimatedDemand - item.quantity;
+        
+        if (toOrder > 0) {
+          forecastHTML += `
+            <tr>
+              <td class="fw-bold">${item.name}</td>
+              <td>${item.category}</td>
+              <td>${formatDecimal(usedLast30Days)} ${item.unit}</td>
+              <td class="text-warning">${formatDecimal(item.quantity)} ${item.unit}</td>
+              <td class="text-success fw-bold">+${formatDecimal(toOrder)} ${item.unit}</td>
+            </tr>`;
+        }
+      }
+    });
+
+    if (forecastHTML === "") {
+      forecastHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Inventory levels are optimal. No bulk orders required right now.</td></tr>`;
+    }
+    forecastTable.innerHTML = forecastHTML;
+  }
+
+  populateQueryDropdown();
+  window.runTransactionQuery();
+}
+
+// Global delete helpers
+window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
+window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
+window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
+
+document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date().toISOString().split("T")[0];
+  const stockInDate = document.getElementById("stockInDate");
+  const stockOutDate = document.getElementById("stockOutDate");
+  
+  if (stockInDate) stockInDate.value = today;
+  if (stockOutDate) stockOutDate.value = today;
+
+  // Insert print report button next to the reset button cleanly
+  const resetBtn = document.getElementById("queryResetBtn") || document.getElementById("resetBtn") || document.querySelector("button.btn-light, button.btn-outline-secondary");
+  if (resetBtn && !document.getElementById("queryPrintBtn")) {
+    const printBtn = document.createElement("button");
+    printBtn.id = "queryPrintBtn";
+    printBtn.className = "btn btn-outline-dark ms-2";
+    printBtn.innerHTML = '<i class="bi bi-printer"></i> Print Report';
+    printBtn.type = "button";
+    printBtn.onclick = window.printFilteredReport;
+    
+    resetBtn.parentNode.insertBefore(printBtn, resetBtn.nextSibling);
+  }
+});
+
 function populateQueryDropdown() {
   const dropdown = document.getElementById("queryIngredient");
   if (!dropdown) return;
@@ -264,9 +553,7 @@ function populateQueryDropdown() {
   const currentSelection = dropdown.value;
   let options = '<option value="ALL">All Ingredients</option>';
   Object.values(allIngredients).forEach(item => {
-    if (window.activeReportCategory === "ALL" || item.category === window.activeReportCategory) {
-      options += `<option value="${item.name}">${item.name}</option>`;
-    }
+    options += `<option value="${item.name}">${item.name}</option>`;
   });
   dropdown.innerHTML = options;
   if (currentSelection) dropdown.value = currentSelection;
@@ -321,250 +608,58 @@ window.runTransactionQuery = function() {
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
     const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
 
-    let matchesCategorySlicer = true;
-    if (window.activeReportCategory !== "ALL") {
-      const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
-      if (matchedIngKey) {
-        matchesCategorySlicer = allIngredients[matchedIngKey].category === window.activeReportCategory;
-      } else {
-        matchesCategorySlicer = false;
-      }
-    }
-
-    return matchStart && matchEnd && matchType && matchItem && matchesCategorySlicer;
+    return matchStart && matchEnd && matchType && matchItem;
   });
 
   renderTransactionTable(filtered);
-
-  // Sync Chart with query results
-  let queryCategoryCounts = {};
-  filtered.forEach(tx => {
-    const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
-    if (matchedIngKey) {
-      const item = allIngredients[matchedIngKey];
-      const cat = item.category || "Uncategorized";
-      if (window.activeChartMetric === "quantity") {
-        queryCategoryCounts[cat] = (queryCategoryCounts[cat] || 0) + parseFloat(tx.addedQty || tx.deductedQty || 0);
-      } else {
-        queryCategoryCounts[cat] = (queryCategoryCounts[cat] || 0) + 1;
-      }
-    }
-  });
-
-  if (Object.keys(queryCategoryCounts).length > 0 && (startDate || endDate || selectedType !== "ALL" || selectedItem !== "ALL")) {
-    renderDynamicCategoryChart(queryCategoryCounts);
-  }
 };
 
-// -------------------------------------------------------------
-// DASHBOARD WIDGETS & REPORT RENDERER
-// -------------------------------------------------------------
-function renderDashboardWidgets() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// Handle Edit Form Submission
+const editForm = document.getElementById("editForm");
+if (editForm) {
+  editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const key = document.getElementById("editKey").value;
+    const updatedIng = {
+      name: document.getElementById("editName").value,
+      quantity: parseFloat(document.getElementById("editQty").value),
+      minThreshold: parseFloat(document.getElementById("editMin").value),
+      expiryDate: document.getElementById("editExpiry").value,
+      unit: document.getElementById("editUnit").value
+    };
 
-  const filteredEntries = Object.entries(allIngredients).filter(([key, item]) => {
-    if (window.activeReportCategory === "ALL") return true;
-    return item.category === window.activeReportCategory;
-  });
-
-  let totalItems = 0, lowStockCount = 0, expiredCount = 0;
-  let attentionHTML = "";
-
-  filteredEntries.forEach(([key, item]) => {
-    totalItems++;
-    const isLowStock = item.quantity <= item.minThreshold;
-    let isExpired = false;
-    
-    if (item.expiryDate) {
-      const expDate = new Date(item.expiryDate);
-      if (expDate < today) isExpired = true;
-    }
-
-    if (isLowStock) lowStockCount++;
-    if (isExpired) expiredCount++;
-
-    if (isLowStock || isExpired) {
-      let issueBadge = isExpired 
-        ? `<span class="badge bg-warning text-dark">Expired</span>`
-        : `<span class="badge bg-danger">Low Stock</span>`;
-      
-      let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
-
-      attentionHTML += `
-        <tr>
-          <td class="fw-bold">${item.name}</td>
-          <td>${issueBadge}</td>
-          <td>${formatDecimal(item.quantity)} ${item.unit}</td>
-          <td class="text-muted">${limitText}</td>
-        </tr>`;
-    }
-  });
-
-  if (!attentionHTML) {
-    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
-  }
-
-  if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
-  if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = lowStockCount;
-  if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = expiredCount;
-  if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = window.globalSupplierCount || 0;
-  
-  const attentionTable = document.getElementById("attentionTableBody");
-  if (attentionTable) attentionTable.innerHTML = attentionHTML;
-
-  const categoryCounts = {};
-  filteredEntries.forEach(([key, item]) => {
-    const cat = item.category || "Uncategorized";
-    if (window.activeChartMetric === "quantity") {
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + parseFloat(item.quantity || 0);
-    } else {
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-    }
-  });
-
-  renderDynamicCategoryChart(categoryCounts);
-  populateQueryDropdown();
-  window.runTransactionQuery();
-}
-
-function renderDynamicCategoryChart(categoryCounts) {
-  const chartCanvas = document.getElementById('categoryChart');
-  if (!chartCanvas) return;
-  
-  let chartCardBody = chartCanvas.closest('.card-body');
-  let existingSlicers = document.getElementById("reportSlicersContainer");
-  
-  if (chartCardBody && !existingSlicers) {
-    const slicerWrapper = document.createElement("div");
-    slicerWrapper.id = "reportSlicersContainer";
-    slicerWrapper.className = "mb-3 p-2 bg-light border rounded";
-    
-    slicerWrapper.innerHTML = `
-      <div class="row g-2 align-items-center">
-        <div class="col-md-7">
-          <span style="font-size: 11px; font-weight: bold; color: #555; display: block; margin-bottom: 2px;">Category Filter:</span>
-          <div class="btn-group btn-group-sm w-100" role="group" id="categorySlicerGroup">
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'ALL' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="ALL" style="font-size: 11px;">All</button>
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Dry' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Dry" style="font-size: 11px;">Dry</button>
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Wet' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Wet" style="font-size: 11px;">Wet</button>
-            <button type="button" class="btn btn-sm ${window.activeReportCategory === 'Dairy' ? 'btn-dark' : 'btn-outline-secondary'}" data-cat="Dairy" style="font-size: 11px;">Dairy</button>
-          </div>
-        </div>
-        <div class="col-md-5">
-          <span style="font-size: 11px; font-weight: bold; color: #555; display: block; margin-bottom: 2px;">Metric View:</span>
-          <div class="btn-group btn-group-sm w-100" role="group" id="metricSlicerGroup">
-            <button type="button" class="btn btn-sm ${window.activeChartMetric === 'count' ? 'btn-dark' : 'btn-outline-secondary'}" data-metric="count" style="font-size: 11px;">Count</button>
-            <button type="button" class="btn btn-sm ${window.activeChartMetric === 'quantity' ? 'btn-dark' : 'btn-outline-secondary'}" data-metric="quantity" style="font-size: 11px;">Qty</button>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    chartCardBody.insertBefore(slicerWrapper, chartCardBody.firstChild);
-
-    document.querySelectorAll("#categorySlicerGroup button").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
-          b.className = "btn btn-sm btn-outline-secondary";
-        });
-        e.target.className = "btn btn-sm btn-dark";
-        window.activeReportCategory = e.target.getAttribute("data-cat");
-        renderDashboardWidgets();
-      });
-    });
-
-    document.querySelectorAll("#metricSlicerGroup button").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        document.querySelectorAll("#metricSlicerGroup button").forEach(b => {
-          b.className = "btn btn-sm btn-outline-secondary";
-        });
-        e.target.className = "btn btn-sm btn-dark";
-        window.activeChartMetric = e.target.getAttribute("data-metric");
-        renderDashboardWidgets();
-      });
-    });
-  }
-
-  const ctx = chartCanvas.getContext('2d');
-  if (window.inventoryChart) window.inventoryChart.destroy();
-  
-  window.inventoryChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(categoryCounts),
-      datasets: [{
-        data: Object.values(categoryCounts),
-        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom' }
-      },
-      onClick: (event, elements) => {
-        if (elements.length > 0) {
-          const index = elements[0].index;
-          const clickedCategory = window.inventoryChart.data.labels[index];
-          window.activeReportCategory = clickedCategory;
-          document.querySelectorAll("#categorySlicerGroup button").forEach(b => {
-            if (b.getAttribute("data-cat") === clickedCategory) {
-              b.className = "btn btn-sm btn-dark";
-            } else {
-              b.className = "btn btn-sm btn-outline-secondary";
-            }
-          });
-          renderDashboardWidgets();
+    update(ref(db, `ingredients/${key}`), updatedIng).then(() => {
+      alert("Ingredient updated successfully!");
+      const editModalElement = document.getElementById('editModal');
+      if (editModalElement && typeof bootstrap !== "undefined") {
+        const activeEl = document.activeElement;
+        if (editModalElement.contains(activeEl)) {
+          activeEl.blur();
         }
+
+        const modal = bootstrap.Modal.getInstance(editModalElement);
+        if (modal) modal.hide();
       }
-    }
+    }).catch(err => {
+      alert("Error updating ingredient: " + err.message);
+    });
   });
 }
-
-window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
-window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
-window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
 
 window.resetTransactionQuery = function() {
   if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
   if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
   if (document.getElementById("queryType")) document.getElementById("queryType").value = "ALL";
   if (document.getElementById("queryIngredient")) document.getElementById("queryIngredient").value = "ALL";
-  window.activeReportCategory = "ALL";
-  document.querySelectorAll("#categorySlicerGroup button").forEach((b, idx) => {
-    b.className = idx === 0 ? "btn btn-sm btn-dark" : "btn btn-sm btn-outline-secondary";
-  });
   window.runTransactionQuery();
-  renderDashboardWidgets();
 };
 
 document.getElementById("queryFilterBtn")?.addEventListener("click", window.runTransactionQuery);
 document.getElementById("queryResetBtn")?.addEventListener("click", window.resetTransactionQuery);
 
-// DOM LOADED & PRINT BUTTON INJECTION FIX
-document.addEventListener("DOMContentLoaded", () => {
-  const today = new Date().toISOString().split("T")[0];
-  if (document.getElementById("stockInDate")) document.getElementById("stockInDate").value = today;
-  if (document.getElementById("stockOutDate")) document.getElementById("stockOutDate").value = today;
-
-  const targetResetButton = document.getElementById("queryResetBtn") || document.getElementById("resetBtn") || document.querySelector("button.btn-light, button.btn-outline-secondary");
-  
-  if (targetResetButton && !document.getElementById("queryPrintBtn")) {
-    const printBtn = document.createElement("button");
-    printBtn.id = "queryPrintBtn";
-    printBtn.className = "btn btn-outline-dark ms-2";
-    printBtn.innerHTML = '<i class="bi bi-printer"></i> Print Report';
-    printBtn.type = "button";
-    printBtn.onclick = window.printFilteredReport;
-    
-    targetResetButton.parentNode.insertBefore(printBtn, targetResetButton.nextSibling);
-  }
-});
-
-// PDF Export Utility
+// ==========================================
+// BakeWise - Direct PDF Generation Utilities
+// ==========================================
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
@@ -592,7 +687,7 @@ window.printFilteredReport = function() {
       const chartDataUrl = tempCanvas.toDataURL("image/jpeg", 1.0);
       chartImgHtml = `
         <div style="text-align: center; margin: 15px 0;">
-          <h4 style="margin-bottom: 5px; color: #555;">Inventory Category Overview (${window.activeReportCategory})</h4>
+          <h4 style="margin-bottom: 5px; color: #555;">Inventory Category Overview</h4>
           <img src="${chartDataUrl}" style="width: 250px; height: auto;" />
         </div>
       `;
@@ -606,7 +701,7 @@ window.printFilteredReport = function() {
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
       <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
         <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Inventory Summary Report (${window.activeReportCategory})</h2>
+        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Inventory & Transaction Summary Report</h2>
       </div>
 
       <div style="display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center;">
@@ -637,7 +732,7 @@ window.printFilteredReport = function() {
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Date</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Type</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Ingredient</th>
-            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Quantity</th>
+            <th style="proto; border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Quantity</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Reason / Supplier</th>
           </tr>
         </thead>
