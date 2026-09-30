@@ -424,7 +424,6 @@ window.runTransactionQuery = function() {
     const ctx = chartCanvas.getContext('2d');
     if (window.inventoryChart) window.inventoryChart.destroy();
     
-    // Map labels to include counts directly so they are always visible!
     const labelsWithValues = Object.keys(dynamicCategoryCounts).map(cat => {
       return `${cat} (${dynamicCategoryCounts[cat]})`;
     });
@@ -432,7 +431,7 @@ window.runTransactionQuery = function() {
     window.inventoryChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: labelsWithValues, // <-- Shows category name + exact count permanently in the legend
+        labels: labelsWithValues,
         datasets: [{
           data: Object.values(dynamicCategoryCounts),
           backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#6c757d', '#0dcaf0'],
@@ -456,8 +455,53 @@ window.runTransactionQuery = function() {
   }
 };
 
+// -------------------------------------------------------------
+// FORECAST TABLE RENDERER
+// -------------------------------------------------------------
+function renderForecastTable() {
+  const forecastTableBody = document.getElementById("forecastTableBody");
+  if (!forecastTableBody) return;
+
+  forecastTableBody.innerHTML = "";
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  let usageMap = {};
+  globalStockOut.forEach(tx => {
+    if (tx.date && new Date(tx.date) >= thirtyDaysAgo) {
+      const qty = parseFloat(tx.deductedQty || 0);
+      usageMap[tx.ingredientName] = (usageMap[tx.ingredientName] || 0) + qty;
+    }
+  });
+
+  let rowsHtml = "";
+  Object.values(allIngredients).forEach(item => {
+    const monthlyUsage = usageMap[item.name] || 0;
+    let suggestedOrder = (monthlyUsage * 1.1) - item.quantity;
+    if (suggestedOrder < 0) suggestedOrder = 0;
+
+    rowsHtml += `
+      <tr>
+        <td class="fw-bold">${item.name}</td>
+        <td><span class="badge bg-secondary">${item.category || 'General'}</span></td>
+        <td>${formatDecimal(monthlyUsage)} ${item.unit}</td>
+        <td>${formatDecimal(item.quantity)} ${item.unit}</td>
+        <td class="fw-bold text-success">${formatDecimal(suggestedOrder)} ${item.unit}</td>
+      </tr>
+    `;
+  });
+
+  if (!rowsHtml) {
+    rowsHtml = `<tr><td colspan="5" class="text-center text-muted py-3">No ingredient data available for forecasting.</td></tr>`;
+  }
+
+  forecastTableBody.innerHTML = rowsHtml;
+}
+
 function renderDashboardWidgets() {
   window.runTransactionQuery();
+  renderForecastTable();
 }
 
 // Global delete helpers
@@ -583,7 +627,7 @@ window.printFilteredReport = function() {
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Type</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Ingredient</th>
             <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Quantity</th>
-            <th style="border: 1px solid #ddd; padding: 6px; test-align: left; font-size: 12px;">Reason / Supplier</th>
+            <th style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 12px;">Reason / Supplier</th>
           </tr>
         </thead>
         <tbody style="font-size: 11px;">
