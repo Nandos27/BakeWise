@@ -469,7 +469,6 @@ function renderDynamicCategoryChart(categoryCounts) {
       }
     }
   });
-}
 
 // Global delete helpers
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
