@@ -484,6 +484,31 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("stockOutDate")) document.getElementById("stockOutDate").value = today;
 });
 
+window.printForecastReport = function() {
+  const printArea = document.getElementById("printArea");
+  if (!printArea) return;
+
+  const originalContents = document.body.innerHTML;
+  const printContents = printArea.innerHTML;
+
+  document.body.innerHTML = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
+      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
+        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
+        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">30-Day Purchase Order & Forecast Report</h2>
+      </div>
+      ${printContents}
+      <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
+        BakeWise Integrated Kitchen System &bull; Official Generated Forecast
+      </div>
+    </div>
+  `;
+
+  window.print();
+  document.body.innerHTML = originalContents;
+  window.location.reload();
+};
+
 // PDF Export Utility
 window.printFilteredReport = function() {
   const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
