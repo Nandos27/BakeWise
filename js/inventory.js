@@ -136,8 +136,8 @@ function renderInventoryTable() {
       if (tableBody) tableBody.innerHTML += row;
     }
 
-    if (stockInSelect) stockInSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
-    if (stockOutSelect) stockOutSelect.innerHTML += `<option value="${key}">${item.name}</option>`;
+    if (stockInSelect) stockInSelect.innerHTML += `<option value="${key}">${item.name} (${item.unit || 'unit'})</option>`;
+    if (stockOutSelect) stockOutSelect.innerHTML += `<option value="${key}">${item.name} (${item.unit || 'unit'})</option>`;
   });
 
   if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = totalItems;
@@ -228,6 +228,57 @@ if (addSupplierForm) {
       });
     }
     if (document.getElementById("rptSuppliers")) document.getElementById("rptSuppliers").innerText = count;
+  });
+}
+
+// -------------------------------------------------------------
+// STOCK IN FORM HANDLER (ADDED & FIXED)
+// -------------------------------------------------------------
+const stockInForm = document.getElementById("stockInForm");
+if (stockInForm) {
+  stockInForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const ingKey = document.getElementById("stockInIngSelect").value;
+    const addedQty = parseFloat(document.getElementById("stockInQty").value);
+    const supplier = document.getElementById("stockInSupSelect").value;
+    const entryDate = document.getElementById("stockInDate").value;
+
+    if (!ingKey || isNaN(addedQty) || addedQty <= 0) {
+      alert("Please select an ingredient and enter a valid quantity.");
+      return;
+    }
+
+    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+      if (!snap.exists()) {
+        alert("Selected ingredient not found in database.");
+        return;
+      }
+
+      const item = snap.val();
+      const currentQty = parseFloat(item.quantity || 0);
+      const newQty = currentQty + addedQty;
+
+      update(ref(db, `ingredients/${ingKey}`), { quantity: newQty })
+        .then(() => {
+          return push(ref(db, 'stock_in/'), {
+            ingredientName: item.name,
+            addedQty: addedQty,
+            unit: item.unit,
+            supplier: supplier || "Direct Stock In",
+            date: entryDate
+          });
+        })
+        .then(() => {
+          alert("Stock In recorded and inventory updated successfully!");
+          stockInForm.reset();
+          const today = new Date().toISOString().split("T")[0];
+          const stockInDateElem = document.getElementById("stockInDate");
+          if (stockInDateElem) stockInDateElem.value = today;
+        })
+        .catch((err) => {
+          alert("Error processing Stock In: " + err.message);
+        });
+    });
   });
 }
 
