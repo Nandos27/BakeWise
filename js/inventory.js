@@ -619,113 +619,137 @@ const getHighResPdfOptions = (filename) => ({
   pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
 });
 
-// 1. Executive / Summary Report (Metrics + Chart)
+// High-resolution PDF Options Configuration
+const getHighResPdfOptions = (filename) => ({
+  margin:       10,
+  filename:     filename,
+  image:        { type: 'jpeg', quality: 0.98 },
+  html2canvas:  { scale: 2, logging: false, useCORS: true },
+  jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+});
+
+// Explicitly export & attach functions to global window scope for HTML onclick attributes
 window.printSummaryReport = function() {
-  const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
-  const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
-  const expired = document.getElementById("rptExpired")?.innerText || "0";
-  const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
+  console.log("Summary PDF generation requested...");
 
-  let chartImgHtml = "";
-  const chartCanvas = document.getElementById("categoryChart");
-
-  if (chartCanvas) {
-    try {
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = chartCanvas.width * 2;
-      tempCanvas.height = chartCanvas.height * 2;
-      const ctx = tempCanvas.getContext("2d");
-
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-      ctx.drawImage(chartCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-
-      const chartDataUrl = tempCanvas.toDataURL("image/jpeg", 1.0);
-      chartImgHtml = `
-        <div style="text-align: center; margin: 20px 0;">
-          <h4 style="margin-bottom: 10px; color: #555;">Inventory Category Overview</h4>
-          <img src="${chartDataUrl}" style="width: 320px; height: auto;" />
-        </div>
-      `;
-    } catch (e) {
-      console.error("Could not capture chart canvas:", e);
-    }
+  if (typeof html2pdf === "undefined") {
+    alert("PDF library (html2pdf.js) is not loaded! Check dashboard.html script imports.");
+    return;
   }
 
-  const element = document.createElement("div");
-  element.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 20px;">
-        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Executive Inventory Summary Report</h2>
+  try {
+    const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
+    const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
+    const expired = document.getElementById("rptExpired")?.innerText || "0";
+    const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
+
+    let chartImgHtml = "";
+    const chartCanvas = document.getElementById("categoryChart");
+
+    if (chartCanvas) {
+      try {
+        const chartDataUrl = chartCanvas.toDataURL("image/png");
+        chartImgHtml = `
+          <div style="text-align: center; margin: 20px 0;">
+            <h4 style="margin-bottom: 10px; color: #555;">Inventory Category Overview</h4>
+            <img src="${chartDataUrl}" style="width: 280px; height: auto;" />
+          </div>
+        `;
+      } catch (err) {
+        console.warn("Could not extract chart canvas image:", err);
+      }
+    }
+
+    const element = document.createElement("div");
+    element.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
+        <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 20px;">
+          <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
+          <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Executive Inventory Summary Report</h2>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center;">
+          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
+            <div style="font-size: 11px; color: #666;">Total Items</div>
+            <strong style="font-size: 18px; color: #A05A35;">${totalIngredients}</strong>
+          </div>
+          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
+            <div style="font-size: 11px; color: #666;">Low Stock</div>
+            <strong style="font-size: 18px; color: #d9534f;">${lowStock}</strong>
+          </div>
+          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
+            <div style="font-size: 11px; color: #666;">Expired</div>
+            <strong style="font-size: 18px; color: #f0ad4e;">${expired}</strong>
+          </div>
+          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
+            <div style="font-size: 11px; color: #666;">Suppliers</div>
+            <strong style="font-size: 18px; color: #0275d8;">${suppliers}</strong>
+          </div>
+        </div>
+
+        ${chartImgHtml}
+
+        <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 10px;">
+          BakeWise Integrated Kitchen System &bull; Executive Overview Report
+        </div>
       </div>
+    `;
 
-      <div style="display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center;">
-        <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-          <div style="font-size: 11px; color: #666;">Total Items</div>
-          <strong style="font-size: 18px; color: #A05A35;">${totalIngredients}</strong>
-        </div>
-        <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-          <div style="font-size: 11px; color: #666;">Low Stock</div>
-          <strong style="font-size: 18px; color: #d9534f;">${lowStock}</strong>
-        </div>
-        <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-          <div style="font-size: 11px; color: #666;">Expired</div>
-          <strong style="font-size: 18px; color: #f0ad4e;">${expired}</strong>
-        </div>
-        <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-          <div style="font-size: 11px; color: #666;">Suppliers</div>
-          <strong style="font-size: 18px; color: #0275d8;">${suppliers}</strong>
-        </div>
-      </div>
-
-      ${chartImgHtml}
-
-      <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 10px;">
-        BakeWise Integrated Kitchen System &bull; Executive Overview Report
-      </div>
-    </div>
-  `;
-
-  html2pdf().set(getHighResPdfOptions('BakeWise_Executive_Summary.pdf')).from(element).save();
+    html2pdf().set(getHighResPdfOptions('BakeWise_Executive_Summary.pdf')).from(element).save();
+  } catch (err) {
+    console.error("Summary PDF Error:", err);
+    alert("Failed to export Summary PDF. Check browser console for details.");
+  }
 };
 
-// 2. Detailed / Audit Report (Full Itemized Transaction History)
 window.printDetailedReport = function() {
-  const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+  console.log("Detailed PDF generation requested...");
 
-  let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
-  transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
+  if (typeof html2pdf === "undefined") {
+    alert("PDF library (html2pdf.js) is not loaded! Check dashboard.html script imports.");
+    return;
+  }
 
-  const element = document.createElement("div");
-  element.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
-        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Detailed Itemized Transaction Report</h2>
+  try {
+    const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+
+    let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
+    transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
+
+    const element = document.createElement("div");
+    element.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
+        <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
+          <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
+          <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Detailed Itemized Transaction Report</h2>
+        </div>
+
+        <h3 style="font-size: 14px; margin-bottom: 10px;">Filtered Transaction History (${recordCount})</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #F8F7F3;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Date</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Type</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Ingredient</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Quantity</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Reason / Supplier</th>
+            </tr>
+          </thead>
+          <tbody style="font-size: 11px;">
+            ${transactionRows}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
+          BakeWise Integrated Kitchen System &bull; Full Detailed Audit Report
+        </div>
       </div>
+    `;
 
-      <h3 style="font-size: 14px; margin-bottom: 10px;">Filtered Transaction History (${recordCount} records)</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="background-color: #F8F7F3;">
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Date</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Type</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Ingredient</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Quantity</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Reason / Supplier</th>
-          </tr>
-        </thead>
-        <tbody style="font-size: 11px;">
-          ${transactionRows}
-        </tbody>
-      </table>
-
-      <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
-        BakeWise Integrated Kitchen System &bull; Full Detailed Audit Report
-      </div>
-    </div>
-  `;
-
-  html2pdf().set(getHighResPdfOptions('BakeWise_Detailed_Transaction_Report.pdf')).from(element).save();
+    html2pdf().set(getHighResPdfOptions('BakeWise_Detailed_Transaction_Report.pdf')).from(element).save();
+  } catch (err) {
+    console.error("Detailed PDF Error:", err);
+    alert("Failed to export Detailed PDF. Check browser console for details.");
+  }
 };
