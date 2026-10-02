@@ -523,7 +523,6 @@ window.runTransactionQuery = function() {
  * Handles disposing of expired items in Firebase Realtime Database:
  * - Records a Stock Out transaction with automated reason "Expired"
  * - Resets ingredient quantity to 0 in database
- * - Clears query date filters to ensure the transaction renders immediately
  */
 async function disposeExpiredItem(ingKey, disposeQty) {
   if (!ingKey || isNaN(disposeQty) || disposeQty <= 0) {
@@ -544,7 +543,7 @@ async function disposeExpiredItem(ingKey, disposeQty) {
   try {
     const todayStr = new Date().toISOString().split("T")[0];
 
-    // 1. Record Stock Out entry with automated reason "Expired"
+    // 1. Record Stock Out entry with hardcoded reason "Expired"
     const stockOutRecord = {
       ingredientName: targetIngredient.name,
       deductedQty: parseFloat(disposeQty),
@@ -553,19 +552,11 @@ async function disposeExpiredItem(ingKey, disposeQty) {
       date: todayStr
     };
 
-    // 2. Clear date range filter inputs so the newly added stock-out record isn't filtered out by query dates
-    if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
-    if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
-
-    // 3. Execute updates in Firebase Realtime Database
+    // 2. Execute atomic operations on Realtime DB
     await push(ref(db, 'stock_out/'), stockOutRecord);
     await update(ref(db, `ingredients/${ingKey}`), { quantity: 0 });
 
-    alert(`Successfully disposed ${targetIngredient.name}. Recorded stock out as 'Expired'.`);
-
-    // 4. Force immediate UI refresh
-    if (typeof renderInventoryTable === "function") renderInventoryTable();
-    if (typeof window.runTransactionQuery === "function") window.runTransactionQuery();
+    alert(`Successfully disposed ${targetIngredient.name}. Transaction recorded as 'Expired'.`);
 
   } catch (error) {
     console.error("Error disposing expired stock:", error);
@@ -577,7 +568,6 @@ async function disposeExpiredItem(ingKey, disposeQty) {
 document.addEventListener("click", function (e) {
   const btn = e.target.closest(".btn-dispose-expired");
   if (btn) {
-    e.preventDefault();
     const ingKey = btn.getAttribute("data-id");
     const qty = parseFloat(btn.getAttribute("data-qty"));
 
@@ -667,60 +657,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
 window.printForecastReport = function() {
   const printArea = document.getElementById("printArea");
-  if (!printArea) {
-    alert("Print area content not found.");
-    return;
-  }
+  if (!printArea) return;
 
-  // Create an isolated hidden iframe for printing
-  const printIframe = document.createElement("iframe");
-  printIframe.style.position = "fixed";
-  printIframe.style.right = "0";
-  printIframe.style.bottom = "0";
-  printIframe.style.width = "0";
-  printIframe.style.height = "0";
-  printIframe.style.border = "0";
-  document.body.appendChild(printIframe);
+  const originalContents = document.body.innerHTML;
+  const printContents = printArea.innerHTML;
 
-  const iframeDoc = printIframe.contentWindow.document;
+  document.body.innerHTML = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
+      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
+        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
+        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">30-Day Purchase Order & Forecast Report</h2>
+      </div>
+      ${printContents}
+      <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
+        BakeWise Integrated Kitchen System &bull; Official Generated Forecast
+      </div>
+    </div>
+  `;
 
-  iframeDoc.open();
-  iframeDoc.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>BakeWise Forecast Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; color: #2C241B; }
-          .header { text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px; }
-          .header h1 { margin: 0; color: #A05A35; font-size: 22px; }
-          .header h2 { margin: 5px 0 0 0; font-size: 15px; color: #555; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          th { background-color: #f4f4f4; }
-          .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #888; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>BakeWise Kitchen Management</h1>
-          <h2>30-Day Purchase Order & Forecast Report</h2>
-        </div>
-        ${printArea.innerHTML}
-        <div class="footer">
-          BakeWise Integrated Kitchen System &bull; Official Generated Forecast
-        </div>
-      </body>
-    </html>
-  `);
-  iframeDoc.close();
-
-  // Trigger print in iframe and remove it afterward
-  setTimeout(() => {
-    printIframe.contentWindow.focus();
-    printIframe.contentWindow.print();
-    document.body.removeChild(printIframe);
-  }, 500);
+  window.print();
+  document.body.innerHTML = originalContents;
+  window.location.reload();
 };
 
 // High-resolution PDF Options Configuration
