@@ -523,6 +523,7 @@ window.runTransactionQuery = function() {
  * Handles disposing of expired items in Firebase Realtime Database:
  * - Records a Stock Out transaction with automated reason "Expired"
  * - Resets ingredient quantity to 0 in database
+ * - Clears query date filters to ensure the transaction renders immediately
  */
 async function disposeExpiredItem(ingKey, disposeQty) {
   if (!ingKey || isNaN(disposeQty) || disposeQty <= 0) {
@@ -543,7 +544,7 @@ async function disposeExpiredItem(ingKey, disposeQty) {
   try {
     const todayStr = new Date().toISOString().split("T")[0];
 
-    // 1. Record Stock Out entry with hardcoded reason "Expired"
+    // 1. Record Stock Out entry with automated reason "Expired"
     const stockOutRecord = {
       ingredientName: targetIngredient.name,
       deductedQty: parseFloat(disposeQty),
@@ -552,11 +553,19 @@ async function disposeExpiredItem(ingKey, disposeQty) {
       date: todayStr
     };
 
-    // 2. Execute atomic operations on Realtime DB
+    // 2. Clear date range filter inputs so the newly added stock-out record isn't filtered out by query dates
+    if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
+    if (document.getElementById("queryEndDate")) document.getElementById("queryEndDate").value = "";
+
+    // 3. Execute updates in Firebase Realtime Database
     await push(ref(db, 'stock_out/'), stockOutRecord);
     await update(ref(db, `ingredients/${ingKey}`), { quantity: 0 });
 
-    alert(`Successfully disposed ${targetIngredient.name}. Transaction recorded as 'Expired'.`);
+    alert(`Successfully disposed ${targetIngredient.name}. Recorded stock out as 'Expired'.`);
+
+    // 4. Force immediate UI refresh
+    if (typeof renderInventoryTable === "function") renderInventoryTable();
+    if (typeof window.runTransactionQuery === "function") window.runTransactionQuery();
 
   } catch (error) {
     console.error("Error disposing expired stock:", error);
@@ -568,6 +577,7 @@ async function disposeExpiredItem(ingKey, disposeQty) {
 document.addEventListener("click", function (e) {
   const btn = e.target.closest(".btn-dispose-expired");
   if (btn) {
+    e.preventDefault();
     const ingKey = btn.getAttribute("data-id");
     const qty = parseFloat(btn.getAttribute("data-qty"));
 
