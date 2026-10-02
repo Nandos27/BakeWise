@@ -577,6 +577,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const today = new Date().toISOString().split("T")[0];
   if (document.getElementById("stockInDate")) document.getElementById("stockInDate").value = today;
   if (document.getElementById("stockOutDate")) document.getElementById("stockOutDate").value = today;
+
+  const queryCatElem = document.getElementById("queryCategory");
+  if (queryCatElem) {
+    queryCatElem.addEventListener("change", populateQueryDropdown);
+  }
 });
 
 window.printForecastReport = function() {
