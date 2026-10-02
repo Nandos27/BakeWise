@@ -120,14 +120,30 @@ function renderInventoryTable() {
     let isExpired = false;
     let isExpiringSoon = false;
     
-    if (item.expiryDate && item.quantity > 0) {
+if (item.expiryDate && item.quantity > 0) {
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0); 
-      const expDate = new Date(item.expiryDate);
-      const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
-      
-      if (daysDiff < 0) isExpired = true;
-      else if (daysDiff >= 0 && daysDiff <= 7) isExpiringSoon = true;
+
+      // Safely parse both YYYY-MM-DD and DD/MM/YYYY formats
+      let parts = item.expiryDate.split(/[-/]/);
+      let expDate;
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD format
+          expDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        } else {
+          // DD/MM/YYYY format
+          expDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+      } else {
+        expDate = new Date(item.expiryDate);
+      }
+
+      if (!isNaN(expDate.getTime())) {
+        const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
+        if (daysDiff < 0) isExpired = true;
+        else if (daysDiff >= 0 && daysDiff <= 7) isExpiringSoon = true;
+      }
     }
 
     if (isLowStock) lowStockCount++;
