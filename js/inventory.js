@@ -6,7 +6,7 @@ export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
 
-// Helper: Standardized Date Expiry Evaluator
+// Standardized Date Expiry Evaluator
 function checkExpiryStatus(expiryDateStr, quantity) {
   if (!expiryDateStr || quantity <= 0) return { isExpired: false, isExpiringSoon: false };
 
@@ -36,7 +36,7 @@ function checkExpiryStatus(expiryDateStr, quantity) {
   };
 }
 
-// Helper: Format raw date string into ISO YYYY-MM-DD for <input type="date">
+// Format raw date string into ISO YYYY-MM-DD for <input type="date">
 function toIsoDateString(rawDate) {
   if (!rawDate) return "";
   let parts = rawDate.split(/[-/]/);
