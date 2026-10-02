@@ -252,32 +252,46 @@ window.markOrderReceived = function(orderKey) {
       return;
     }
 
-    if (!confirm(`Confirm receipt of ${po.quantity} ${po.unit} of ${po.ingredientName}? This will automatically add it to your live inventory.`)) {
+    if (!confirm(`Confirm receipt of ${po.quantity} ${po.unit || ''} of ${po.ingredientName}? This will automatically add it to your live inventory.`)) {
       return;
     }
 
     const ingRef = ref(db, `ingredients/${po.ingredientKey}`);
     get(ingRef).then((ingSnap) => {
+      let updatePromise;
+
       if (ingSnap.exists()) {
         const currentQty = parseFloat(ingSnap.val().quantity || 0);
         const newQty = currentQty + parseFloat(po.quantity);
+        updatePromise = update(ingRef, { quantity: newQty });
+      } else {
+        // Fallback: Re-create ingredient if it was previously deleted
+        updatePromise = set(ingRef, {
+          name: po.ingredientName,
+          category: "General",
+          quantity: parseFloat(po.quantity),
+          minThreshold: 5,
+          expiryDate: "",
+          unit: po.unit || "unit"
+        });
+      }
 
-        update(ingRef, { quantity: newQty });
-
+      updatePromise.then(() => {
         push(ref(db, 'stock_in/'), {
           ingredientName: po.ingredientName,
-          addedQty: po.quantity,
-          unit: po.unit,
+          addedQty: parseFloat(po.quantity),
+          unit: po.unit || "unit",
           supplier: po.supplierName,
           date: new Date().toISOString().split("T")[0]
         });
 
-        update(ref(db, `purchase_orders/${orderKey}`), { status: "Received" }).then(() => {
-          alert(`Success! Added ${po.quantity} ${po.unit} of ${po.ingredientName} to inventory stock.`);
-        });
-      } else {
-        alert("Ingredient record not found in database.");
-      }
+        return update(ref(db, `purchase_orders/${orderKey}`), { status: "Received" });
+      }).then(() => {
+        alert(`Success! Added ${po.quantity} ${po.unit || ''} of ${po.ingredientName} to inventory stock.`);
+      }).catch(err => {
+        console.error("Error receiving PO:", err);
+        alert("Failed to process received order: " + err.message);
+      });
     });
   });
 };
