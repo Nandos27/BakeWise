@@ -6,6 +6,50 @@ export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
 
+// Helper: Standardized Date Expiry Evaluator
+function checkExpiryStatus(expiryDateStr, quantity) {
+  if (!expiryDateStr || quantity <= 0) return { isExpired: false, isExpiringSoon: false };
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  let parts = expiryDateStr.split(/[-/]/);
+  let expDate;
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD format
+      expDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+      // DD/MM/YYYY format
+      expDate = new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+  } else {
+    expDate = new Date(expiryDateStr);
+  }
+
+  if (isNaN(expDate.getTime())) return { isExpired: false, isExpiringSoon: false };
+
+  const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
+  return {
+    isExpired: daysDiff < 0,
+    isExpiringSoon: daysDiff >= 0 && daysDiff <= 7
+  };
+}
+
+// Helper: Format raw date string into ISO YYYY-MM-DD for <input type="date">
+function toIsoDateString(rawDate) {
+  if (!rawDate) return "";
+  let parts = rawDate.split(/[-/]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    } else {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return rawDate;
+}
+
 // -------------------------------------------------------------
 // MODULE 2: INGREDIENTS
 // -------------------------------------------------------------
@@ -18,7 +62,7 @@ if (addIngredientForm) {
       category: document.getElementById("ingCategorySelect").value,
       quantity: parseFloat(document.getElementById("ingQty").value),
       minThreshold: parseFloat(document.getElementById("ingMin").value),
-      expiryDate: document.getElementById("ingExpiry").value,
+      expiryDate: toIsoDateString(document.getElementById("ingExpiry").value),
       unit: document.getElementById("ingUnit").value
     };
 
@@ -42,7 +86,11 @@ const filterCat = document.getElementById("filterCategorySelect");
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
-window.openEditModal = function(key, name, qty, unit, min, expiry) {
+// Robust Edit Modal Populator (Looks up directly via Firebase key)
+window.openEditModal = function(key) {
+  const item = allIngredients[key];
+  if (!item) return;
+
   const editKey = document.getElementById("editKey");
   const editName = document.getElementById("editName");
   const editQty = document.getElementById("editQty");
@@ -51,11 +99,11 @@ window.openEditModal = function(key, name, qty, unit, min, expiry) {
   const editUnit = document.getElementById("editUnit");
 
   if (editKey) editKey.value = key;
-  if (editName) editName.value = name;
-  if (editQty) editQty.value = qty;
-  if (editMin) editMin.value = min;
-  if (editExpiry) editExpiry.value = expiry;
-  if (editUnit) editUnit.value = unit;
+  if (editName) editName.value = item.name || "";
+  if (editQty) editQty.value = item.quantity || 0;
+  if (editMin) editMin.value = item.minThreshold || 0;
+  if (editExpiry) editExpiry.value = toIsoDateString(item.expiryDate);
+  if (editUnit) editUnit.value = item.unit || "kg";
 
   const editModalElement = document.getElementById('editModal');
   if (editModalElement && typeof bootstrap !== "undefined") {
@@ -63,6 +111,8 @@ window.openEditModal = function(key, name, qty, unit, min, expiry) {
     modal.show();
   }
 };
+
+// Edit Form Submit Handler
 const editForm = document.getElementById("editForm");
 if (editForm) {
   editForm.addEventListener("submit", (e) => {
@@ -70,11 +120,13 @@ if (editForm) {
     const key = document.getElementById("editKey").value;
     if (!key) return;
 
+    const existingItem = allIngredients[key] || {};
     const updatedData = {
       name: document.getElementById("editName").value,
+      category: existingItem.category || "",
       quantity: parseFloat(document.getElementById("editQty").value),
       minThreshold: parseFloat(document.getElementById("editMin").value),
-      expiryDate: document.getElementById("editExpiry").value,
+      expiryDate: toIsoDateString(document.getElementById("editExpiry").value),
       unit: document.getElementById("editUnit").value
     };
 
@@ -117,34 +169,7 @@ function renderInventoryTable() {
     const isLowStock = item.quantity <= item.minThreshold;
     const isAlmostLow = !isLowStock && (item.quantity <= (item.minThreshold * 1.2));
 
-    let isExpired = false;
-    let isExpiringSoon = false;
-    
-if (item.expiryDate && item.quantity > 0) {
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0); 
-
-      // Safely parse both YYYY-MM-DD and DD/MM/YYYY formats
-      let parts = item.expiryDate.split(/[-/]/);
-      let expDate;
-      if (parts.length === 3) {
-        if (parts[0].length === 4) {
-          // YYYY-MM-DD format
-          expDate = new Date(parts[0], parts[1] - 1, parts[2]);
-        } else {
-          // DD/MM/YYYY format
-          expDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        }
-      } else {
-        expDate = new Date(item.expiryDate);
-      }
-
-      if (!isNaN(expDate.getTime())) {
-        const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
-        if (daysDiff < 0) isExpired = true;
-        else if (daysDiff >= 0 && daysDiff <= 7) isExpiringSoon = true;
-      }
-    }
+    const { isExpired, isExpiringSoon } = checkExpiryStatus(item.expiryDate, item.quantity);
 
     if (isLowStock) lowStockCount++;
     if (isExpired) expiredCount++;
@@ -174,7 +199,7 @@ if (item.expiryDate && item.quantity > 0) {
           <td>${item.expiryDate || 'N/A'}</td>
           <td>${statusBadges}</td>
           <td class="admin-only d-none">
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${key}', '${item.name}', ${item.quantity}, '${item.unit}', ${item.minThreshold}, '${item.expiryDate}')">Edit</button>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${key}')">Edit</button>
             <button class="btn btn-sm btn-outline-danger" onclick="deleteIngredient('${key}')">Delete</button>
           </td>
         </tr>`;
@@ -286,7 +311,7 @@ if (stockInForm) {
     const addedQty = parseFloat(document.getElementById("stockInQty").value);
     const supplier = document.getElementById("stockInSupSelect").value;
     const entryDate = document.getElementById("stockInDate").value;
-    const newExpiry = document.getElementById("stockInNewExpiry").value; // Capture optional expiry
+    const newExpiry = document.getElementById("stockInNewExpiry").value;
 
     if (!ingKey || isNaN(addedQty) || addedQty <= 0) {
       alert("Please select an ingredient and enter a valid quantity.");
@@ -303,10 +328,9 @@ if (stockInForm) {
       const currentQty = parseFloat(item.quantity || 0);
       const newQty = currentQty + addedQty;
 
-      // Prepare payload to update stock quantity and optional expiry date
       const updatePayload = { quantity: newQty };
       if (newExpiry) {
-        updatePayload.expiryDate = newExpiry;
+        updatePayload.expiryDate = toIsoDateString(newExpiry);
       }
 
       update(ref(db, `ingredients/${ingKey}`), updatePayload)
@@ -317,7 +341,7 @@ if (stockInForm) {
             unit: item.unit,
             supplier: supplier || "Direct Stock In",
             date: entryDate,
-            newExpiry: newExpiry || item.expiryDate || "N/A"
+            newExpiry: newExpiry ? toIsoDateString(newExpiry) : (item.expiryDate || "N/A")
           });
         })
         .then(() => {
@@ -422,7 +446,6 @@ window.runTransactionQuery = function() {
   const selectedItem = document.getElementById("queryIngredient")?.value || "ALL";
   const selectedCategory = document.getElementById("queryCategory")?.value || "ALL";
 
-  // 1. Filter Transactions Table
   const allRecords = [...globalStockIn, ...globalStockOut];
   allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -448,10 +471,6 @@ window.runTransactionQuery = function() {
 
   renderTransactionTable(filteredTransactions);
 
-  // 2. Dynamic Attention Table & Cards
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   let dynamicTotalItems = 0;
   let dynamicLowStock = 0;
   let dynamicExpired = 0;
@@ -466,12 +485,7 @@ window.runTransactionQuery = function() {
       dynamicTotalItems++;
 
       const isLowStock = item.quantity <= item.minThreshold;
-      let isExpired = false;
-      
-      if (item.expiryDate && item.quantity > 0) {
-        const expDate = new Date(item.expiryDate);
-        if (expDate < today) isExpired = true;
-      }
+      const { isExpired } = checkExpiryStatus(item.expiryDate, item.quantity);
 
       if (isLowStock) dynamicLowStock++;
       if (isExpired) dynamicExpired++;
@@ -512,7 +526,6 @@ window.runTransactionQuery = function() {
   const attentionTable = document.getElementById("attentionTableBody");
   if (attentionTable) attentionTable.innerHTML = attentionHTML;
 
-  // 3. Category Doughnut Chart
   let dynamicCategoryCounts = {};
   filteredTransactions.forEach(tx => {
     const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
@@ -600,7 +613,6 @@ async function disposeExpiredItem(ingKey, disposeQty) {
   }
 }
 
-// Global click event listener for Dispose buttons
 document.addEventListener("click", function (e) {
   const btn = e.target.closest(".btn-dispose-expired");
   if (btn) {
@@ -662,7 +674,6 @@ export function renderDashboardWidgets() {
   renderForecastTable();
 }
 
-// Global delete helpers
 window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
 window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
 window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
@@ -690,7 +701,6 @@ document.addEventListener("DOMContentLoaded", () => {
     queryCatElem.addEventListener("change", populateQueryDropdown);
   }
 
-  // Event listener to render Forecast whenever the tab is shown
   const forecastTabEl = document.querySelector('button[data-bs-target="#mod-forecast"]');
   if (forecastTabEl) {
     forecastTabEl.addEventListener('shown.bs.tab', () => {
@@ -756,7 +766,6 @@ window.printForecastReport = function() {
   }, 500);
 };
 
-// PDF Configuration Helpers
 const getPdfConfig = (filename) => ({
   margin:       [12, 12, 12, 12],
   filename:     filename,
