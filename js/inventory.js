@@ -620,21 +620,43 @@ const getHighResPdfOptions = (filename) => ({
 });
 
 // High-resolution PDF Options Configuration
-const getHighResPdfOptions = (filename) => ({
-  margin:       10,
+const getPdfConfig = (filename) => ({
+  margin:       [12, 12, 12, 12],
   filename:     filename,
   image:        { type: 'jpeg', quality: 0.98 },
-  html2canvas:  { scale: 2, logging: false, useCORS: true },
+  html2canvas:  { scale: 2.5, logging: false, useCORS: true },
   jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
   pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
 });
 
-// Explicitly export & attach functions to global window scope for HTML onclick attributes
-window.printSummaryReport = function() {
-  console.log("Summary PDF generation requested...");
+// Helper for professional PDF Header Block
+const generatePdfHeader = (reportTitle, reportSubtitle) => {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  const reportRef = "RPT-" + Math.floor(100000 + Math.random() * 900000);
 
+  return `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <h1 style="margin: 0; color: #1e3a8a; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
+          <p style="margin: 3px 0 0 0; font-size: 13px; color: #475569; font-weight: 600;">${reportTitle}</p>
+        </div>
+        <div style="text-align: right; font-size: 10px; color: #64748b; line-height: 1.4;">
+          <div><strong>Report Ref:</strong> ${reportRef}</div>
+          <div><strong>Generated:</strong> ${currentDate}</div>
+          <div><strong>Scope:</strong> Operational Audit</div>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+// 1. Formal Executive Summary PDF Generation
+window.printSummaryReport = function() {
   if (typeof html2pdf === "undefined") {
-    alert("PDF library (html2pdf.js) is not loaded! Check dashboard.html script imports.");
+    alert("PDF library is missing! Check your script imports in dashboard.html.");
     return;
   }
 
@@ -651,105 +673,142 @@ window.printSummaryReport = function() {
       try {
         const chartDataUrl = chartCanvas.toDataURL("image/png");
         chartImgHtml = `
-          <div style="text-align: center; margin: 20px 0;">
-            <h4 style="margin-bottom: 10px; color: #555;">Inventory Category Overview</h4>
-            <img src="${chartDataUrl}" style="width: 280px; height: auto;" />
+          <div style="margin-top: 25px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background-color: #ffffff;">
+            <div style="font-size: 12px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
+              Category Breakdown Visual Analysis
+            </div>
+            <div style="text-align: center;">
+              <img src="${chartDataUrl}" style="max-width: 260px; height: auto;" />
+            </div>
           </div>
         `;
       } catch (err) {
-        console.warn("Could not extract chart canvas image:", err);
+        console.warn("Unable to capture canvas image for PDF:", err);
       }
     }
 
-    const element = document.createElement("div");
-    element.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-        <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 20px;">
-          <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-          <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Executive Inventory Summary Report</h2>
-        </div>
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #0f172a; background: #ffffff;">
+        ${generatePdfHeader("Executive Inventory & Operations Summary", "Overview Metrics")}
 
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center;">
-          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-            <div style="font-size: 11px; color: #666;">Total Items</div>
-            <strong style="font-size: 18px; color: #A05A35;">${totalIngredients}</strong>
+        <!-- Metric KPI Cards -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #1e3a8a; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Total Items</div>
+            <div style="font-size: 22px; font-weight: 700; color: #1e3a8a; margin-top: 4px;">${totalIngredients}</div>
           </div>
-          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-            <div style="font-size: 11px; color: #666;">Low Stock</div>
-            <strong style="font-size: 18px; color: #d9534f;">${lowStock}</strong>
+          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #dc2626; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Low Stock</div>
+            <div style="font-size: 22px; font-weight: 700; color: #dc2626; margin-top: 4px;">${lowStock}</div>
           </div>
-          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-            <div style="font-size: 11px; color: #666;">Expired</div>
-            <strong style="font-size: 18px; color: #f0ad4e;">${expired}</strong>
+          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #d97706; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Expired Items</div>
+            <div style="font-size: 22px; font-weight: 700; color: #d97706; margin-top: 4px;">${expired}</div>
           </div>
-          <div style="border: 1px solid #ddd; padding: 12px; width: 22%; border-radius: 4px; background: #fafafa;">
-            <div style="font-size: 11px; color: #666;">Suppliers</div>
-            <strong style="font-size: 18px; color: #0275d8;">${suppliers}</strong>
+          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #16a34a; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Active Suppliers</div>
+            <div style="font-size: 22px; font-weight: 700; color: #16a34a; margin-top: 4px;">${suppliers}</div>
           </div>
         </div>
 
         ${chartImgHtml}
 
-        <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 10px;">
-          BakeWise Integrated Kitchen System &bull; Executive Overview Report
+        <!-- Official Footer -->
+        <div style="margin-top: 40px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
+          <div>BakeWise Enterprise Inventory System &bull; Confidential</div>
+          <div>Page 1 of 1</div>
         </div>
       </div>
     `;
 
-    html2pdf().set(getHighResPdfOptions('BakeWise_Executive_Summary.pdf')).from(element).save();
+    html2pdf().set(getPdfConfig('BakeWise_Executive_Summary.pdf')).from(container).save();
   } catch (err) {
-    console.error("Summary PDF Error:", err);
-    alert("Failed to export Summary PDF. Check browser console for details.");
+    console.error("Executive Summary PDF Generation Error:", err);
+    alert("Could not export PDF. Please check the console.");
   }
 };
 
+// 2. Formal Detailed Itemized Audit Report PDF
 window.printDetailedReport = function() {
-  console.log("Detailed PDF generation requested...");
-
   if (typeof html2pdf === "undefined") {
-    alert("PDF library (html2pdf.js) is not loaded! Check dashboard.html script imports.");
+    alert("PDF library is missing! Check your script imports in dashboard.html.");
     return;
   }
 
   try {
-    const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+    // Sanitize record count text to prevent duplicate words glitch
+    let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+    let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
 
-    let transactionRows = document.getElementById("fullTransactionTableBody")?.innerHTML || "";
-    transactionRows = transactionRows.replace(/<button[\s\S]*?<\/button>/gi, '');
+    // Collect transaction rows safely
+    const originalTable = document.getElementById("fullTransactionTableBody");
+    let formattedRows = "";
 
-    const element = document.createElement("div");
-    element.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-        <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
-          <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-          <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">Detailed Itemized Transaction Report</h2>
+    if (originalTable && originalTable.rows.length > 0) {
+      Array.from(originalTable.rows).forEach((row, idx) => {
+        if (row.cells.length >= 5) {
+          const date = row.cells[0].innerText.trim();
+          const type = row.cells[1].innerText.trim();
+          const ingredient = row.cells[2].innerText.trim();
+          const quantity = row.cells[3].innerText.trim();
+          const details = row.cells[4].innerText.trim();
+
+          const isStockIn = type.toLowerCase().includes("in");
+          const typeColor = isStockIn ? "#16a34a" : "#dc2626";
+          const bgColor = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+          formattedRows += `
+            <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 7px 10px; font-size: 10px; color: #334155;">${date}</td>
+              <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: ${typeColor};">${type}</td>
+              <td style="padding: 7px 10px; font-size: 10px; font-weight: 600; color: #0f172a;">${ingredient}</td>
+              <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: #334155;">${quantity}</td>
+              <td style="padding: 7px 10px; font-size: 10px; color: #475569;">${details}</td>
+            </tr>
+          `;
+        }
+      });
+    } else {
+      formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 15px; color: #94a3b8; font-size: 11px;">No transactions found for the specified filters.</td></tr>`;
+    }
+
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #0f172a; background: #ffffff;">
+        ${generatePdfHeader("Itemized Inventory Audit & Ledger", "Detailed Transactions")}
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1;">
+          <span style="font-size: 11px; font-weight: 700; color: #1e3a8a; text-transform: uppercase;">Filtered Transaction Records</span>
+          <span style="font-size: 11px; font-weight: 700; background: #1e3a8a; color: #ffffff; padding: 2px 8px; border-radius: 12px;">${cleanRecordCount} Total Records</span>
         </div>
 
-        <h3 style="font-size: 14px; margin-bottom: 10px;">Filtered Transaction History (${recordCount})</h3>
-        <table style="width: 100%; border-collapse: collapse;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1;">
           <thead>
-            <tr style="background-color: #F8F7F3;">
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Date</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Type</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Ingredient</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Quantity</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">Reason / Supplier</th>
+            <tr style="background-color: #1e3a8a; color: #ffffff;">
+              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Date</th>
+              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Type</th>
+              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Ingredient</th>
+              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Quantity</th>
+              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Reason / Supplier</th>
             </tr>
           </thead>
-          <tbody style="font-size: 11px;">
-            ${transactionRows}
+          <tbody>
+            ${formattedRows}
           </tbody>
         </table>
 
-        <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
-          BakeWise Integrated Kitchen System &bull; Full Detailed Audit Report
+        <!-- Official Footer -->
+        <div style="margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
+          <div>BakeWise Enterprise Inventory System &bull; Audit Trail Log</div>
+          <div>Official System Document</div>
         </div>
       </div>
     `;
 
-    html2pdf().set(getHighResPdfOptions('BakeWise_Detailed_Transaction_Report.pdf')).from(element).save();
+    html2pdf().set(getPdfConfig('BakeWise_Detailed_Transaction_Report.pdf')).from(container).save();
   } catch (err) {
-    console.error("Detailed PDF Error:", err);
-    alert("Failed to export Detailed PDF. Check browser console for details.");
+    console.error("Detailed Audit PDF Generation Error:", err);
+    alert("Could not export Detailed PDF. Please check the console.");
   }
 };
