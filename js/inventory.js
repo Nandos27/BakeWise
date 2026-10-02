@@ -63,6 +63,35 @@ window.openEditModal = function(key, name, qty, unit, min, expiry) {
     modal.show();
   }
 };
+const editForm = document.getElementById("editForm");
+if (editForm) {
+  editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const key = document.getElementById("editKey").value;
+    if (!key) return;
+
+    const updatedData = {
+      name: document.getElementById("editName").value,
+      quantity: parseFloat(document.getElementById("editQty").value),
+      minThreshold: parseFloat(document.getElementById("editMin").value),
+      expiryDate: document.getElementById("editExpiry").value,
+      unit: document.getElementById("editUnit").value
+    };
+
+    update(ref(db, `ingredients/${key}`), updatedData)
+      .then(() => {
+        alert("Ingredient updated successfully!");
+        const editModalElement = document.getElementById('editModal');
+        if (editModalElement && typeof bootstrap !== "undefined") {
+          const modal = bootstrap.Modal.getInstance(editModalElement);
+          if (modal) modal.hide();
+        }
+      })
+      .catch((err) => {
+        alert("Error updating ingredient: " + err.message);
+      });
+  });
+}
 
 function renderInventoryTable() {
   const tableBody = document.getElementById("inventoryTableBody");
@@ -241,6 +270,7 @@ if (stockInForm) {
     const addedQty = parseFloat(document.getElementById("stockInQty").value);
     const supplier = document.getElementById("stockInSupSelect").value;
     const entryDate = document.getElementById("stockInDate").value;
+    const newExpiry = document.getElementById("stockInNewExpiry").value; // Capture optional expiry
 
     if (!ingKey || isNaN(addedQty) || addedQty <= 0) {
       alert("Please select an ingredient and enter a valid quantity.");
@@ -257,14 +287,21 @@ if (stockInForm) {
       const currentQty = parseFloat(item.quantity || 0);
       const newQty = currentQty + addedQty;
 
-      update(ref(db, `ingredients/${ingKey}`), { quantity: newQty })
+      // Prepare payload to update stock quantity and optional expiry date
+      const updatePayload = { quantity: newQty };
+      if (newExpiry) {
+        updatePayload.expiryDate = newExpiry;
+      }
+
+      update(ref(db, `ingredients/${ingKey}`), updatePayload)
         .then(() => {
           return push(ref(db, 'stock_in/'), {
             ingredientName: item.name,
             addedQty: addedQty,
             unit: item.unit,
             supplier: supplier || "Direct Stock In",
-            date: entryDate
+            date: entryDate,
+            newExpiry: newExpiry || item.expiryDate || "N/A"
           });
         })
         .then(() => {
