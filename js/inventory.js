@@ -7,7 +7,7 @@ export let globalStockIn = [];
 export let globalStockOut = [];
 
 // -------------------------------------------------------------
-// BATCH & EXPIRY HELPER FUNCTIONS
+// BATCH & EXPIRY FUNCTIONS
 // -------------------------------------------------------------
 function getItemBatches(item) {
   if (Array.isArray(item.batches) && item.batches.length > 0) {
