@@ -667,27 +667,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
 window.printForecastReport = function() {
   const printArea = document.getElementById("printArea");
-  if (!printArea) return;
+  if (!printArea) {
+    alert("Print area content not found.");
+    return;
+  }
 
-  const originalContents = document.body.innerHTML;
-  const printContents = printArea.innerHTML;
+  // Create an isolated hidden iframe for printing
+  const printIframe = document.createElement("iframe");
+  printIframe.style.position = "fixed";
+  printIframe.style.right = "0";
+  printIframe.style.bottom = "0";
+  printIframe.style.width = "0";
+  printIframe.style.height = "0";
+  printIframe.style.border = "0";
+  document.body.appendChild(printIframe);
 
-  document.body.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
-        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">30-Day Purchase Order & Forecast Report</h2>
-      </div>
-      ${printContents}
-      <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
-        BakeWise Integrated Kitchen System &bull; Official Generated Forecast
-      </div>
-    </div>
-  `;
+  const iframeDoc = printIframe.contentWindow.document;
 
-  window.print();
-  document.body.innerHTML = originalContents;
-  window.location.reload();
+  iframeDoc.open();
+  iframeDoc.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>BakeWise Forecast Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #2C241B; }
+          .header { text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px; }
+          .header h1 { margin: 0; color: #A05A35; font-size: 22px; }
+          .header h2 { margin: 5px 0 0 0; font-size: 15px; color: #555; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          th { background-color: #f4f4f4; }
+          .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #888; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>BakeWise Kitchen Management</h1>
+          <h2>30-Day Purchase Order & Forecast Report</h2>
+        </div>
+        ${printArea.innerHTML}
+        <div class="footer">
+          BakeWise Integrated Kitchen System &bull; Official Generated Forecast
+        </div>
+      </body>
+    </html>
+  `);
+  iframeDoc.close();
+
+  // Trigger print in iframe and remove it afterward
+  setTimeout(() => {
+    printIframe.contentWindow.focus();
+    printIframe.contentWindow.print();
+    document.body.removeChild(printIframe);
+  }, 500);
 };
 
 // High-resolution PDF Options Configuration
