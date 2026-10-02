@@ -32,6 +32,7 @@ if (addIngredientForm) {
     allIngredients = snapshot.exists() ? snapshot.val() : {};
     window.allIngredients = allIngredients; 
     renderInventoryTable();
+    renderDashboardWidgets();
   });
 }
 
@@ -151,8 +152,6 @@ function renderInventoryTable() {
       }
     });
   }
-
-  renderDashboardWidgets();
 }
 
 // -------------------------------------------------------------
@@ -232,7 +231,7 @@ if (addSupplierForm) {
 }
 
 // -------------------------------------------------------------
-// STOCK IN FORM HANDLER (ADDED & FIXED)
+// STOCK IN / STOCK OUT LISTENERS
 // -------------------------------------------------------------
 const stockInForm = document.getElementById("stockInForm");
 if (stockInForm) {
@@ -396,7 +395,7 @@ window.runTransactionQuery = function() {
 
   renderTransactionTable(filteredTransactions);
 
-  // 2. Make Top Metrics & Attention Table Dynamic
+  // 2. Dynamic Attention Table & Cards
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -416,7 +415,7 @@ window.runTransactionQuery = function() {
       const isLowStock = item.quantity <= item.minThreshold;
       let isExpired = false;
       
-      if (item.expiryDate) {
+      if (item.expiryDate && item.quantity > 0) {
         const expDate = new Date(item.expiryDate);
         if (expDate < today) isExpired = true;
       }
@@ -431,7 +430,6 @@ window.runTransactionQuery = function() {
         
         let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
 
-        // Generate Dispose button for expired items passing explicit ingKey
         const actionHtml = isExpired 
           ? `<button type="button" class="btn btn-sm btn-outline-danger btn-dispose-expired" data-id="${ingKey}" data-qty="${item.quantity}">
                <i class="bi bi-trash3-fill me-1"></i>Dispose
@@ -461,7 +459,7 @@ window.runTransactionQuery = function() {
   const attentionTable = document.getElementById("attentionTableBody");
   if (attentionTable) attentionTable.innerHTML = attentionHTML;
 
-  // 3. Dynamic Chart Update
+  // 3. Category Doughnut Chart
   let dynamicCategoryCounts = {};
   filteredTransactions.forEach(tx => {
     const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
@@ -480,13 +478,11 @@ window.runTransactionQuery = function() {
   }
 
   const chartCanvas = document.getElementById('categoryChart');
-  if (chartCanvas) {
+  if (chartCanvas && typeof Chart !== "undefined") {
     const ctx = chartCanvas.getContext('2d');
     if (window.inventoryChart) window.inventoryChart.destroy();
     
-    const labelsWithValues = Object.keys(dynamicCategoryCounts).map(cat => {
-      return `${cat} (${dynamicCategoryCounts[cat]})`;
-    });
+    const labelsWithValues = Object.keys(dynamicCategoryCounts).map(cat => `${cat} (${dynamicCategoryCounts[cat]})`);
 
     window.inventoryChart = new Chart(ctx, {
       type: 'doughnut',
@@ -502,13 +498,7 @@ window.runTransactionQuery = function() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { 
-            position: 'bottom',
-            labels: {
-              boxWidth: 12,
-              font: { size: 11 }
-            }
-          }
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
         }
       }
     });
@@ -518,12 +508,6 @@ window.runTransactionQuery = function() {
 // ==========================================
 // EXPIRED ITEM DISPOSAL HANDLER
 // ==========================================
-
-/**
- * Handles disposing of expired items in Firebase Realtime Database:
- * - Records a Stock Out transaction with automated reason "Expired"
- * - Resets ingredient quantity to 0 in database
- */
 async function disposeExpiredItem(ingKey, disposeQty) {
   if (!ingKey || isNaN(disposeQty) || disposeQty <= 0) {
     alert("Invalid item key or disposal quantity.");
@@ -543,7 +527,6 @@ async function disposeExpiredItem(ingKey, disposeQty) {
   try {
     const todayStr = new Date().toISOString().split("T")[0];
 
-    // 1. Record Stock Out entry with hardcoded reason "Expired"
     const stockOutRecord = {
       ingredientName: targetIngredient.name,
       deductedQty: parseFloat(disposeQty),
@@ -552,11 +535,11 @@ async function disposeExpiredItem(ingKey, disposeQty) {
       date: todayStr
     };
 
-    // 2. Execute atomic operations on Realtime DB
     await push(ref(db, 'stock_out/'), stockOutRecord);
     await update(ref(db, `ingredients/${ingKey}`), { quantity: 0 });
 
     alert(`Successfully disposed ${targetIngredient.name}. Transaction recorded as 'Expired'.`);
+    renderDashboardWidgets();
 
   } catch (error) {
     console.error("Error disposing expired stock:", error);
@@ -564,7 +547,7 @@ async function disposeExpiredItem(ingKey, disposeQty) {
   }
 }
 
-// Global delegated click listener for Dispose buttons
+// Global click event listener for Dispose buttons
 document.addEventListener("click", function (e) {
   const btn = e.target.closest(".btn-dispose-expired");
   if (btn) {
@@ -580,7 +563,7 @@ document.addEventListener("click", function (e) {
 // -------------------------------------------------------------
 // FORECAST TABLE RENDERER
 // -------------------------------------------------------------
-function renderForecastTable() {
+export function renderForecastTable() {
   const forecastTableBody = document.getElementById("forecastTableBody");
   if (!forecastTableBody) return;
 
@@ -621,7 +604,7 @@ function renderForecastTable() {
   forecastTableBody.innerHTML = rowsHtml;
 }
 
-function renderDashboardWidgets() {
+export function renderDashboardWidgets() {
   window.runTransactionQuery();
   renderForecastTable();
 }
@@ -653,44 +636,74 @@ document.addEventListener("DOMContentLoaded", () => {
   if (queryCatElem) {
     queryCatElem.addEventListener("change", populateQueryDropdown);
   }
+
+  // Event listener to render Forecast whenever the tab is shown
+  const forecastTabEl = document.querySelector('button[data-bs-target="#mod-forecast"]');
+  if (forecastTabEl) {
+    forecastTabEl.addEventListener('shown.bs.tab', () => {
+      renderForecastTable();
+    });
+  }
 });
 
+// Non-destructive Printing via isolated iframe
 window.printForecastReport = function() {
   const printArea = document.getElementById("printArea");
-  if (!printArea) return;
+  if (!printArea) {
+    alert("Print area content not found.");
+    return;
+  }
 
-  const originalContents = document.body.innerHTML;
-  const printContents = printArea.innerHTML;
+  const printIframe = document.createElement("iframe");
+  printIframe.style.position = "fixed";
+  printIframe.style.right = "0";
+  printIframe.style.bottom = "0";
+  printIframe.style.width = "0";
+  printIframe.style.height = "0";
+  printIframe.style.border = "0";
+  document.body.appendChild(printIframe);
 
-  document.body.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #2C241B;">
-      <div style="text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px;">
-        <h1 style="margin: 0; color: #A05A35; font-size: 22px;">BakeWise Kitchen Management</h1>
-        <h2 style="margin: 5px 0 0 0; font-size: 15px; color: #555;">30-Day Purchase Order & Forecast Report</h2>
-      </div>
-      ${printContents}
-      <div style="margin-top: 25px; text-align: center; font-size: 10px; color: #888;">
-        BakeWise Integrated Kitchen System &bull; Official Generated Forecast
-      </div>
-    </div>
-  `;
+  const iframeDoc = printIframe.contentWindow.document;
 
-  window.print();
-  document.body.innerHTML = originalContents;
-  window.location.reload();
+  iframeDoc.open();
+  iframeDoc.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>BakeWise Forecast Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #2C241B; }
+          .header { text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px; }
+          .header h1 { margin: 0; color: #A05A35; font-size: 22px; }
+          .header h2 { margin: 5px 0 0 0; font-size: 15px; color: #555; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          th { background-color: #f4f4f4; }
+          .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #888; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>BakeWise Kitchen Management</h1>
+          <h2>30-Day Purchase Order & Forecast Report</h2>
+        </div>
+        ${printArea.innerHTML}
+        <div class="footer">
+          BakeWise Integrated Kitchen System &bull; Official Generated Forecast
+        </div>
+      </body>
+    </html>
+  `);
+  iframeDoc.close();
+
+  setTimeout(() => {
+    printIframe.contentWindow.focus();
+    printIframe.contentWindow.print();
+    document.body.removeChild(printIframe);
+  }, 500);
 };
 
-// High-resolution PDF Options Configuration
-const getHighResPdfOptions = (filename) => ({
-  margin:       10,
-  filename:     filename,
-  image:        { type: 'jpeg', quality: 0.98 },
-  html2canvas:  { scale: 3, logging: false, useCORS: true }, // Higher scale prevents blurry scan look
-  jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-});
-
-// High-resolution PDF Options Configuration
+// PDF Configuration Helpers
 const getPdfConfig = (filename) => ({
   margin:       [12, 12, 12, 12],
   filename:     filename,
@@ -700,7 +713,6 @@ const getPdfConfig = (filename) => ({
   pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
 });
 
-// Helper for professional PDF Header Block
 const generatePdfHeader = (reportTitle, reportSubtitle) => {
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -724,10 +736,9 @@ const generatePdfHeader = (reportTitle, reportSubtitle) => {
   `;
 };
 
-// 1. Formal Executive Summary PDF Generation
 window.printSummaryReport = function() {
   if (typeof html2pdf === "undefined") {
-    alert("PDF library is missing! Check your script imports in dashboard.html.");
+    alert("PDF library is missing!");
     return;
   }
 
@@ -763,29 +774,27 @@ window.printSummaryReport = function() {
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #0f172a; background: #ffffff;">
         ${generatePdfHeader("Executive Inventory & Operations Summary", "Overview Metrics")}
 
-        <!-- Metric KPI Cards -->
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
           <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #1e3a8a; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Total Items</div>
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Total Items</div>
             <div style="font-size: 22px; font-weight: 700; color: #1e3a8a; margin-top: 4px;">${totalIngredients}</div>
           </div>
           <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #dc2626; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Low Stock</div>
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Low Stock</div>
             <div style="font-size: 22px; font-weight: 700; color: #dc2626; margin-top: 4px;">${lowStock}</div>
           </div>
           <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #d97706; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Expired Items</div>
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Expired Items</div>
             <div style="font-size: 22px; font-weight: 700; color: #d97706; margin-top: 4px;">${expired}</div>
           </div>
           <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #16a34a; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Active Suppliers</div>
+            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Active Suppliers</div>
             <div style="font-size: 22px; font-weight: 700; color: #16a34a; margin-top: 4px;">${suppliers}</div>
           </div>
         </div>
 
         ${chartImgHtml}
 
-        <!-- Official Footer -->
         <div style="margin-top: 40px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
           <div>BakeWise Enterprise Inventory System &bull; Confidential</div>
           <div>Page 1 of 1</div>
@@ -800,19 +809,16 @@ window.printSummaryReport = function() {
   }
 };
 
-// 2. Formal Detailed Itemized Audit Report PDF
 window.printDetailedReport = function() {
   if (typeof html2pdf === "undefined") {
-    alert("PDF library is missing! Check your script imports in dashboard.html.");
+    alert("PDF library is missing!");
     return;
   }
 
   try {
-    // Sanitize record count text to prevent duplicate words glitch
     let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
     let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
 
-    // Collect transaction rows safely
     const originalTable = document.getElementById("fullTransactionTableBody");
     let formattedRows = "";
 
@@ -869,7 +875,6 @@ window.printDetailedReport = function() {
           </tbody>
         </table>
 
-        <!-- Official Footer -->
         <div style="margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
           <div>BakeWise Enterprise Inventory System &bull; Audit Trail Log</div>
           <div>Official System Document</div>
