@@ -892,13 +892,9 @@
   <div class="card p-4 border-0 shadow-sm">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h4 class="card-title m-0">Inventory Summary Report</h4>
-      <!-- Top Action Buttons -->
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-maroon btn-sm fw-bold" onclick="printSummaryReport()">
-          <i class="bi bi-pie-chart-fill me-1"></i> Download Summary PDF
-        </button>
-        <button class="btn btn-maroon btn-sm fw-bold" onclick="printDetailedReport()">
-          <i class="bi bi-file-earmark-text-fill me-1"></i> Download Detailed PDF
+      <div>
+        <button type="button" class="btn btn-outline-primary" onclick="printSummaryReport()">
+          <i class="bi bi-pie-chart me-1"></i> Download Summary PDF
         </button>
       </div>
     </div>
@@ -999,13 +995,10 @@
           </select>
         </div>
 
-        <!-- Action Buttons Row -->
+        <!-- BOTTOM ACTION BUTTONS -->
         <div class="col-md-12 d-flex gap-2 mt-3 justify-content-end">
           <button class="btn btn-sm btn-maroon px-4 fw-bold" onclick="runTransactionQuery()">Filter</button>
           <button class="btn btn-sm btn-outline-secondary px-4" onclick="resetTransactionQuery()">Reset</button>
-          <button class="btn btn-sm btn-outline-dark px-3" type="button" onclick="printSummaryReport()">
-            <i class="bi bi-file-pdf me-1"></i> Summary PDF
-          </button>
           <button class="btn btn-sm btn-dark px-3" type="button" onclick="printDetailedReport()">
             <i class="bi bi-file-earmark-text me-1"></i> Detailed PDF
           </button>
@@ -1022,18 +1015,16 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Ingredient</th>
-                  <th>Quantity</th>
-                  <th>Reason / Supplier</th>
-                </tr>
-              </thead>
-              <tbody id="fullTransactionTableBody"></tbody>
-            </table>
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Ingredient</th>
+                <th>Quantity</th>
+                <th>Reason / Supplier</th>
+              </tr>
+            </thead>
+            <tbody id="fullTransactionTableBody"></tbody>
           </table>
         </div>
       </div>
