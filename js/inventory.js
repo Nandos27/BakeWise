@@ -6,37 +6,84 @@ export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
 
-// Standardized Date Expiry Evaluator
-function checkExpiryStatus(expiryDateStr, quantity) {
-  if (!expiryDateStr || quantity <= 0) return { isExpired: false, isExpiringSoon: false };
+// -------------------------------------------------------------
+// BATCH & EXPIRY HELPER FUNCTIONS
+// -------------------------------------------------------------
+function getItemBatches(item) {
+  if (Array.isArray(item.batches) && item.batches.length > 0) {
+    return item.batches;
+  }
+  if (item.expiryDate && item.quantity > 0) {
+    return [{ qty: parseFloat(item.quantity) || 0, expiryDate: item.expiryDate }];
+  }
+  return [{ qty: parseFloat(item.quantity) || 0, expiryDate: "" }];
+}
 
+function calculateItemStockDetails(item) {
+  const batches = getItemBatches(item);
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
 
-  let parts = expiryDateStr.split(/[-/]/);
-  let expDate;
-  if (parts.length === 3) {
-    if (parts[0].length === 4) {
-      // YYYY-MM-DD format
-      expDate = new Date(parts[0], parts[1] - 1, parts[2]);
-    } else {
-      // DD/MM/YYYY format
-      expDate = new Date(parts[2], parts[1] - 1, parts[0]);
+  let totalQty = 0;
+  let expiredQty = 0;
+  let expiringSoonQty = 0;
+  let validQty = 0;
+  let validExpiries = [];
+
+  batches.forEach(b => {
+    const bQty = parseFloat(b.qty) || 0;
+    totalQty += bQty;
+
+    if (bQty > 0 && b.expiryDate) {
+      let parts = b.expiryDate.split(/[-/]/);
+      let expDate;
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          expDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        } else {
+          expDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+      } else {
+        expDate = new Date(b.expiryDate);
+      }
+
+      if (!isNaN(expDate.getTime())) {
+        const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
+        if (daysDiff < 0) {
+          expiredQty += bQty;
+        } else {
+          validQty += bQty;
+          validExpiries.push(b.expiryDate);
+          if (daysDiff <= 7) {
+            expiringSoonQty += bQty;
+          }
+        }
+      } else {
+        validQty += bQty;
+      }
+    } else if (bQty > 0) {
+      validQty += bQty;
     }
-  } else {
-    expDate = new Date(expiryDateStr);
+  });
+
+  let displayExpiry = item.expiryDate || "N/A";
+  if (validExpiries.length > 0) {
+    validExpiries.sort((a, b) => new Date(a) - new Date(b));
+    displayExpiry = validExpiries[0];
   }
 
-  if (isNaN(expDate.getTime())) return { isExpired: false, isExpiringSoon: false };
-
-  const daysDiff = (expDate - todayDate) / (1000 * 60 * 60 * 24);
   return {
-    isExpired: daysDiff < 0,
-    isExpiringSoon: daysDiff >= 0 && daysDiff <= 7
+    totalQty,
+    validQty,
+    expiredQty,
+    expiringSoonQty,
+    isExpired: expiredQty > 0,
+    isExpiringSoon: expiringSoonQty > 0 && expiredQty === 0,
+    displayExpiry,
+    batches
   };
 }
 
-// Format raw date string into ISO YYYY-MM-DD for <input type="date">
 function toIsoDateString(rawDate) {
   if (!rawDate) return "";
   let parts = rawDate.split(/[-/]/);
@@ -57,13 +104,17 @@ const addIngredientForm = document.getElementById("addIngredientForm");
 if (addIngredientForm) {
   addIngredientForm.addEventListener("submit", (e) => {
     e.preventDefault();
+    const qty = parseFloat(document.getElementById("ingQty").value);
+    const expDate = toIsoDateString(document.getElementById("ingExpiry").value);
+
     const newIng = {
       name: document.getElementById("ingName").value,
       category: document.getElementById("ingCategorySelect").value,
-      quantity: parseFloat(document.getElementById("ingQty").value),
+      quantity: qty,
       minThreshold: parseFloat(document.getElementById("ingMin").value),
-      expiryDate: toIsoDateString(document.getElementById("ingExpiry").value),
-      unit: document.getElementById("ingUnit").value
+      expiryDate: expDate,
+      unit: document.getElementById("ingUnit").value,
+      batches: [{ qty: qty, expiryDate: expDate }]
     };
 
     push(ref(db, 'ingredients/'), newIng).then(() => {
@@ -86,7 +137,6 @@ const filterCat = document.getElementById("filterCategorySelect");
 if (searchInput) searchInput.addEventListener("input", renderInventoryTable);
 if (filterCat) filterCat.addEventListener("change", renderInventoryTable);
 
-// Robust Edit Modal Populator (Looks up directly via Firebase key)
 window.openEditModal = function(key) {
   const item = allIngredients[key];
   if (!item) return;
@@ -112,7 +162,6 @@ window.openEditModal = function(key) {
   }
 };
 
-// Edit Form Submit Handler
 const editForm = document.getElementById("editForm");
 if (editForm) {
   editForm.addEventListener("submit", (e) => {
@@ -121,13 +170,17 @@ if (editForm) {
     if (!key) return;
 
     const existingItem = allIngredients[key] || {};
+    const newQty = parseFloat(document.getElementById("editQty").value);
+    const newExp = toIsoDateString(document.getElementById("editExpiry").value);
+
     const updatedData = {
       name: document.getElementById("editName").value,
       category: existingItem.category || "",
-      quantity: parseFloat(document.getElementById("editQty").value),
+      quantity: newQty,
       minThreshold: parseFloat(document.getElementById("editMin").value),
-      expiryDate: toIsoDateString(document.getElementById("editExpiry").value),
-      unit: document.getElementById("editUnit").value
+      expiryDate: newExp,
+      unit: document.getElementById("editUnit").value,
+      batches: [{ qty: newQty, expiryDate: newExp }]
     };
 
     update(ref(db, `ingredients/${key}`), updatedData)
@@ -166,10 +219,18 @@ function renderInventoryTable() {
     const matchesSearch = item.name.toLowerCase().includes(searchVal);
     const matchesCategory = catVal === "" || item.category === catVal;
 
-    const isLowStock = item.quantity <= item.minThreshold;
-    const isAlmostLow = !isLowStock && (item.quantity <= (item.minThreshold * 1.2));
+    const {
+      totalQty,
+      validQty,
+      expiredQty,
+      expiringSoonQty,
+      isExpired,
+      isExpiringSoon,
+      displayExpiry
+    } = calculateItemStockDetails(item);
 
-    const { isExpired, isExpiringSoon } = checkExpiryStatus(item.expiryDate, item.quantity);
+    const isLowStock = validQty <= item.minThreshold;
+    const isAlmostLow = !isLowStock && (validQty <= (item.minThreshold * 1.2));
 
     if (isLowStock) lowStockCount++;
     if (isExpired) expiredCount++;
@@ -186,8 +247,8 @@ function renderInventoryTable() {
       }
 
       let quantityDisplay = `${formatDecimal(item.quantity)} ${item.unit}`;
-      if (isExpired) {
-        quantityDisplay += `<br><small class="text-danger fw-bold">(${formatDecimal(item.quantity)} ${item.unit} Expired)</small>`;
+      if (expiredQty > 0) {
+        quantityDisplay += `<br><small class="text-danger fw-bold">(${formatDecimal(expiredQty)} ${item.unit} Expired)</small>`;
       }
 
       const row = `
@@ -196,7 +257,7 @@ function renderInventoryTable() {
           <td><span class="badge bg-secondary">${item.category}</span></td>
           <td class="fw-bold">${quantityDisplay}</td>
           <td>${formatDecimal(item.minThreshold)} ${item.unit}</td>
-          <td>${item.expiryDate || 'N/A'}</td>
+          <td>${displayExpiry || 'N/A'}</td>
           <td>${statusBadges}</td>
           <td class="admin-only d-none">
             <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${key}')">Edit</button>
@@ -301,7 +362,7 @@ if (addSupplierForm) {
 }
 
 // -------------------------------------------------------------
-// STOCK IN / STOCK OUT LISTENERS
+// STOCK IN / STOCK OUT LISTENERS WITH MULTI-BATCH SUPPORT
 // -------------------------------------------------------------
 const stockInForm = document.getElementById("stockInForm");
 if (stockInForm) {
@@ -327,11 +388,33 @@ if (stockInForm) {
       const item = snap.val();
       const currentQty = parseFloat(item.quantity || 0);
       const newQty = currentQty + addedQty;
+      const expDateStr = newExpiry ? toIsoDateString(newExpiry) : (item.expiryDate || "");
 
-      const updatePayload = { quantity: newQty };
-      if (newExpiry) {
-        updatePayload.expiryDate = toIsoDateString(newExpiry);
+      let existingBatches = getItemBatches(item);
+      const matchingBatch = existingBatches.find(b => toIsoDateString(b.expiryDate) === expDateStr);
+
+      if (matchingBatch) {
+        matchingBatch.qty = (parseFloat(matchingBatch.qty) || 0) + addedQty;
+      } else {
+        existingBatches.push({ qty: addedQty, expiryDate: expDateStr });
       }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const validBatches = existingBatches.filter(b => b.qty > 0 && new Date(b.expiryDate) >= today);
+      let primaryExpiry = item.expiryDate;
+      if (validBatches.length > 0) {
+        validBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+        primaryExpiry = validBatches[0].expiryDate;
+      } else if (newExpiry) {
+        primaryExpiry = toIsoDateString(newExpiry);
+      }
+
+      const updatePayload = {
+        quantity: newQty,
+        expiryDate: primaryExpiry,
+        batches: existingBatches
+      };
 
       update(ref(db, `ingredients/${ingKey}`), updatePayload)
         .then(() => {
@@ -341,15 +424,15 @@ if (stockInForm) {
             unit: item.unit,
             supplier: supplier || "Direct Stock In",
             date: entryDate,
-            newExpiry: newExpiry ? toIsoDateString(newExpiry) : (item.expiryDate || "N/A")
+            newExpiry: expDateStr || "N/A"
           });
         })
         .then(() => {
           alert("Stock In recorded and inventory updated successfully!");
           stockInForm.reset();
-          const today = new Date().toISOString().split("T")[0];
+          const todayStr = new Date().toISOString().split("T")[0];
           const stockInDateElem = document.getElementById("stockInDate");
-          if (stockInDateElem) stockInDateElem.value = today;
+          if (stockInDateElem) stockInDateElem.value = todayStr;
         })
         .catch((err) => {
           alert("Error processing Stock In: " + err.message);
@@ -484,8 +567,8 @@ window.runTransactionQuery = function() {
     if (matchesCategory && matchesItemName) {
       dynamicTotalItems++;
 
-      const isLowStock = item.quantity <= item.minThreshold;
-      const { isExpired } = checkExpiryStatus(item.expiryDate, item.quantity);
+      const { expiredQty, validQty, isExpired } = calculateItemStockDetails(item);
+      const isLowStock = validQty <= item.minThreshold;
 
       if (isLowStock) dynamicLowStock++;
       if (isExpired) dynamicExpired++;
@@ -495,10 +578,10 @@ window.runTransactionQuery = function() {
           ? `<span class="badge bg-warning text-dark">Expired</span>`
           : `<span class="badge bg-danger">Low Stock</span>`;
         
-        let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
+        let limitText = isExpired ? `Expired Qty: ${formatDecimal(expiredQty)} ${item.unit}` : `Min: ${item.minThreshold}`;
 
         const actionHtml = isExpired 
-          ? `<button type="button" class="btn btn-sm btn-outline-danger btn-dispose-expired" data-id="${ingKey}" data-qty="${item.quantity}">
+          ? `<button type="button" class="btn btn-sm btn-outline-danger btn-dispose-expired" data-id="${ingKey}" data-qty="${expiredQty}">
                <i class="bi bi-trash3-fill me-1"></i>Dispose
              </button>`
           : `<span class="text-muted small">N/A</span>`;
@@ -592,6 +675,18 @@ async function disposeExpiredItem(ingKey, disposeQty) {
 
   try {
     const todayStr = new Date().toISOString().split("T")[0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let existingBatches = getItemBatches(targetIngredient);
+    let updatedBatches = existingBatches.filter(b => {
+      if (!b.expiryDate) return true;
+      let exp = new Date(b.expiryDate);
+      return exp >= today;
+    });
+
+    let newTotalQty = updatedBatches.reduce((acc, b) => acc + (parseFloat(b.qty) || 0), 0);
+    let primaryExpiry = updatedBatches.length > 0 ? updatedBatches[0].expiryDate : targetIngredient.expiryDate;
 
     const stockOutRecord = {
       ingredientName: targetIngredient.name,
@@ -602,7 +697,11 @@ async function disposeExpiredItem(ingKey, disposeQty) {
     };
 
     await push(ref(db, 'stock_out/'), stockOutRecord);
-    await update(ref(db, `ingredients/${ingKey}`), { quantity: 0 });
+    await update(ref(db, `ingredients/${ingKey}`), {
+      quantity: newTotalQty,
+      expiryDate: primaryExpiry,
+      batches: updatedBatches
+    });
 
     alert(`Successfully disposed ${targetIngredient.name}. Transaction recorded as 'Expired'.`);
     renderDashboardWidgets();
