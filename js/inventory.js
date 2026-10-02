@@ -430,19 +430,27 @@ window.runTransactionQuery = function() {
         
         let limitText = isExpired ? `Expired: ${item.expiryDate}` : `Min: ${item.minThreshold}`;
 
+        // Generate Dispose button for expired items
+        const actionHtml = isExpired 
+          ? `<button type="button" class="btn btn-sm btn-outline-danger btn-dispose-expired" data-id="${item.id || item.ingredientId}" data-qty="${item.quantity}">
+               <i class="bi bi-trash3-fill me-1"></i>Dispose
+             </button>`
+          : `<span class="text-muted small">N/A</span>`;
+
         attentionHTML += `
           <tr>
             <td class="fw-bold">${item.name}</td>
             <td>${issueBadge}</td>
             <td>${formatDecimal(item.quantity)} ${item.unit}</td>
             <td class="text-muted">${limitText}</td>
+            <td class="text-end">${actionHtml}</td>
           </tr>`;
       }
     }
   });
 
   if (!attentionHTML) {
-    attentionHTML = `<tr><td colspan="4" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
+    attentionHTML = `<tr><td colspan="5" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
   }
 
   if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = dynamicTotalItems;
@@ -812,3 +820,69 @@ window.printDetailedReport = function() {
     alert("Could not export Detailed PDF. Please check the console.");
   }
 };
+// ==========================================
+// EXPIRED ITEM DISPOSAL HANDLER
+// ==========================================
+
+/**
+ * Handles disposing of expired items:
+ * - Records an automatic "Stock Out" transaction with reason "Expired Disposal"
+ * - Deducts/clears item stock quantity from database/state
+ */
+async function disposeExpiredItem(itemId, disposeQty) {
+  if (!disposeQty || disposeQty <= 0) {
+    alert("Invalid disposal quantity.");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to dispose ${disposeQty} units of expired stock?`)) {
+    return;
+  }
+
+  try {
+    // 1. Prepare Stock Out transaction payload
+    const transactionData = {
+      itemId: itemId,
+      type: "Stock Out",
+      quantity: Number(disposeQty),
+      reason: "Expired Disposal",
+      timestamp: new Date().toISOString()
+    };
+
+    // Replace with your project's transaction handler if needed
+    if (typeof saveTransaction === "function") {
+      await saveTransaction(transactionData);
+    } else if (typeof firebase !== "undefined") {
+      // Firebase Firestore backup fallback
+      await db.collection("transactions").add(transactionData);
+    }
+
+    // 2. Update stock level for the item
+    if (typeof updateItemQuantity === "function") {
+      await updateItemQuantity(itemId, -Number(disposeQty));
+    }
+
+    alert("Expired stock successfully disposed.");
+
+    // 3. Refresh reports and tables
+    if (typeof renderInventoryTable === "function") renderInventoryTable();
+    if (typeof window.runTransactionQuery === "function") window.runTransactionQuery();
+
+  } catch (error) {
+    console.error("Error disposing expired stock:", error);
+    alert("Failed to dispose expired stock. Please check the console for details.");
+  }
+}
+
+// Global delegated click listener for Dispose buttons
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest(".btn-dispose-expired");
+  if (btn) {
+    const itemId = btn.getAttribute("data-id");
+    const qty = parseFloat(btn.getAttribute("data-qty"));
+
+    if (itemId && !isNaN(qty)) {
+      disposeExpiredItem(itemId, qty);
+    }
+  }
+});
