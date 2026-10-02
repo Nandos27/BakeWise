@@ -887,148 +887,159 @@
         </div>
       </div>
 
-      <!-- MODULE 11: REPORTS -->
-      <div class="tab-pane fade" id="mod-report">
-        <div class="card p-4 border-0 shadow-sm">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="card-title m-0">Inventory Summary Report</h4>
-            <button class="btn btn-outline-maroon btn-sm fw-bold" onclick="printFilteredReport()">
-              <i class="bi bi-printer me-1"></i> Print Report
-            </button>
+<!-- MODULE 11: REPORTS -->
+<div class="tab-pane fade" id="mod-report">
+  <div class="card p-4 border-0 shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="card-title m-0">Inventory Summary Report</h4>
+      <!-- Top Action Buttons -->
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-maroon btn-sm fw-bold" onclick="printSummaryReport()">
+          <i class="bi bi-pie-chart-fill me-1"></i> Download Summary PDF
+        </button>
+        <button class="btn btn-maroon btn-sm fw-bold" onclick="printDetailedReport()">
+          <i class="bi bi-file-earmark-text-fill me-1"></i> Download Detailed PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="row text-center mb-4 g-3">
+      <div class="col-md-3">
+        <div class="p-3 metric-box">
+          <h6 class="text-muted small mb-1">Total Ingredients</h6>
+          <h3 class="fw-bold m-0" id="rptTotalItems">0</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="p-3 metric-box border-danger">
+          <h6 class="text-muted small mb-1">Low Stock Items</h6>
+          <h3 class="text-danger fw-bold m-0" id="rptLowStock">0</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="p-3 metric-box border-warning">
+          <h6 class="text-muted small mb-1">Expired Items</h6>
+          <h3 class="text-warning fw-bold m-0" id="rptExpired">0</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="p-3 metric-box border-success">
+          <h6 class="text-muted small mb-1">Total Suppliers</h6>
+          <h3 class="text-success fw-bold m-0" id="rptSuppliers">0</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Widgets Area -->
+    <div class="row g-4 mb-4">
+      <!-- Left Side: Category Chart -->
+      <div class="col-md-5">
+        <div class="card h-100 p-0 border-0">
+          <div class="card-header fw-bold bg-transparent">
+            <i class="bi bi-pie-chart-fill me-1" style="color:#A05A35;"></i> Inventory by Category
           </div>
-
-          <div class="row text-center mb-4 g-3">
-            <div class="col-md-3">
-              <div class="p-3 metric-box">
-                <h6 class="text-muted small mb-1">Total Ingredients</h6>
-                <h3 class="fw-bold m-0" id="rptTotalItems">0</h3>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 metric-box border-danger">
-                <h6 class="text-muted small mb-1">Low Stock Items</h6>
-                <h3 class="text-danger fw-bold m-0" id="rptLowStock">0</h3>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 metric-box border-warning">
-                <h6 class="text-muted small mb-1">Expired Items</h6>
-                <h3 class="text-warning fw-bold m-0" id="rptExpired">0</h3>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 metric-box border-success">
-                <h6 class="text-muted small mb-1">Total Suppliers</h6>
-                <h3 class="text-success fw-bold m-0" id="rptSuppliers">0</h3>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dashboard Widgets Area -->
-          <div class="row g-4 mb-4">
-            <!-- Left Side: Category Chart -->
-            <div class="col-md-5">
-              <div class="card h-100 p-0 border-0">
-                <div class="card-header fw-bold bg-transparent">
-                  <i class="bi bi-pie-chart-fill me-1" style="color:#A05A35;"></i> Inventory by Category
-                </div>
-                <div class="card-body d-flex justify-content-center align-items-center p-3">
-                  <canvas id="categoryChart" style="max-height: 250px;"></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- Right Side: Action Table -->
-            <div class="col-md-7">
-              <div class="card h-100 p-0" style="border: 1px solid rgba(220, 53, 69, 0.4) !important;">
-                <div class="card-header text-danger fw-bold bg-transparent border-bottom-0">
-                  <i class="bi bi-exclamation-triangle-fill"></i> Requires Immediate Attention
-                </div>
-                <div class="card-body overflow-auto p-0" style="max-height: 300px;">
-                  <table class="table table-hover align-middle mb-0 bg-transparent border-top">
-                    <thead class="table-light">
-                      <tr>
-                        <th>Ingredient</th>
-                        <th>Issue</th>
-                        <th>Stock</th>
-                        <th>Limit / Expiry</th>
-                      </tr>
-                    </thead>
-                    <tbody id="attentionTableBody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TRANSACTION QUERY ENGINE -->
-          <div class="card p-3 mb-4 d-print-none bg-light border-0 shadow-sm">
-            <div class="row g-2 align-items-end">
-              <div class="col-md-3">
-                <label class="form-label small text-muted mb-1">Start Date</label>
-                <input type="date" id="queryStartDate" class="form-control form-control-sm">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label small text-muted mb-1">End Date</label>
-                <input type="date" id="queryEndDate" class="form-control form-control-sm">
-              </div>
-              <div class="col-md-2">
-                <label class="form-label small text-muted mb-1">Type</label>
-                <select id="queryType" class="form-select form-select-sm">
-                  <option value="ALL">All Transactions</option>
-                  <option value="IN">Stock In</option>
-                  <option value="OUT">Stock Out</option>
-                </select>
-              </div>
-              <!-- Add this column right next to your Type or Ingredient filter in your HTML -->
-              <div class="col-md-2">
-              <label for="queryCategory" class="form-label small text-muted mb-1">Category</label>
-              <select id="queryCategory" class="form-select form-select-sm">
-                <option value="ALL">All Categories</option>
-              </select>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label small text-muted mb-1">Ingredient</label>
-                <select id="queryIngredient" class="form-select form-select-sm">
-                  <option value="ALL">All Ingredients</option>
-                </select>
-              </div>
-              <!-- Action Buttons Row Including Direct Print Button -->
-              <div class="col-md-12 d-flex gap-2 mt-3 justify-content-end">
-                <button class="btn btn-sm btn-maroon px-4 fw-bold" onclick="runTransactionQuery()">Filter</button>
-                <button class="btn btn-sm btn-outline-secondary px-4" onclick="resetTransactionQuery()">Reset</button>
-                <button id="queryPrintBtn" class="btn btn-sm btn-outline-dark px-4" type="button" onclick="printFilteredReport()">
-                  <i class="bi bi-printer me-1"></i> Print Report
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- QUERY RESULTS TABLE -->
-          <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
-              <span class="fw-bold" id="queryResultsHeader">Historical Transactions (All Records)</span>
-              <span class="badge bg-secondary" id="queryRecordCount">0 records</span>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Date</th>
-                      <th>Type</th>
-                      <th>Ingredient</th>
-                      <th>Quantity</th>
-                      <th>Reason / Supplier</th>
-                    </tr>
-                  </thead>
-                  <tbody id="fullTransactionTableBody"></tbody>
-                </table>
-              </div>
-            </div>
+          <div class="card-body d-flex justify-content-center align-items-center p-3">
+            <canvas id="categoryChart" style="max-height: 250px;"></canvas>
           </div>
         </div>
       </div>
+
+      <!-- Right Side: Action Table -->
+      <div class="col-md-7">
+        <div class="card h-100 p-0" style="border: 1px solid rgba(220, 53, 69, 0.4) !important;">
+          <div class="card-header text-danger fw-bold bg-transparent border-bottom-0">
+            <i class="bi bi-exclamation-triangle-fill"></i> Requires Immediate Attention
+          </div>
+          <div class="card-body overflow-auto p-0" style="max-height: 300px;">
+            <table class="table table-hover align-middle mb-0 bg-transparent border-top">
+              <thead class="table-light">
+                <tr>
+                  <th>Ingredient</th>
+                  <th>Issue</th>
+                  <th>Stock</th>
+                  <th>Limit / Expiry</th>
+                </tr>
+              </thead>
+              <tbody id="attentionTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSACTION QUERY ENGINE -->
+    <div class="card p-3 mb-4 d-print-none bg-light border-0 shadow-sm">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Start Date</label>
+          <input type="date" id="queryStartDate" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">End Date</label>
+          <input type="date" id="queryEndDate" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small text-muted mb-1">Type</label>
+          <select id="queryType" class="form-select form-select-sm">
+            <option value="ALL">All Transactions</option>
+            <option value="IN">Stock In</option>
+            <option value="OUT">Stock Out</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label for="queryCategory" class="form-label small text-muted mb-1">Category</label>
+          <select id="queryCategory" class="form-select form-select-sm">
+            <option value="ALL">All Categories</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small text-muted mb-1">Ingredient</label>
+          <select id="queryIngredient" class="form-select form-select-sm">
+            <option value="ALL">All Ingredients</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons Row -->
+        <div class="col-md-12 d-flex gap-2 mt-3 justify-content-end">
+          <button class="btn btn-sm btn-maroon px-4 fw-bold" onclick="runTransactionQuery()">Filter</button>
+          <button class="btn btn-sm btn-outline-secondary px-4" onclick="resetTransactionQuery()">Reset</button>
+          <button class="btn btn-sm btn-outline-dark px-3" type="button" onclick="printSummaryReport()">
+            <i class="bi bi-file-pdf me-1"></i> Summary PDF
+          </button>
+          <button class="btn btn-sm btn-dark px-3" type="button" onclick="printDetailedReport()">
+            <i class="bi bi-file-earmark-text me-1"></i> Detailed PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUERY RESULTS TABLE -->
+    <div class="card mb-4 border-0 shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
+        <span class="fw-bold" id="queryResultsHeader">Historical Transactions (All Records)</span>
+        <span class="badge bg-secondary" id="queryRecordCount">0 records</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Ingredient</th>
+                  <th>Quantity</th>
+                  <th>Reason / Supplier</th>
+                </tr>
+              </thead>
+              <tbody id="fullTransactionTableBody"></tbody>
+            </table>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
       <!-- MODULE: 30-DAY FORECAST -->
       <div class="tab-pane fade" id="mod-forecast">
