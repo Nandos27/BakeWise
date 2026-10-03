@@ -4,3 +4,4 @@ import "./auth.js";
 import "./inventory.js";
 import "./recipes.js";
 import "./purchasing.js";
+import "./audit.js";
