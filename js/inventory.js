@@ -1,6 +1,7 @@
 // js/inventory.js
 import { db, auth, formatDecimal } from "./firebase.js";
 import { ref, push, set, onValue, remove, update, get, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { logAuditEvent } from "./audit.js";
 
 export let allIngredients = {};
 export let globalStockIn = [];
@@ -102,22 +103,25 @@ function toIsoDateString(rawDate) {
 // -------------------------------------------------------------
 const addIngredientForm = document.getElementById("addIngredientForm");
 if (addIngredientForm) {
-  addIngredientForm.addEventListener("submit", (e) => {
+  addIngredientForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const ingName = document.getElementById("ingName").value;
     const qty = parseFloat(document.getElementById("ingQty").value);
+    const unit = document.getElementById("ingUnit").value;
     const expDate = toIsoDateString(document.getElementById("ingExpiry").value);
 
     const newIng = {
-      name: document.getElementById("ingName").value,
+      name: ingName,
       category: document.getElementById("ingCategorySelect").value,
       quantity: qty,
       minThreshold: parseFloat(document.getElementById("ingMin").value),
       expiryDate: expDate,
-      unit: document.getElementById("ingUnit").value,
+      unit: unit,
       batches: [{ qty: qty, expiryDate: expDate }]
     };
 
-    push(ref(db, 'ingredients/'), newIng).then(() => {
+    push(ref(db, 'ingredients/'), newIng).then(async () => {
+      await logAuditEvent("Add Ingredient", `Created new ingredient: ${ingName} (${qty} ${unit})`);
       alert("Ingredient Saved!");
       addIngredientForm.reset();
     });
@@ -170,21 +174,24 @@ if (editForm) {
     if (!key) return;
 
     const existingItem = allIngredients[key] || {};
+    const newName = document.getElementById("editName").value;
     const newQty = parseFloat(document.getElementById("editQty").value);
+    const newUnit = document.getElementById("editUnit").value;
     const newExp = toIsoDateString(document.getElementById("editExpiry").value);
 
     const updatedData = {
-      name: document.getElementById("editName").value,
+      name: newName,
       category: existingItem.category || "",
       quantity: newQty,
       minThreshold: parseFloat(document.getElementById("editMin").value),
       expiryDate: newExp,
-      unit: document.getElementById("editUnit").value,
+      unit: newUnit,
       batches: [{ qty: newQty, expiryDate: newExp }]
     };
 
     update(ref(db, `ingredients/${key}`), updatedData)
-      .then(() => {
+      .then(async () => {
+        await logAuditEvent("Edit Ingredient", `Updated ingredient details for: ${newName} (Qty: ${newQty} ${newUnit}, Exp: ${newExp})`);
         alert("Ingredient updated successfully!");
         const editModalElement = document.getElementById('editModal');
         if (editModalElement && typeof bootstrap !== "undefined") {
@@ -292,7 +299,9 @@ const addCategoryForm = document.getElementById("addCategoryForm");
 if (addCategoryForm) {
   addCategoryForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    push(ref(db, 'categories/'), { name: document.getElementById("catName").value }).then(() => {
+    const catName = document.getElementById("catName").value;
+    push(ref(db, 'categories/'), { name: catName }).then(async () => {
+      await logAuditEvent("Add Category", `Created category: ${catName}`);
       alert("Category Added!");
       addCategoryForm.reset();
     });
@@ -329,12 +338,14 @@ const addSupplierForm = document.getElementById("addSupplierForm");
 if (addSupplierForm) {
   addSupplierForm.addEventListener("submit", (e) => {
     e.preventDefault();
+    const supName = document.getElementById("supName").value;
     push(ref(db, 'suppliers/'), {
-      name: document.getElementById("supName").value,
+      name: supName,
       contact: document.getElementById("supContact").value,
       phone: document.getElementById("supPhone").value,
       email: document.getElementById("supEmail").value
-    }).then(() => {
+    }).then(async () => {
+      await logAuditEvent("Add Supplier", `Saved supplier: ${supName}`);
       alert("Supplier Saved!");
       addSupplierForm.reset();
     });
@@ -362,7 +373,7 @@ if (addSupplierForm) {
 }
 
 // -------------------------------------------------------------
-// STOCK IN / STOCK OUT LISTENERS WITH MULTI-BATCH SUPPORT
+// STOCK IN / STOCK OUT LISTENERS WITH AUDIT LOGGING
 // -------------------------------------------------------------
 const stockInForm = document.getElementById("stockInForm");
 if (stockInForm) {
@@ -427,7 +438,8 @@ if (stockInForm) {
             newExpiry: expDateStr || "N/A"
           });
         })
-        .then(() => {
+        .then(async () => {
+          await logAuditEvent("Stock In", `Added +${addedQty} ${item.unit} of ${item.name} (Supplier: ${supplier || 'Direct'}, Expiry: ${expDateStr || 'N/A'})`);
           alert("Stock In recorded and inventory updated successfully!");
           stockInForm.reset();
           const todayStr = new Date().toISOString().split("T")[0];
@@ -436,6 +448,61 @@ if (stockInForm) {
         })
         .catch((err) => {
           alert("Error processing Stock In: " + err.message);
+        });
+    });
+  });
+}
+
+const stockOutForm = document.getElementById("stockOutForm");
+if (stockOutForm) {
+  stockOutForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const ingKey = document.getElementById("stockOutIngSelect").value;
+    const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
+    const reason = document.getElementById("stockOutReason").value;
+    const useDate = document.getElementById("stockOutDate").value;
+
+    if (!ingKey || isNaN(deductedQty) || deductedQty <= 0) {
+      alert("Please select an ingredient and enter a valid quantity.");
+      return;
+    }
+
+    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+      if (!snap.exists()) {
+        alert("Selected ingredient not found in database.");
+        return;
+      }
+
+      const item = snap.val();
+      const currentQty = parseFloat(item.quantity || 0);
+
+      if (deductedQty > currentQty) {
+        alert(`Cannot deduct ${deductedQty} ${item.unit}. Only ${currentQty} ${item.unit} available.`);
+        return;
+      }
+
+      const newQty = currentQty - deductedQty;
+
+      update(ref(db, `ingredients/${ingKey}`), { quantity: newQty })
+        .then(() => {
+          return push(ref(db, 'stock_out/'), {
+            ingredientName: item.name,
+            deductedQty: deductedQty,
+            unit: item.unit,
+            reason: reason || "General Use",
+            date: useDate
+          });
+        })
+        .then(async () => {
+          await logAuditEvent("Stock Out", `Deducted -${deductedQty} ${item.unit} of ${item.name} (Reason: ${reason})`);
+          alert("Stock Out recorded successfully!");
+          stockOutForm.reset();
+          const todayStr = new Date().toISOString().split("T")[0];
+          const stockOutDateElem = document.getElementById("stockOutDate");
+          if (stockOutDateElem) stockOutDateElem.value = todayStr;
+        })
+        .catch((err) => {
+          alert("Error processing Stock Out: " + err.message);
         });
     });
   });
@@ -703,6 +770,7 @@ async function disposeExpiredItem(ingKey, disposeQty) {
       batches: updatedBatches
     });
 
+    await logAuditEvent("Dispose Expired", `Disposed ${disposeQty} ${targetIngredient.unit} of expired ${targetIngredient.name}`);
     alert(`Successfully disposed ${targetIngredient.name}. Transaction recorded as 'Expired'.`);
     renderDashboardWidgets();
 
@@ -773,9 +841,31 @@ export function renderDashboardWidgets() {
   renderForecastTable();
 }
 
-window.deleteCategory = (key) => { if (confirm("Delete this category?")) remove(ref(db, 'categories/' + key)); };
-window.deleteIngredient = (key) => { if (confirm("Delete this ingredient?")) remove(ref(db, 'ingredients/' + key)); };
-window.deleteSupplier = (key) => { if (confirm("Delete this supplier?")) remove(ref(db, 'suppliers/' + key)); };
+window.deleteCategory = (key) => { 
+  const name = allIngredients[key]?.name || key;
+  if (confirm("Delete this category?")) {
+    remove(ref(db, 'categories/' + key)).then(async () => {
+      await logAuditEvent("Delete Category", `Removed category key: ${key}`);
+    });
+  }
+};
+
+window.deleteIngredient = (key) => { 
+  const name = allIngredients[key]?.name || key;
+  if (confirm("Delete this ingredient?")) {
+    remove(ref(db, 'ingredients/' + key)).then(async () => {
+      await logAuditEvent("Delete Ingredient", `Deleted ingredient: ${name}`);
+    });
+  }
+};
+
+window.deleteSupplier = (key) => { 
+  if (confirm("Delete this supplier?")) {
+    remove(ref(db, 'suppliers/' + key)).then(async () => {
+      await logAuditEvent("Delete Supplier", `Removed supplier key: ${key}`);
+    });
+  }
+};
 
 window.resetTransactionQuery = function() {
   if (document.getElementById("queryStartDate")) document.getElementById("queryStartDate").value = "";
@@ -808,7 +898,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Non-destructive Printing via isolated iframe
 window.printForecastReport = function() {
   const printArea = document.getElementById("printArea");
   if (!printArea) {
