@@ -1063,7 +1063,6 @@ window.printSummaryReport = function() {
       console.error("Executive Summary PDF Generation Error:", err);
     });
 
-    html2pdf().set(getPdfConfig('BakeWise_Executive_Summary.pdf')).from(container).save();
   } catch (err) {
     console.error("Executive Summary PDF Generation Error:", err);
     alert("Could not export PDF. Please check the console.");
@@ -1153,8 +1152,7 @@ window.printDetailedReport = function() {
       document.body.removeChild(container);
       console.error("Detailed Audit PDF Generation Error:", err);
     });
-
-    html2pdf().set(getPdfConfig('BakeWise_Detailed_Transaction_Report.pdf')).from(container).save();
+    
   } catch (err) {
     console.error("Detailed Audit PDF Generation Error:", err);
     alert("Could not export Detailed PDF. Please check the console.");
