@@ -986,159 +986,99 @@ const generatePdfHeader = (reportTitle, reportSubtitle) => {
   `;
 };
 
-window.printSummaryReport = function() {
-  if (typeof html2pdf === "undefined") {
-    alert("PDF library is missing!");
-    return;
-  }
-
-  try {
-    const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
-    const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
-    const expired = document.getElementById("rptExpired")?.innerText || "0";
-    const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
-
-    let chartImgHtml = "";
-    const chartCanvas = document.getElementById("categoryChart");
-
-    if (chartCanvas) {
-      try {
-        const chartDataUrl = chartCanvas.toDataURL("image/png");
-        chartImgHtml = `
-          <div style="margin-top: 25px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background-color: #ffffff;">
-            <div style="font-size: 12px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
-              Category Breakdown Visual Analysis
-            </div>
-            <div style="text-align: center;">
-              <img src="${chartDataUrl}" style="max-width: 260px; height: auto;" />
-            </div>
-          </div>
-        `;
-      } catch (err) {
-        console.warn("Unable to capture canvas image for PDF:", err);
-      }
-    }
-
-    const container = document.createElement("div");
-    container.innerHTML = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #0f172a; background: #ffffff;">
-        ${generatePdfHeader("Executive Inventory & Operations Summary", "Overview Metrics")}
-
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #1e3a8a; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Total Items</div>
-            <div style="font-size: 22px; font-weight: 700; color: #1e3a8a; margin-top: 4px;">${totalIngredients}</div>
-          </div>
-          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #dc2626; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Low Stock</div>
-            <div style="font-size: 22px; font-weight: 700; color: #dc2626; margin-top: 4px;">${lowStock}</div>
-          </div>
-          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #d97706; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Expired Items</div>
-            <div style="font-size: 22px; font-weight: 700; color: #d97706; margin-top: 4px;">${expired}</div>
-          </div>
-          <div style="flex: 1; border: 1px solid #cbd5e1; border-top: 3px solid #16a34a; padding: 12px; border-radius: 4px; background: #f8fafc; text-align: center;">
-            <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 600;">Active Suppliers</div>
-            <div style="font-size: 22px; font-weight: 700; color: #16a34a; margin-top: 4px;">${suppliers}</div>
-          </div>
-        </div>
-
-        ${chartImgHtml}
-
-        <div style="margin-top: 40px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
-          <div>BakeWise Enterprise Inventory System &bull; Confidential</div>
-          <div>Page 1 of 1</div>
-        </div>
-      </div>
-    `;
-
-    // 1. Force browser to paint the element by attaching it to the body temporarily
-    document.body.appendChild(container);
-    setTimeout(() => {
-    // 2. Generate PDF and remove it from the body when finished
-    html2pdf().set(getPdfConfig('BakeWise_Executive_Summary.pdf')).from(container).save().then(() => {
-      document.body.removeChild(container);
-    }).catch((err) => {
-      document.body.removeChild(container);
-      console.error("Executive Summary PDF Generation Error:", err);
-    });
-    }, 150);
-  } catch (err) {
-    console.error("Executive Summary PDF Generation Error:", err);
-    alert("Could not export PDF. Please check the console.");
-  }
-};
-
 window.printDetailedReport = function() {
-  if (typeof window.jspdf === "undefined" && typeof jsPDF === "undefined") {
-    alert("jsPDF library is missing!");
+  console.log("printDetailedReport function triggered.");
+
+  // 1. Check if jsPDF library is actually available globally
+  const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+  if (!jsPDFConstructor) {
+    alert("ERROR: jsPDF library is missing or not loaded globally!");
+    console.error("jsPDF constructor is undefined. Check your script import tags.");
+    return;
+  }
+
+  // 2. Check if the table body element exists in the DOM
+  const originalTable = document.getElementById("fullTransactionTableBody");
+  if (!originalTable) {
+    alert("ERROR: Table body element #fullTransactionTableBody not found!");
+    console.error("Table element missing from DOM");
     return;
   }
 
   try {
-    const { jsPDF } = window.jspdf || window;
-    const doc = new jsPDF('p', 'mm', 'a4');
-
+    const doc = new jsPDFConstructor('p', 'mm', 'a4');
+    
     let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
     let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
 
-    const originalTable = document.getElementById("fullTransactionTableBody");
-    let rowsData = [];
-
-    if (originalTable && originalTable.rows.length > 0) {
-      Array.from(originalTable.rows).forEach((row) => {
-        if (row.cells.length >= 5) {
-          rowsData.push([
-            row.cells[0].innerText.trim(),
-            row.cells[1].innerText.trim(),
-            row.cells[2].innerText.trim(),
-            row.cells[3].innerText.trim(),
-            row.cells[4].innerText.trim()
-          ]);
-        }
-      });
-    }
-
-    // Header styling
+    // Draw Header
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setTextColor(30, 58, 138); // #1e3a8a
     doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(71, 85, 105); // #475569
-    doc.text("Itemized Inventory Audit & Ledger", 14, 26);
+    doc.text("Itemized Inventory Audit & Ledger", 14, 28);
 
-    // Record count badge text
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(30, 58, 138);
-    doc.text(`Filtered Transaction Records: ${cleanRecordCount} Total Records`, 14, 36);
+    doc.text(`Filtered Transaction Records: ${cleanRecordCount}`, 14, 38);
 
-    // Check if autoTable plugin is available for clean native tables
-    if (typeof doc.autoTable === 'function') {
-      doc.autoTable({
-        startY: 42,
-        head: [['Date', 'Type', 'Ingredient', 'Quantity', 'Reason / Supplier']],
-        body: rowsData.length > 0 ? rowsData : [["No transactions found for the specified filters.", "", "", "", ""]],
-        theme: 'grid',
-        headStyles: { fillColor: [30, 58, 138], fontSize: 9, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
-        margin: { left: 14, right: 14 }
+    // Table Column Headers Background & Text
+    doc.setFillColor(30, 58, 138);
+    doc.rect(14, 44, 182, 8, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    
+    doc.text("Date", 16, 49);
+    doc.text("Type", 48, 49);
+    doc.text("Ingredient", 72, 49);
+    doc.text("Qty", 125, 49);
+    doc.text("Reason / Supplier", 145, 49);
+
+    let yPos = 58;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+
+    if (originalTable.rows.length > 0) {
+      Array.from(originalTable.rows).forEach((row) => {
+        if (row.cells.length >= 5) {
+          const date = row.cells[0].innerText.trim();
+          const type = row.cells[1].innerText.trim();
+          const ingredient = row.cells[2].innerText.trim();
+          const quantity = row.cells[3].innerText.trim();
+          const details = row.cells[4].innerText.trim();
+
+          // Page break check if vertical limit is reached
+          if (yPos > 280) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          doc.text(date, 16, yPos);
+          doc.text(type, 48, yPos);
+          doc.text(ingredient, 72, yPos, { maxWidth: 50 });
+          doc.text(quantity, 125, yPos);
+          doc.text(details, 145, yPos, { maxWidth: 50 });
+
+          yPos += 8;
+        }
       });
     } else {
-      // Fallback if autoTable isn't loaded
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text("Table plugin missing. Check console.", 14, 45);
+      doc.text("No transactions found for the specified filters.", 16, yPos);
     }
 
-    // Trigger direct file download
+    // Force download
     doc.save('BakeWise_Detailed_Transaction_Report.pdf');
+    console.log("PDF successfully generated and download triggered.");
 
   } catch (err) {
-    console.error("Native jsPDF Generation Error:", err);
-    alert("Could not generate PDF file. Please check console.");
+    console.error("jsPDF Generation Exception:", err);
+    alert("PDF Crash Error: " + err.message);
   }
 };
