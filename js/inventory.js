@@ -3,6 +3,105 @@ import { db, auth, formatDecimal } from "./firebase.js";
 import { ref, push, set, onValue, remove, update, get, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { logAuditEvent } from "./audit.js";
 
+const BRAND = {
+  primary:   [160, 90, 53],
+  primaryLt: [252, 244, 238],
+  ink:       [44, 36, 27],
+  muted:     [120, 110, 100],
+  rule:      [220, 210, 200],
+  ok:        [22, 163, 74],
+  warn:      [217, 119, 6],
+  danger:    [220, 38, 38],
+  white:     [255, 255, 255]
+};
+
+function bakeWiseDocHeader(doc, subtitle) {
+  const pageW = doc.internal.pageSize.width;
+  const margin = 14;
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(...BRAND.primary);
+  doc.text("BakeWise Kitchen", margin, 20);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(subtitle, margin, 27);
+
+  const now = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+  const ref = "RPT-" + Math.floor(100000 + Math.random() * 900000);
+
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`Ref: ${ref}`, pageW - margin, 18, { align: "right" });
+  doc.text(`Generated: ${now}`, pageW - margin, 23, { align: "right" });
+
+  doc.setDrawColor(...BRAND.primary);
+  doc.setLineWidth(0.7);
+  doc.line(margin, 32, pageW - margin, 32);
+
+  return 38;
+}
+
+function bakeWiseDocFooter(doc, note) {
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+  const margin = 14;
+
+  doc.setDrawColor(...BRAND.rule);
+  doc.setLineWidth(0.3);
+  doc.line(margin, pageH - 18, pageW - margin, pageH - 18);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(note || "BakeWise Kitchen Management • System-generated report", margin, pageH - 12);
+  doc.text("Page 1 of 1", pageW - margin, pageH - 12, { align: "right" });
+}
+
+function bakeWiseAutoTableTheme() {
+  return {
+    theme: 'grid',
+    headStyles: {
+      fillColor: BRAND.primary,
+      textColor: BRAND.white,
+      fontSize: 9,
+      fontStyle: 'bold',
+      lineColor: BRAND.primary,
+      lineWidth: 0.2
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      textColor: BRAND.ink,
+      lineColor: BRAND.rule,
+      lineWidth: 0.15
+    },
+    alternateRowStyles: { fillColor: BRAND.primaryLt },
+    styles: { cellPadding: 2 }
+  };
+}
+
+function bakeWiseSavePdf(doc, filename) {
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isIOS) {
+    window.open(url, '_blank');
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
 export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
@@ -902,7 +1001,6 @@ window.printForecastReport = function() {
   const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
   if (!jsPDFCtor) { alert("jsPDF library missing!"); return; }
 
-  // ---- Data (same as renderForecastTable) ----
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -928,98 +1026,36 @@ window.printForecastReport = function() {
   });
 
   const doc = new jsPDFCtor('p', 'mm', 'a4');
-  const pageW = doc.internal.pageSize.width;
-  const pageH = doc.internal.pageSize.height;
-  const margin = 14;
+  const startY = bakeWiseDocHeader(doc, "30-Day Purchase Order & Forecast Report");
 
-  // ---- CENTERED HEADER ----
   doc.setFont("times", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(160, 90, 53);        // maroon
-  doc.text("BakeWise Kitchen Management", pageW / 2, 20, { align: "center" });
+  doc.setFontSize(13);
+  doc.setTextColor(...BRAND.ink);
+  doc.text("BakeWise - 30-Day Purchase Order", 14, startY + 4);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(44, 36, 27);
-  doc.text("30-Day Purchase Order & Forecast Report", pageW / 2, 27, { align: "center" });
-
-  // Maroon divider line
-  doc.setDrawColor(160, 90, 53);
-  doc.setLineWidth(0.8);
-  doc.line(margin, 31, pageW - margin, 31);
-
-  // ---- TABLE TITLE (left aligned, serif) ----
-  doc.setFont("times", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(44, 36, 27);
-  doc.text("BakeWise - 30-Day Purchase Order", margin, 40);
-
-  // ---- TABLE ----
   const body = rows.length ? rows : [["-", "-", "No data available.", "-", "-"]];
 
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
-      startY: 45,
-      head: [['Ingredient', 'Category', '30-Day Usage', 'Current Stock', 'Suggested Order (+10% Buffer)']],
+      startY: startY + 9,
+      head: [['Ingredient', 'Category', '30-Day Usage', 'Current Stock', 'Suggested Order (+10%)']],
       body: body,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [44, 36, 27],
-        fontSize: 9.5,
-        fontStyle: 'bold',
-        lineColor: [180, 180, 180],
-        lineWidth: 0.2
-      },
-      bodyStyles: {
-        fontSize: 9.5,
-        textColor: [44, 36, 27],
-        lineColor: [200, 200, 200],
-        lineWidth: 0.15,
-        fillColor: [255, 255, 255]
-      },
-      margin: { left: margin, right: margin },
-      styles: { cellPadding: 2 }
+      margin: { left: 14, right: 14 },
+      ...bakeWiseAutoTableTheme()
     });
   } else {
-    let y = 50;
+    let y = startY + 12;
     doc.setFontSize(9);
-    doc.setTextColor(44, 36, 27);
+    doc.setTextColor(...BRAND.ink);
     body.forEach(r => {
       if (y > 280) { doc.addPage(); y = 20; }
-      doc.text(r.join("  |  ").substring(0, 110), margin, y);
+      doc.text(r.join("  |  ").substring(0, 110), 14, y);
       y += 6;
     });
   }
 
-  // ---- FOOTER ----
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(130, 130, 130);
-  doc.text(
-    "BakeWise Integrated Kitchen System - Official Generated Forecast",
-    pageW / 2,
-    pageH - 10,
-    { align: "center" }
-  );
-
-  // ---- SAVE ----
-  const filename = 'BakeWise_Forecast_Report.pdf';
-  const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-  if (isIOS) {
-    window.open(url, '_blank');
-  } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
+  bakeWiseDocFooter(doc, "BakeWise Integrated Kitchen System • Official Generated Forecast");
+  bakeWiseSavePdf(doc, 'BakeWise_Forecast_Report.pdf');
 };
 
 window.printDetailedReport = function() {
@@ -1040,32 +1076,21 @@ window.printDetailedReport = function() {
     const matchEnd = !endDate || tx.date <= endDate;
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
     const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
-
     let matchCategory = true;
     if (selectedCategory !== "ALL") {
       const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
       matchCategory = matchedIngKey ? allIngredients[matchedIngKey].category === selectedCategory : false;
     }
-
     return matchStart && matchEnd && matchType && matchItem && matchCategory;
   });
 
   const doc = new jsPDFCtor('p', 'mm', 'a4');
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(30, 58, 138);
-  doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(71, 85, 105);
-  doc.text("Itemized Inventory Audit & Ledger", 14, 26);
+  const startY = bakeWiseDocHeader(doc, "Itemized Inventory Audit & Ledger");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.setTextColor(30, 58, 138);
-  doc.text(`${filteredTransactions.length} Records`, 14, 36);
+  doc.setTextColor(...BRAND.primary);
+  doc.text(`${filteredTransactions.length} Records`, 14, startY + 2);
 
   const body = filteredTransactions.length
     ? filteredTransactions.map(tx => [
@@ -1079,18 +1104,16 @@ window.printDetailedReport = function() {
 
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
-      startY: 42,
+      startY: startY + 6,
       head: [['Date', 'Type', 'Ingredient', 'Qty', 'Reason / Supplier']],
       body: body,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 58, 138], fontSize: 9, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
-      margin: { left: 14, right: 14 }
+      margin: { left: 14, right: 14 },
+      ...bakeWiseAutoTableTheme()
     });
   } else {
-    let y = 46;
+    let y = startY + 10;
     doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
+    doc.setTextColor(...BRAND.ink);
     body.forEach(r => {
       if (y > 280) { doc.addPage(); y = 20; }
       doc.text(r.join("  |  ").substring(0, 110), 14, y);
@@ -1098,35 +1121,8 @@ window.printDetailedReport = function() {
     });
   }
 
-  // Mobile-safe save: blob + anchor, fallback to new tab
-  const filename = 'BakeWise_Detailed_Transaction_Report.pdf';
-  const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-  if (isIOS) {
-    // iOS: open in new tab so the native PDF viewer handles it
-    const w = window.open(url, '_blank');
-    if (!w) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  } else {
-    // Desktop + Android: trigger a direct download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  bakeWiseDocFooter(doc);
+  bakeWiseSavePdf(doc, 'BakeWise_Detailed_Transaction_Report.pdf');
 };
 
 window.printSummaryReport = function() {
@@ -1137,138 +1133,73 @@ window.printSummaryReport = function() {
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
   const expired = document.getElementById("rptExpired")?.innerText || "0";
   const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
-  const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
-
-  // Reuse the live transaction table (already filtered by runTransactionQuery)
-  const tbody = document.getElementById("fullTransactionTableBody");
-  const txRows = [];
-  if (tbody && tbody.rows.length > 0) {
-    Array.from(tbody.rows).forEach(row => {
-      if (row.cells.length === 1) return; // skip "no matching" placeholder
-      txRows.push([
-        row.cells[0]?.innerText.trim() || "-",
-        row.cells[1]?.innerText.trim() || "-",
-        row.cells[2]?.innerText.trim() || "-",
-        row.cells[3]?.innerText.trim() || "-",
-        row.cells[4]?.innerText.trim() || "-"
-      ]);
-    });
-  }
 
   const doc = new jsPDFCtor('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.width;
-  const pageH = doc.internal.pageSize.height;
   const margin = 14;
 
-  // Header
-  doc.setFont("times", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(160, 90, 53);
-  doc.text("BakeWise Kitchen Management", pageW / 2, 20, { align: "center" });
+  const startY = bakeWiseDocHeader(doc, "Executive Inventory & Operations Summary");
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(44, 36, 27);
-  doc.text("Inventory & Transaction Summary Report", pageW / 2, 27, { align: "center" });
-
-  doc.setDrawColor(160, 90, 53);
-  doc.setLineWidth(0.8);
-  doc.line(margin, 31, pageW - margin, 31);
-
-  // Metrics row (4 boxes)
-  const boxY = 38;
-  const boxH = 18;
+  const boxY = startY + 4;
+  const boxH = 22;
   const gap = 4;
   const boxW = (pageW - margin * 2 - gap * 3) / 4;
-  const labels = ["Total Items", "Low Stock", "Expired", "Suppliers"];
+  const labels = ["TOTAL ITEMS", "LOW STOCK", "EXPIRED ITEMS", "ACTIVE SUPPLIERS"];
   const values = [totalIngredients, lowStock, expired, suppliers];
+  const colors = [BRAND.primary, BRAND.danger, BRAND.warn, BRAND.ok];
 
   labels.forEach((label, i) => {
     const x = margin + i * (boxW + gap);
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(203, 213, 225);
+    doc.setFillColor(...colors[i]);
+    doc.rect(x, boxY, boxW, 1.2, 'F');
+    doc.setDrawColor(...BRAND.rule);
     doc.setLineWidth(0.3);
-    doc.roundedRect(x, boxY, boxW, boxH, 1, 1, 'FD');
+    doc.roundedRect(x, boxY + 1.2, boxW, boxH - 1.2, 1, 1, 'S');
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(label, x + boxW / 2, boxY + 6, { align: "center" });
+    doc.setTextColor(...BRAND.muted);
+    doc.text(label, x + boxW / 2, boxY + 8, { align: "center" });
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.setTextColor(30, 58, 138);
-    doc.text(String(values[i]), x + boxW / 2, boxY + 14, { align: "center" });
+    doc.setFontSize(18);
+    doc.setTextColor(...colors[i]);
+    doc.text(String(values[i]), x + boxW / 2, boxY + 18, { align: "center" });
   });
 
-  // Section title
-  doc.setFont("times", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(44, 36, 27);
-  doc.text(`Filtered Transaction History (${recordCount})`, margin, boxY + boxH + 12);
+  const catBoxY = boxY + boxH + 12;
+  const catBoxH = 100;
 
-  // Transactions table
-  const body = txRows.length ? txRows : [["-", "-", "No matching transactions.", "-", "-"]];
+  doc.setDrawColor(...BRAND.rule);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, catBoxY, pageW - margin * 2, catBoxH, 2, 2, 'S');
 
-  if (typeof doc.autoTable === "function") {
-    doc.autoTable({
-      startY: boxY + boxH + 17,
-      head: [['Date', 'Type', 'Ingredient', 'Quantity', 'Reason / Supplier']],
-      body: body,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [44, 36, 27],
-        fontSize: 9,
-        fontStyle: 'bold',
-        lineColor: [180, 180, 180],
-        lineWidth: 0.2
-      },
-      bodyStyles: {
-        fontSize: 8.5,
-        textColor: [44, 36, 27],
-        lineColor: [220, 220, 220],
-        lineWidth: 0.15
-      },
-      margin: { left: margin, right: margin },
-      styles: { cellPadding: 2 }
-    });
-  } else {
-    let y = boxY + boxH + 22;
-    doc.setFontSize(9);
-    body.forEach(r => {
-      if (y > 280) { doc.addPage(); y = 20; }
-      doc.text(r.join("  |  ").substring(0, 110), margin, y);
-      y += 6;
-    });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.primary);
+  doc.text("CATEGORY BREAKDOWN VISUAL ANALYSIS", margin + 6, catBoxY + 8);
+
+  const chartCanvas = document.getElementById("categoryChart");
+  if (chartCanvas) {
+    try {
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = chartCanvas.width;
+      tempCanvas.height = chartCanvas.height;
+      const ctx = tempCanvas.getContext("2d");
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      ctx.drawImage(chartCanvas, 0, 0);
+      const chartDataUrl = tempCanvas.toDataURL("image/png");
+      const chartImgW = 90;
+      const chartImgH = chartImgW * (chartCanvas.height / chartCanvas.width);
+      const chartX = (pageW - chartImgW) / 2;
+      const chartY = catBoxY + 14;
+      doc.addImage(chartDataUrl, 'PNG', chartX, chartY, chartImgW, chartImgH, undefined, 'FAST');
+    } catch (e) {
+      console.error("Chart capture failed:", e);
+    }
   }
 
-  // Footer
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(130, 130, 130);
-  doc.text(
-    "BakeWise Integrated Kitchen System - Official Generated Report",
-    pageW / 2,
-    pageH - 10,
-    { align: "center" }
-  );
-
-  // Save
-  const filename = 'BakeWise_Summary_Report.pdf';
-  const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-  if (isIOS) {
-    window.open(url, '_blank');
-  } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
+  bakeWiseDocFooter(doc, "BakeWise Enterprise Inventory System • Confidential");
+  bakeWiseSavePdf(doc, 'BakeWise_Executive_Summary.pdf');
 };
