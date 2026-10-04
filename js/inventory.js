@@ -114,17 +114,29 @@ function bakeWiseSavePdf(doc, filename) {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   if (isIOS) {
+    // iOS: open in new tab, never revoke — WebKit needs the blob alive
     window.open(url, '_blank');
-  } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return;
   }
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Revoke on next interaction, or after 60s as a fallback — whichever first
+  const cleanup = () => {
+    URL.revokeObjectURL(url);
+    window.removeEventListener('click', cleanup);
+    window.removeEventListener('touchstart', cleanup);
+  };
+  window.addEventListener('click', cleanup, { once: true });
+  window.addEventListener('touchstart', cleanup, { once: true });
+  setTimeout(cleanup, 60000);
 }
+
 export { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseAutoTableTheme, bakeWiseMultiPageFooter, bakeWiseSavePdf };
 // ========== END HELPERS ==========
 
