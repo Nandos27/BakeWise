@@ -902,7 +902,7 @@ window.printForecastReport = function() {
   const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
   if (!jsPDFCtor) { alert("jsPDF library missing!"); return; }
 
-  // Recompute forecast data (same as renderForecastTable)
+  // ---- Data (same as renderForecastTable) ----
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -928,40 +928,82 @@ window.printForecastReport = function() {
   });
 
   const doc = new jsPDFCtor('p', 'mm', 'a4');
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+  const margin = 14;
+
+  // ---- CENTERED HEADER ----
+  doc.setFont("times", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(160, 90, 53);        // maroon
+  doc.text("BakeWise Kitchen Management", pageW / 2, 20, { align: "center" });
 
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(44, 36, 27);
+  doc.text("30-Day Purchase Order & Forecast Report", pageW / 2, 27, { align: "center" });
+
+  // Maroon divider line
+  doc.setDrawColor(160, 90, 53);
+  doc.setLineWidth(0.8);
+  doc.line(margin, 31, pageW - margin, 31);
+
+  // ---- TABLE TITLE (left aligned, serif) ----
+  doc.setFont("times", "bold");
   doc.setFontSize(14);
-  doc.setTextColor(30, 58, 138);
-  doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
+  doc.setTextColor(44, 36, 27);
+  doc.text("BakeWise - 30-Day Purchase Order", margin, 40);
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(71, 85, 105);
-  doc.text("30-Day Purchase Order & Forecast Report", 14, 26);
-
+  // ---- TABLE ----
   const body = rows.length ? rows : [["-", "-", "No data available.", "-", "-"]];
 
   if (typeof doc.autoTable === "function") {
     doc.autoTable({
-      startY: 34,
-      head: [['Ingredient', 'Category', '30-Day Usage', 'Current Stock', 'Suggested Order']],
+      startY: 45,
+      head: [['Ingredient', 'Category', '30-Day Usage', 'Current Stock', 'Suggested Order (+10% Buffer)']],
       body: body,
       theme: 'grid',
-      headStyles: { fillColor: [30, 58, 138], fontSize: 9, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
-      margin: { left: 14, right: 14 }
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [44, 36, 27],
+        fontSize: 9.5,
+        fontStyle: 'bold',
+        lineColor: [180, 180, 180],
+        lineWidth: 0.2
+      },
+      bodyStyles: {
+        fontSize: 9.5,
+        textColor: [44, 36, 27],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.15,
+        fillColor: [255, 255, 255]
+      },
+      margin: { left: margin, right: margin },
+      styles: { cellPadding: 2 }
     });
   } else {
-    let y = 40;
+    let y = 50;
     doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
+    doc.setTextColor(44, 36, 27);
     body.forEach(r => {
       if (y > 280) { doc.addPage(); y = 20; }
-      doc.text(r.join("  |  ").substring(0, 110), 14, y);
+      doc.text(r.join("  |  ").substring(0, 110), margin, y);
       y += 6;
     });
   }
 
+  // ---- FOOTER ----
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(130, 130, 130);
+  doc.text(
+    "BakeWise Integrated Kitchen System - Official Generated Forecast",
+    pageW / 2,
+    pageH - 10,
+    { align: "center" }
+  );
+
+  // ---- SAVE ----
   const filename = 'BakeWise_Forecast_Report.pdf';
   const blob = doc.output('blob');
   const url = URL.createObjectURL(blob);
@@ -978,38 +1020,6 @@ window.printForecastReport = function() {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-};
-
-const getPdfConfig = (filename) => ({
-  margin:       [12, 12, 12, 12],
-  filename:     filename,
-  image:        { type: 'jpeg', quality: 0.98 },
-  html2canvas:  { scale: 2.5, logging: false, useCORS: true },
-  jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-});
-
-const generatePdfHeader = (reportTitle, reportSubtitle) => {
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
-  const reportRef = "RPT-" + Math.floor(100000 + Math.random() * 900000);
-
-  return `
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-        <div>
-          <h1 style="margin: 0; color: #1e3a8a; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
-          <p style="margin: 3px 0 0 0; font-size: 13px; color: #475569; font-weight: 600;">${reportTitle}</p>
-        </div>
-        <div style="text-align: right; font-size: 10px; color: #64748b; line-height: 1.4;">
-          <div><strong>Report Ref:</strong> ${reportRef}</div>
-          <div><strong>Generated:</strong> ${currentDate}</div>
-          <div><strong>Scope:</strong> Operational Audit</div>
-        </div>
-      </div>
-    </div>
-  `;
 };
 
 window.printDetailedReport = function() {
