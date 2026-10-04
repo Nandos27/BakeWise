@@ -1054,7 +1054,7 @@ window.printSummaryReport = function() {
 
     // 1. Force browser to paint the element by attaching it to the body temporarily
     document.body.appendChild(container);
-
+    setTimeout(() => {
     // 2. Generate PDF and remove it from the body when finished
     html2pdf().set(getPdfConfig('BakeWise_Executive_Summary.pdf')).from(container).save().then(() => {
       document.body.removeChild(container);
@@ -1062,7 +1062,7 @@ window.printSummaryReport = function() {
       document.body.removeChild(container);
       console.error("Executive Summary PDF Generation Error:", err);
     });
-
+    }, 150);
   } catch (err) {
     console.error("Executive Summary PDF Generation Error:", err);
     alert("Could not export PDF. Please check the console.");
@@ -1144,7 +1144,7 @@ window.printDetailedReport = function() {
 
     // ---> ADDED HERE: Attach container to body so browser paints it <---
     document.body.appendChild(container);
-
+    setTimeout(() => {
     html2pdf().set(getPdfConfig('BakeWise_Detailed_Transaction_Report.pdf')).from(container).save().then(() => {
       // ---> ADDED HERE: Remove container after saving <---
       document.body.removeChild(container);
@@ -1152,7 +1152,7 @@ window.printDetailedReport = function() {
       document.body.removeChild(container);
       console.error("Detailed Audit PDF Generation Error:", err);
     });
-    
+    }, 150);
   } catch (err) {
     console.error("Detailed Audit PDF Generation Error:", err);
     alert("Could not export Detailed PDF. Please check the console.");
