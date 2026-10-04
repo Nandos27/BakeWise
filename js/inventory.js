@@ -958,12 +958,7 @@ const getPdfConfig = (filename) => ({
   margin:       [12, 12, 12, 12],
   filename:     filename,
   image:        { type: 'jpeg', quality: 0.98 },
-  html2canvas:  { 
-    scale: 2.5, 
-    logging: false, 
-    useCORS: true, 
-    windowWidth: 1024 // <--- Forces mobile and desktop to render identically!
-  },
+  html2canvas:  { scale: 2.5, logging: false, useCORS: true },
   jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
   pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
 });
@@ -1057,6 +1052,17 @@ window.printSummaryReport = function() {
       </div>
     `;
 
+    // 1. Force browser to paint the element by attaching it to the body temporarily
+    document.body.appendChild(container);
+
+    // 2. Generate PDF and remove it from the body when finished
+    html2pdf().set(getPdfConfig('BakeWise_Executive_Summary.pdf')).from(container).save().then(() => {
+      document.body.removeChild(container);
+    }).catch((err) => {
+      document.body.removeChild(container);
+      console.error("Executive Summary PDF Generation Error:", err);
+    });
+
     html2pdf().set(getPdfConfig('BakeWise_Executive_Summary.pdf')).from(container).save();
   } catch (err) {
     console.error("Executive Summary PDF Generation Error:", err);
@@ -1136,6 +1142,17 @@ window.printDetailedReport = function() {
         </div>
       </div>
     `;
+
+    // ---> ADDED HERE: Attach container to body so browser paints it <---
+    document.body.appendChild(container);
+
+    html2pdf().set(getPdfConfig('BakeWise_Detailed_Transaction_Report.pdf')).from(container).save().then(() => {
+      // ---> ADDED HERE: Remove container after saving <---
+      document.body.removeChild(container);
+    }).catch((err) => {
+      document.body.removeChild(container);
+      console.error("Detailed Audit PDF Generation Error:", err);
+    });
 
     html2pdf().set(getPdfConfig('BakeWise_Detailed_Transaction_Report.pdf')).from(container).save();
   } catch (err) {
