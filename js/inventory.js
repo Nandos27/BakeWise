@@ -987,7 +987,8 @@ const generatePdfHeader = (reportTitle, reportSubtitle) => {
 };
 
 window.printDetailedReport = function() {
-  if (typeof html2pdf === "undefined") { alert("PDF library missing!"); return; }
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDFCtor) { alert("jsPDF library missing!"); return; }
 
   const startDate = document.getElementById("queryStartDate")?.value;
   const endDate = document.getElementById("queryEndDate")?.value;
@@ -999,70 +1000,94 @@ window.printDetailedReport = function() {
   allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const filteredTransactions = allRecords.filter(tx => {
-    const txDate = tx.date;
-    const matchStart = !startDate || txDate >= startDate;
-    const matchEnd = !endDate || txDate <= endDate;
+    const matchStart = !startDate || tx.date >= startDate;
+    const matchEnd = !endDate || tx.date <= endDate;
     const matchType = (selectedType === "ALL") || tx.type === selectedType;
     const matchItem = (selectedItem === "ALL") || tx.ingredientName === selectedItem;
 
     let matchCategory = true;
     if (selectedCategory !== "ALL") {
       const matchedIngKey = Object.keys(allIngredients).find(k => allIngredients[k].name === tx.ingredientName);
-      if (matchedIngKey) {
-        matchCategory = allIngredients[matchedIngKey].category === selectedCategory;
-      } else {
-        matchCategory = false;
-      }
+      matchCategory = matchedIngKey ? allIngredients[matchedIngKey].category === selectedCategory : false;
     }
 
     return matchStart && matchEnd && matchType && matchItem && matchCategory;
   });
 
-  const container = document.createElement("div");
-  container.innerHTML = `
-    <div style="font-family: Helvetica, Arial, sans-serif; padding: 10px; color: #0f172a;">
-      <h1 style="color:#1e3a8a; font-size:18px; margin:0;">BAKEWISE KITCHEN MANAGEMENT</h1>
-      <p style="color:#475569; font-size:12px; margin:4px 0 12px;">Itemized Inventory Audit & Ledger</p>
-      <p style="font-size:11px; color:#1e3a8a; font-weight:bold;">${filteredTransactions.length} Records</p>
-      <table style="width:100%; border-collapse:collapse; font-size:11px;">
-        <thead>
-          <tr style="background:#1e3a8a; color:#fff;">
-            <th style="padding:6px; border:1px solid #ccc; text-align:left;">Date</th>
-            <th style="padding:6px; border:1px solid #ccc; text-align:left;">Type</th>
-            <th style="padding:6px; border:1px solid #ccc; text-align:left;">Ingredient</th>
-            <th style="padding:6px; border:1px solid #ccc; text-align:left;">Qty</th>
-            <th style="padding:6px; border:1px solid #ccc; text-align:left;">Reason / Supplier</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filteredTransactions.length ? filteredTransactions.map(tx => `
-            <tr>
-              <td style="padding:5px; border:1px solid #ddd;">${tx.date || "-"}</td>
-              <td style="padding:5px; border:1px solid #ddd;">${tx.type === "IN" ? "Stock In" : "Stock Out"}</td>
-              <td style="padding:5px; border:1px solid #ddd;">${tx.ingredientName}</td>
-              <td style="padding:5px; border:1px solid #ddd;">${tx.type === "IN" ? "+" : "-"}${tx.type === "IN" ? tx.addedQty : tx.deductedQty} ${tx.unit}</td>
-              <td style="padding:5px; border:1px solid #ddd;">${tx.supplier || tx.reason || "-"}</td>
-            </tr>`).join("")
-          : `<tr><td colspan="5" style="padding:10px; text-align:center; color:#888;">No transactions found.</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
+  const doc = new jsPDFCtor('p', 'mm', 'a4');
 
-  document.body.appendChild(container);
-  setTimeout(() => {
-    html2pdf().set({
-      margin: [12, 12, 12, 12],
-      filename: 'BakeWise_Detailed_Transaction_Report.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    }).from(container).save().then(() => {
-      document.body.removeChild(container);
-    }).catch(err => {
-      document.body.removeChild(container);
-      console.error(err);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(30, 58, 138);
+  doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(71, 85, 105);
+  doc.text("Itemized Inventory Audit & Ledger", 14, 26);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(30, 58, 138);
+  doc.text(`${filteredTransactions.length} Records`, 14, 36);
+
+  const body = filteredTransactions.length
+    ? filteredTransactions.map(tx => [
+        tx.date || "-",
+        tx.type === "IN" ? "Stock In" : "Stock Out",
+        tx.ingredientName,
+        (tx.type === "IN" ? "+" : "-") + (tx.type === "IN" ? tx.addedQty : tx.deductedQty) + " " + (tx.unit || ""),
+        tx.supplier || tx.reason || "-"
+      ])
+    : [["-", "-", "No transactions found.", "-", "-"]];
+
+  if (typeof doc.autoTable === "function") {
+    doc.autoTable({
+      startY: 42,
+      head: [['Date', 'Type', 'Ingredient', 'Qty', 'Reason / Supplier']],
+      body: body,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
+      margin: { left: 14, right: 14 }
     });
-  }, 150);
+  } else {
+    let y = 46;
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    body.forEach(r => {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(r.join("  |  ").substring(0, 110), 14, y);
+      y += 6;
+    });
+  }
+
+  // Mobile-safe save: blob + anchor, fallback to new tab
+  const filename = 'BakeWise_Detailed_Transaction_Report.pdf';
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+
+  if (isIOS || isAndroid) {
+    const w = window.open(url, '_blank');
+    if (!w) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 };
