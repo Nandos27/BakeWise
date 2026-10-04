@@ -515,7 +515,7 @@ if (addSupplierForm) {
 // -------------------------------------------------------------
 const stockInForm = document.getElementById("stockInForm");
 if (stockInForm) {
-  stockInForm.addEventListener("submit", (e) => {
+  stockInForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const ingKey = document.getElementById("stockInIngSelect").value;
     const addedQty = parseFloat(document.getElementById("stockInQty").value);
@@ -528,67 +528,165 @@ if (stockInForm) {
       return;
     }
 
-    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
-      if (!snap.exists()) {
-        alert("Selected ingredient not found in database.");
-        return;
+    const item = allIngredients[ingKey];
+    if (!item) { alert("Ingredient not found."); return; }
+
+    const payload = {
+      ingredientKey: ingKey,
+      ingredientName: item.name,
+      addedQty: addedQty,
+      unit: item.unit,
+      supplier: supplier || "Direct Stock In",
+      date: entryDate,
+      newExpiry: newExpiry ? toIsoDateString(newExpiry) : (item.expiryDate || ""),
+      submittedBy: auth.currentUser ? auth.currentUser.email : "Staff",
+      submittedAt: new Date().toISOString(),
+      status: "pending"
+    };
+
+    if (window.currentUserRole !== "admin" && window.currentUserRole !== "supervisor") {
+      try {
+        await push(ref(db, 'pending_stock_in/'), payload);
+        await logAuditEvent("Stock In (Pending)", `Submitted +${addedQty} ${item.unit} of ${item.name} for approval`);
+        alert("Stock In submitted for Admin verification.");
+        stockInForm.reset();
+        const todayStr = new Date().toISOString().split("T")[0];
+        const d = document.getElementById("stockInDate");
+        if (d) d.value = todayStr;
+      } catch (err) {
+        alert("Error submitting: " + err.message);
       }
+      return;
+    }
 
-      const item = snap.val();
-      const currentQty = parseFloat(item.quantity || 0);
-      const newQty = currentQty + addedQty;
-      const expDateStr = newExpiry ? toIsoDateString(newExpiry) : (item.expiryDate || "");
-
-      let existingBatches = getItemBatches(item);
-      const matchingBatch = existingBatches.find(b => toIsoDateString(b.expiryDate) === expDateStr);
-
-      if (matchingBatch) {
-        matchingBatch.qty = (parseFloat(matchingBatch.qty) || 0) + addedQty;
-      } else {
-        existingBatches.push({ qty: addedQty, expiryDate: expDateStr });
-      }
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const validBatches = existingBatches.filter(b => b.qty > 0 && new Date(b.expiryDate) >= today);
-      let primaryExpiry = item.expiryDate;
-      if (validBatches.length > 0) {
-        validBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-        primaryExpiry = validBatches[0].expiryDate;
-      } else if (newExpiry) {
-        primaryExpiry = toIsoDateString(newExpiry);
-      }
-
-      const updatePayload = {
-        quantity: newQty,
-        expiryDate: primaryExpiry,
-        batches: existingBatches
-      };
-
-      update(ref(db, `ingredients/${ingKey}`), updatePayload)
-        .then(() => {
-          return push(ref(db, 'stock_in/'), {
-            ingredientName: item.name,
-            addedQty: addedQty,
-            unit: item.unit,
-            supplier: supplier || "Direct Stock In",
-            date: entryDate,
-            newExpiry: expDateStr || "N/A"
-          });
-        })
-        .then(async () => {
-          await logAuditEvent("Stock In", `Added +${addedQty} ${item.unit} of ${item.name} (Supplier: ${supplier || 'Direct'}, Expiry: ${expDateStr || 'N/A'})`);
-          alert("Stock In recorded and inventory updated successfully!");
-          stockInForm.reset();
-          const todayStr = new Date().toISOString().split("T")[0];
-          const stockInDateElem = document.getElementById("stockInDate");
-          if (stockInDateElem) stockInDateElem.value = todayStr;
-        })
-        .catch((err) => {
-          alert("Error processing Stock In: " + err.message);
-        });
-    });
+    executeDirectStockIn(payload);
   });
+}
+
+async function executeDirectStockIn(payload) {
+  try {
+    const item = allIngredients[payload.ingredientKey];
+    if (!item) { alert("Ingredient not found."); return; }
+
+    const currentQty = parseFloat(item.quantity || 0);
+    const newQty = currentQty + payload.addedQty;
+    const expDateStr = payload.newExpiry || item.expiryDate || "";
+
+    let existingBatches = getItemBatches(item);
+    const matchingBatch = existingBatches.find(b => toIsoDateString(b.expiryDate) === expDateStr);
+
+    if (matchingBatch) {
+      matchingBatch.qty = (parseFloat(matchingBatch.qty) || 0) + payload.addedQty;
+    } else {
+      existingBatches.push({ qty: payload.addedQty, expiryDate: expDateStr });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const validBatches = existingBatches.filter(b => b.qty > 0 && new Date(b.expiryDate) >= today);
+    let primaryExpiry = item.expiryDate;
+    if (validBatches.length > 0) {
+      validBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+      primaryExpiry = validBatches[0].expiryDate;
+    } else if (payload.newExpiry) {
+      primaryExpiry = toIsoDateString(payload.newExpiry);
+    }
+
+    await update(ref(db, `ingredients/${payload.ingredientKey}`), {
+      quantity: newQty,
+      expiryDate: primaryExpiry,
+      batches: existingBatches
+    });
+
+    await push(ref(db, 'stock_in/'), {
+      ingredientName: item.name,
+      addedQty: payload.addedQty,
+      unit: item.unit,
+      supplier: payload.supplier,
+      date: payload.date,
+      newExpiry: expDateStr || "N/A"
+    });
+
+    await logAuditEvent("Stock In", `Added +${payload.addedQty} ${item.unit} of ${item.name} (Supplier: ${payload.supplier})`);
+
+    alert("Stock In recorded successfully!");
+    if (stockInForm) {
+      stockInForm.reset();
+      const todayStr = new Date().toISOString().split("T")[0];
+      const d = document.getElementById("stockInDate");
+      if (d) d.value = todayStr;
+    }
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+// -------------------------------------------------------------
+// PENDING STOCK-IN APPROVALS (admin/supervisor only)
+// -------------------------------------------------------------
+window.renderPendingStockCards = function() {
+  const container = document.getElementById("pendingStockCard");
+  const table = document.getElementById("pendingStockTableBody");
+  const countBadge = document.getElementById("pendingStockCount");
+  if (!container || !table) return;
+
+  if (window.currentUserRole !== "admin" && window.currentUserRole !== "supervisor") {
+    container.style.display = "none";
+    return;
+  }
+
+  get(ref(db, 'pending_stock_in/')).then((snap) => {
+    table.innerHTML = "";
+    if (snap.exists()) {
+      container.style.display = "block";
+      const data = snap.val();
+      const keys = Object.keys(data);
+      if (countBadge) countBadge.textContent = `${keys.length} Pending`;
+
+      keys.forEach(key => {
+        const item = data[key];
+        table.innerHTML += `
+          <tr>
+            <td>${item.date || "-"}</td>
+            <td><small class="text-secondary">${item.submittedBy || "Staff"}</small></td>
+            <td class="fw-bold">${item.ingredientName}</td>
+            <td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td>
+            <td>${item.supplier || "-"}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-success py-1 px-2 me-1" onclick="approvePendingStock('${key}')">Approve</button>
+              <button class="btn btn-sm btn-outline-danger py-1 px-2" onclick="rejectPendingStock('${key}')">Reject</button>
+            </td>
+          </tr>`;
+      });
+    } else {
+      container.style.display = "none";
+    }
+  });
+};
+
+onValue(ref(db, 'pending_stock_in/'), () => {
+  if (window.currentUserRole === "admin" || window.currentUserRole === "supervisor") {
+    window.renderPendingStockCards();
+  }
+});
+
+window.approvePendingStock = async function(key) {
+  const snap = await get(ref(db, 'pending_stock_in/' + key));
+  if (!snap.exists()) return;
+  const item = snap.val();
+  await executeDirectStockIn(item);
+  await remove(ref(db, 'pending_stock_in/' + key));
+  window.renderPendingStockCards();
+};
+
+window.rejectPendingStock = async function(key) {
+  if (!confirm("Reject and delete this pending stock-in?")) return;
+  await remove(ref(db, 'pending_stock_in/' + key));
+  window.renderPendingStockCards();
+};
+
+if (typeof window.currentUserRole === "undefined") {
+  window.currentUserRole = "kitchen_staff";
 }
 
 const stockOutForm = document.getElementById("stockOutForm");
