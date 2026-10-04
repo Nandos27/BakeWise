@@ -1068,9 +1068,9 @@ window.printDetailedReport = function() {
   const url = URL.createObjectURL(blob);
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isAndroid = /Android/.test(navigator.userAgent);
 
-  if (isIOS || isAndroid) {
+  if (isIOS) {
+    // iOS: open in new tab so the native PDF viewer handles it
     const w = window.open(url, '_blank');
     if (!w) {
       const a = document.createElement('a');
@@ -1081,6 +1081,7 @@ window.printDetailedReport = function() {
       document.body.removeChild(a);
     }
   } else {
+    // Desktop + Android: trigger a direct download
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
