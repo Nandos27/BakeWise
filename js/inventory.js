@@ -694,22 +694,45 @@ function populateQueryDropdown() {
   if (currentSelection) dropdown.value = currentSelection;
 }
 
-function renderTransactionTable(records) {
-  const table = document.getElementById("fullTransactionTableBody");
-  const countBadge = document.getElementById("queryRecordCount");
-  if (!table) return;
+let txCurrentPage = 1;
+let TX_PER_PAGE = 20;
+let txFullList = [];
 
+function renderTransactionTable(records) {
+  txFullList = records;
+  txCurrentPage = 1;
+
+  const countBadge = document.getElementById("queryRecordCount");
   if (countBadge) countBadge.textContent = `${records.length} records`;
 
-  if (records.length === 0) {
+  renderTxPage();
+}
+
+function renderTxPage() {
+  const table = document.getElementById("fullTransactionTableBody");
+  const pager = document.getElementById("txPager");
+  if (!table) return;
+
+  const total = txFullList.length;
+
+  if (total === 0) {
     table.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No matching transactions found.</td></tr>`;
+    if (pager) pager.innerHTML = "";
     return;
   }
 
-  table.innerHTML = records.map(tx => {
+  const totalPages = Math.max(1, Math.ceil(total / TX_PER_PAGE));
+  if (txCurrentPage > totalPages) txCurrentPage = totalPages;
+  if (txCurrentPage < 1) txCurrentPage = 1;
+
+  const start = (txCurrentPage - 1) * TX_PER_PAGE;
+  const end = Math.min(start + TX_PER_PAGE, total);
+  const slice = txFullList.slice(start, end);
+
+  table.innerHTML = slice.map(tx => {
     const isStockIn = tx.type === "IN";
-    const badge = isStockIn 
-      ? '<span class="badge bg-success">Stock In</span>' 
+    const badge = isStockIn
+      ? '<span class="badge bg-success">Stock In</span>'
       : '<span class="badge bg-danger">Stock Out</span>';
     const qtyDisplay = isStockIn
       ? `<span class="text-success fw-bold">+${formatDecimal(tx.addedQty)} ${tx.unit}</span>`
@@ -725,7 +748,60 @@ function renderTransactionTable(records) {
         <td>${detail}</td>
       </tr>`;
   }).join("");
+
+  if (pager) {
+    pager.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center small text-muted mt-2 px-1 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <span>Showing ${start + 1}–${end} of ${total}</span>
+          <select class="form-select form-select-sm" style="width: auto;"
+                  onchange="window.txSetPerPage(this.value)">
+            <option value="10"  ${TX_PER_PAGE === 10  ? "selected" : ""}>10 / page</option>
+            <option value="20"  ${TX_PER_PAGE === 20  ? "selected" : ""}>20 / page</option>
+            <option value="50"  ${TX_PER_PAGE === 50  ? "selected" : ""}>50 / page</option>
+            <option value="100" ${TX_PER_PAGE === 100 ? "selected" : ""}>100 / page</option>
+          </select>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary"
+                  ${txCurrentPage === 1 ? "disabled" : ""}
+                  onclick="window.txPrevPage()">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          <span>Page ${txCurrentPage} / ${totalPages}</span>
+          <button class="btn btn-sm btn-outline-secondary"
+                  ${txCurrentPage === totalPages ? "disabled" : ""}
+                  onclick="window.txNextPage()">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>`;
+  }
 }
+
+window.txPrevPage = function () {
+  if (txCurrentPage > 1) {
+    txCurrentPage--;
+    renderTxPage();
+  }
+};
+
+window.txNextPage = function () {
+  const totalPages = Math.max(1, Math.ceil(txFullList.length / TX_PER_PAGE));
+  if (txCurrentPage < totalPages) {
+    txCurrentPage++;
+    renderTxPage();
+  }
+};
+
+window.txSetPerPage = function (value) {
+  const n = parseInt(value, 10);
+  if (!isNaN(n) && n > 0) {
+    TX_PER_PAGE = n;
+    txCurrentPage = 1;
+    renderTxPage();
+  }
+};
 
 window.runTransactionQuery = function() {
   const startDate = document.getElementById("queryStartDate")?.value;
