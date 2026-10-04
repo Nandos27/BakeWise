@@ -899,59 +899,85 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.printForecastReport = function() {
-  const printArea = document.getElementById("printArea");
-  if (!printArea) {
-    alert("Print area content not found.");
-    return;
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDFCtor) { alert("jsPDF library missing!"); return; }
+
+  // Recompute forecast data (same as renderForecastTable)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const usageMap = {};
+  globalStockOut.forEach(tx => {
+    if (tx.date && new Date(tx.date) >= thirtyDaysAgo) {
+      const qty = parseFloat(tx.deductedQty || 0);
+      usageMap[tx.ingredientName] = (usageMap[tx.ingredientName] || 0) + qty;
+    }
+  });
+
+  const rows = Object.values(allIngredients).map(item => {
+    const monthlyUsage = usageMap[item.name] || 0;
+    let suggestedOrder = (monthlyUsage * 1.1) - item.quantity;
+    if (suggestedOrder < 0) suggestedOrder = 0;
+    return [
+      item.name,
+      item.category || "General",
+      `${formatDecimal(monthlyUsage)} ${item.unit}`,
+      `${formatDecimal(item.quantity)} ${item.unit}`,
+      `${formatDecimal(suggestedOrder)} ${item.unit}`
+    ];
+  });
+
+  const doc = new jsPDFCtor('p', 'mm', 'a4');
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(30, 58, 138);
+  doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(71, 85, 105);
+  doc.text("30-Day Purchase Order & Forecast Report", 14, 26);
+
+  const body = rows.length ? rows : [["-", "-", "No data available.", "-", "-"]];
+
+  if (typeof doc.autoTable === "function") {
+    doc.autoTable({
+      startY: 34,
+      head: [['Ingredient', 'Category', '30-Day Usage', 'Current Stock', 'Suggested Order']],
+      body: body,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
+      margin: { left: 14, right: 14 }
+    });
+  } else {
+    let y = 40;
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    body.forEach(r => {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(r.join("  |  ").substring(0, 110), 14, y);
+      y += 6;
+    });
   }
 
-  const printIframe = document.createElement("iframe");
-  printIframe.style.position = "fixed";
-  printIframe.style.right = "0";
-  printIframe.style.bottom = "0";
-  printIframe.style.width = "0";
-  printIframe.style.height = "0";
-  printIframe.style.border = "0";
-  document.body.appendChild(printIframe);
+  const filename = 'BakeWise_Forecast_Report.pdf';
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  const iframeDoc = printIframe.contentWindow.document;
-
-  iframeDoc.open();
-  iframeDoc.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>BakeWise Forecast Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; color: #2C241B; }
-          .header { text-align: center; border-bottom: 2px solid #A05A35; padding-bottom: 10px; margin-bottom: 15px; }
-          .header h1 { margin: 0; color: #A05A35; font-size: 22px; }
-          .header h2 { margin: 5px 0 0 0; font-size: 15px; color: #555; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          th { background-color: #f4f4f4; }
-          .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #888; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>BakeWise Kitchen Management</h1>
-          <h2>30-Day Purchase Order & Forecast Report</h2>
-        </div>
-        ${printArea.innerHTML}
-        <div class="footer">
-          BakeWise Integrated Kitchen System &bull; Official Generated Forecast
-        </div>
-      </body>
-    </html>
-  `);
-  iframeDoc.close();
-
-  setTimeout(() => {
-    printIframe.contentWindow.focus();
-    printIframe.contentWindow.print();
-    document.body.removeChild(printIframe);
-  }, 500);
+  if (isIOS) {
+    window.open(url, '_blank');
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 };
 
 const getPdfConfig = (filename) => ({
