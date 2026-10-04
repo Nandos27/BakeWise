@@ -1070,64 +1070,86 @@ window.printSummaryReport = function() {
 };
 
 window.printDetailedReport = function() {
-  if (typeof html2pdf === "undefined") {
-    alert("PDF library is missing!");
-    return;
+  let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+  let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
+
+  const originalTable = document.getElementById("fullTransactionTableBody");
+  let formattedRows = "";
+
+  if (originalTable && originalTable.rows.length > 0) {
+    Array.from(originalTable.rows).forEach((row, idx) => {
+      if (row.cells.length >= 5) {
+        const date = row.cells[0].innerText.trim();
+        const type = row.cells[1].innerText.trim();
+        const ingredient = row.cells[2].innerText.trim();
+        const quantity = row.cells[3].innerText.trim();
+        const details = row.cells[4].innerText.trim();
+
+        const isStockIn = type.toLowerCase().includes("in");
+        const typeColor = isStockIn ? "#16a34a" : "#dc2626";
+        const bgColor = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+        formattedRows += `
+          <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 7px 10px; font-size: 10px; color: #334155;">${date}</td>
+            <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: ${typeColor};">${type}</td>
+            <td style="padding: 7px 10px; font-size: 10px; font-weight: 600; color: #0f172a;">${ingredient}</td>
+            <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: #334155;">${quantity}</td>
+            <td style="padding: 7px 10px; font-size: 10px; color: #475569;">${details}</td>
+          </tr>
+        `;
+      }
+    });
+  } else {
+    formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 15px; color: #94a3b8; font-size: 11px;">No transactions found for the specified filters.</td></tr>`;
   }
 
-  try {
-    let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
-    let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
+  const printIframe = document.createElement("iframe");
+  printIframe.style.position = "fixed";
+  printIframe.style.right = "0";
+  printIframe.style.bottom = "0";
+  printIframe.style.width = "0";
+  printIframe.style.height = "0";
+  printIframe.style.border = "0";
+  document.body.appendChild(printIframe);
 
-    const originalTable = document.getElementById("fullTransactionTableBody");
-    let formattedRows = "";
+  const iframeDoc = printIframe.contentWindow.document;
 
-    if (originalTable && originalTable.rows.length > 0) {
-      Array.from(originalTable.rows).forEach((row, idx) => {
-        if (row.cells.length >= 5) {
-          const date = row.cells[0].innerText.trim();
-          const type = row.cells[1].innerText.trim();
-          const ingredient = row.cells[2].innerText.trim();
-          const quantity = row.cells[3].innerText.trim();
-          const details = row.cells[4].innerText.trim();
-
-          const isStockIn = type.toLowerCase().includes("in");
-          const typeColor = isStockIn ? "#16a34a" : "#dc2626";
-          const bgColor = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
-
-          formattedRows += `
-            <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 7px 10px; font-size: 10px; color: #334155;">${date}</td>
-              <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: ${typeColor};">${type}</td>
-              <td style="padding: 7px 10px; font-size: 10px; font-weight: 600; color: #0f172a;">${ingredient}</td>
-              <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: #334155;">${quantity}</td>
-              <td style="padding: 7px 10px; font-size: 10px; color: #475569;">${details}</td>
-            </tr>
-          `;
-        }
-      });
-    } else {
-      formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 15px; color: #94a3b8; font-size: 11px;">No transactions found for the specified filters.</td></tr>`;
-    }
-
-    const container = document.createElement("div");
-    container.innerHTML = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #0f172a; background: #ffffff;">
-        ${generatePdfHeader("Itemized Inventory Audit & Ledger", "Detailed Transactions")}
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1;">
-          <span style="font-size: 11px; font-weight: 700; color: #1e3a8a; text-transform: uppercase;">Filtered Transaction Records</span>
-          <span style="font-size: 11px; font-weight: 700; background: #1e3a8a; color: #ffffff; padding: 2px 8px; border-radius: 12px;">${cleanRecordCount} Total Records</span>
+  iframeDoc.open();
+  iframeDoc.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>BakeWise Detailed Transaction Report</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #0f172a; background: #ffffff; }
+          .header { border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+          table { width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-top: 15px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+          th { background-color: #1e3a8a; color: #ffffff; font-size: 10px; text-transform: uppercase; }
+          .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 style="margin: 0; color: #1e3a8a; font-size: 20px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
+            <p style="margin: 3px 0 0 0; font-size: 13px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
+          </div>
         </div>
 
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1;">
+        <div style="margin-bottom: 12px; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; color: #1e3a8a;">
+          Filtered Transaction Records: ${cleanRecordCount} Total Records
+        </div>
+
+        <table>
           <thead>
-            <tr style="background-color: #1e3a8a; color: #ffffff;">
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Date</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Type</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Ingredient</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Quantity</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;">Reason / Supplier</th>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Ingredient</th>
+              <th>Quantity</th>
+              <th>Reason / Supplier</th>
             </tr>
           </thead>
           <tbody>
@@ -1135,26 +1157,18 @@ window.printDetailedReport = function() {
           </tbody>
         </table>
 
-        <div style="margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
+        <div class="footer">
           <div>BakeWise Enterprise Inventory System &bull; Audit Trail Log</div>
           <div>Official System Document</div>
         </div>
-      </div>
-    `;
+      </body>
+    </html>
+  `);
+  iframeDoc.close();
 
-    // ---> ADDED HERE: Attach container to body so browser paints it <---
-    document.body.appendChild(container);
-    setTimeout(() => {
-    html2pdf().set(getPdfConfig('BakeWise_Detailed_Transaction_Report.pdf')).from(container).save().then(() => {
-      // ---> ADDED HERE: Remove container after saving <---
-      document.body.removeChild(container);
-    }).catch((err) => {
-      document.body.removeChild(container);
-      console.error("Detailed Audit PDF Generation Error:", err);
-    });
-    }, 150);
-  } catch (err) {
-    console.error("Detailed Audit PDF Generation Error:", err);
-    alert("Could not export Detailed PDF. Please check the console.");
-  }
+  setTimeout(() => {
+    printIframe.contentWindow.focus();
+    printIframe.contentWindow.print();
+    document.body.removeChild(printIframe);
+  }, 500);
 };
