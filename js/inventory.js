@@ -989,15 +989,13 @@ const generatePdfHeader = (reportTitle, reportSubtitle) => {
 window.printDetailedReport = function() {
   console.log("printDetailedReport function triggered.");
 
-  // 1. Check if jsPDF library is actually available globally
-  const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-  if (!jsPDFConstructor) {
-    alert("ERROR: jsPDF library is missing or not loaded globally!");
-    console.error("jsPDF constructor is undefined. Check your script import tags.");
+  // Check if html2pdf is globally available
+  if (typeof html2pdf === "undefined") {
+    alert("ERROR: html2pdf library is not loaded on this page!");
+    console.error("html2pdf is undefined.");
     return;
   }
 
-  // 2. Check if the table body element exists in the DOM
   const originalTable = document.getElementById("fullTransactionTableBody");
   if (!originalTable) {
     alert("ERROR: Table body element #fullTransactionTableBody not found!");
@@ -1005,80 +1003,88 @@ window.printDetailedReport = function() {
     return;
   }
 
-  try {
-    const doc = new jsPDFConstructor('p', 'mm', 'a4');
-    
-    let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
-    let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
+  let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+  let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
 
-    // Draw Header
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(30, 58, 138); // #1e3a8a
-    doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
+  let formattedRows = "";
+  if (originalTable.rows.length > 0) {
+    Array.from(originalTable.rows).forEach((row, idx) => {
+      if (row.cells.length >= 5) {
+        const date = row.cells[0].innerText.trim();
+        const type = row.cells[1].innerText.trim();
+        const ingredient = row.cells[2].innerText.trim();
+        const quantity = row.cells[3].innerText.trim();
+        const details = row.cells[4].innerText.trim();
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(71, 85, 105); // #475569
-    doc.text("Itemized Inventory Audit & Ledger", 14, 28);
+        const isStockIn = type.toLowerCase().includes("in");
+        const typeColor = isStockIn ? "#16a34a" : "#dc2626";
+        const bgColor = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(30, 58, 138);
-    doc.text(`Filtered Transaction Records: ${cleanRecordCount}`, 14, 38);
-
-    // Table Column Headers Background & Text
-    doc.setFillColor(30, 58, 138);
-    doc.rect(14, 44, 182, 8, 'F');
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    
-    doc.text("Date", 16, 49);
-    doc.text("Type", 48, 49);
-    doc.text("Ingredient", 72, 49);
-    doc.text("Qty", 125, 49);
-    doc.text("Reason / Supplier", 145, 49);
-
-    let yPos = 58;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(15, 23, 42);
-
-    if (originalTable.rows.length > 0) {
-      Array.from(originalTable.rows).forEach((row) => {
-        if (row.cells.length >= 5) {
-          const date = row.cells[0].innerText.trim();
-          const type = row.cells[1].innerText.trim();
-          const ingredient = row.cells[2].innerText.trim();
-          const quantity = row.cells[3].innerText.trim();
-          const details = row.cells[4].innerText.trim();
-
-          // Page break check if vertical limit is reached
-          if (yPos > 280) {
-            doc.addPage();
-            yPos = 20;
-          }
-
-          doc.text(date, 16, yPos);
-          doc.text(type, 48, yPos);
-          doc.text(ingredient, 72, yPos, { maxWidth: 50 });
-          doc.text(quantity, 125, yPos);
-          doc.text(details, 145, yPos, { maxWidth: 50 });
-
-          yPos += 8;
-        }
-      });
-    } else {
-      doc.text("No transactions found for the specified filters.", 16, yPos);
-    }
-
-    // Force download
-    doc.save('BakeWise_Detailed_Transaction_Report.pdf');
-    console.log("PDF successfully generated and download triggered.");
-
-  } catch (err) {
-    console.error("jsPDF Generation Exception:", err);
-    alert("PDF Crash Error: " + err.message);
+        formattedRows += `
+          <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 12px; font-size: 11px; color: #334155;">${date}</td>
+            <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: ${typeColor};">${type}</td>
+            <td style="padding: 8px 12px; font-size: 11px; font-weight: 600; color: #0f172a;">${ingredient}</td>
+            <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: #334155;">${quantity}</td>
+            <td style="padding: 8px 12px; font-size: 11px; color: #475569;">${details}</td>
+          </tr>
+        `;
+      }
+    });
+  } else {
+    formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">No transactions found.</td></tr>`;
   }
+
+  // Create a clean container attached to the document temporarily so it renders correctly
+  const container = document.createElement("div");
+  container.style.cssText = "position: fixed; top: 0; left: 0; width: 800px; background: #ffffff; z-index: 999999; opacity: 0.01; pointer-events: none;";
+
+  container.innerHTML = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 25px; color: #0f172a; background: #ffffff;">
+      <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
+        <h1 style="margin: 0; color: #1e3a8a; font-size: 22px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
+        <p style="margin: 4px 0 0 0; font-size: 14px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
+      </div>
+
+      <div style="margin-bottom: 15px; background: #f1f5f9; padding: 10px 14px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e3a8a;">
+        Filtered Transaction Records: ${cleanRecordCount} Total Records
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-top: 15px;">
+        <thead>
+          <tr style="background-color: #1e3a8a; color: #ffffff;">
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Date</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Type</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Ingredient</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Quantity</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Reason / Supplier</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${formattedRows}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  const opt = {
+    margin: 10,
+    filename: 'BakeWise_Detailed_Transaction_Report.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  setTimeout(() => {
+    html2pdf().set(opt).from(container).save().then(() => {
+      document.body.removeChild(container);
+      console.log("PDF download triggered successfully.");
+    }).catch((err) => {
+      if (container.parentNode) document.body.removeChild(container);
+      console.error("html2pdf generation error:", err);
+      alert("PDF Error: " + err.message);
+    });
+  }, 300);
 };
