@@ -1111,17 +1111,11 @@ window.printDetailedReport = function() {
     }
 
     const container = document.createElement("div");
-    
-    // FORCE REAL DIMENSIONS SO MOBILE CANVA RENDERS IT
-    container.style.position = "absolute";
-    container.style.left = "0";
-    container.style.top = "0";
-    container.style.width = "800px";
-    container.style.background = "#ffffff";
-    container.style.zIndex = "99999";
+    container.id = "tempPrintContainer";
+    container.style.cssText = "position: relative; width: 100%; max-width: 800px; margin: 0 auto; background: #ffffff; padding: 20px; box-sizing: border-box;";
 
     container.innerHTML = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #0f172a; background: #ffffff;">
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
         <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px;">
           <h1 style="margin: 0; color: #1e3a8a; font-size: 20px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
           <p style="margin: 3px 0 0 0; font-size: 13px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
@@ -1148,26 +1142,25 @@ window.printDetailedReport = function() {
       </div>
     `;
 
-    // 1. Physically attach it to the body so the browser layout engine calculates dimensions
+    // Append it temporarily to the page body so it has true dimensions
     document.body.appendChild(container);
 
     const opt = {
       margin: 10,
       filename: 'BakeWise_Detailed_Transaction_Report.pdf',
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // 2. Give mobile engines a split second to paint before running the capture
-    setTimeout(() => {
-      html2pdf().set(opt).from(container).save().then(() => {
+    html2pdf().set(opt).from(container).save().then(() => {
+      document.body.removeChild(container);
+    }).catch((err) => {
+      if (document.getElementById("tempPrintContainer")) {
         document.body.removeChild(container);
-      }).catch((err) => {
-        document.body.removeChild(container);
-        console.error("PDF generation failed:", err);
-      });
-    }, 300);
+      }
+      console.error("PDF generation failed:", err);
+    });
 
   } catch (err) {
     console.error("Detailed PDF Error:", err);
