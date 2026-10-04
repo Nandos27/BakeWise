@@ -883,6 +883,13 @@ window.runTransactionQuery = function() {
     attentionHTML = `<tr><td colspan="5" class="text-center text-success py-3">✅ All systems normal for this selection!</td></tr>`;
   }
 
+  const attentionCount = dynamicLowStock + dynamicExpired;
+  const badge = document.getElementById("attentionCountBadge");
+  if (badge) {
+    badge.textContent = attentionCount;
+    badge.style.display = attentionCount > 0 ? "" : "none";
+  }
+
   if (document.getElementById("rptTotalItems")) document.getElementById("rptTotalItems").innerText = dynamicTotalItems;
   if (document.getElementById("rptLowStock")) document.getElementById("rptLowStock").innerText = dynamicLowStock;
   if (document.getElementById("rptExpired")) document.getElementById("rptExpired").innerText = dynamicExpired;
@@ -1282,7 +1289,27 @@ window.printSummaryReport = function() {
     doc.text(String(values[i]), x + boxW / 2, boxY + 18, { align: "center" });
   });
 
-  const catBoxY = boxY + boxH + 12;
+  const attentionCount = document.getElementById("attentionCountBadge")?.innerText || "0";
+  let catBoxY = boxY + boxH + 12;
+  
+  if (attentionCount !== "0" && attentionCount !== "") {
+    const alertY = boxY + boxH + 4;
+    doc.setFillColor(254, 226, 226);
+    doc.setDrawColor(220, 38, 38);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, alertY, pageW - margin * 2, 10, 1.5, 1.5, 'FD');
+  
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(185, 28, 28);
+    doc.text(
+      `⚠  ${attentionCount} item${attentionCount === "1" ? "" : "s"} require immediate attention.`,
+      margin + 5,
+      alertY + 6.5
+    );
+  
+    catBoxY += 12;
+  }
   const catBoxH = 72;
 
   doc.setDrawColor(...BRAND.rule);
