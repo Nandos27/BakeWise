@@ -7,15 +7,16 @@ window.openProfileModal = async function () {
   if (!user) return;
 
   document.getElementById("profileEmail").value = user.email || "";
-  document.getElementById("profileName").value = user.displayName || "";
   document.getElementById("profileNameStatus").innerHTML = "";
   document.getElementById("profileStatus").innerHTML = "";
 
   try {
     const snap = await get(ref(db, `users/${user.uid}`));
-    const role = snap.exists() ? (snap.val().role || "staff") : "staff";
-    document.getElementById("profileRole").value = role;
+    const data = snap.exists() ? snap.val() : {};
+    document.getElementById("profileName").value = data.fullName || "";
+    document.getElementById("profileRole").value = data.role || "staff";
   } catch {
+    document.getElementById("profileName").value = "";
     document.getElementById("profileRole").value = "—";
   }
 
@@ -39,13 +40,15 @@ window.saveProfileName = async function () {
   if (newName.length > 60) return setStatus("Name is too long.", "#dc3545");
 
   try {
+    // Auth displayName (used by Firebase internally, keeps things tidy)
     await updateProfile(user, { displayName: newName });
-    await update(ref(db, `users/${user.uid}`), { displayName: newName });
+
+    // DB fullName — this is what the app reads
+    await update(ref(db, `users/${user.uid}`), { fullName: newName });
 
     setStatus("Name updated.", "#198754");
     setTimeout(() => status.innerHTML = "", 2000);
 
-    // Refresh the sidebar greeting
     const greeting = document.getElementById("userGreeting");
     if (greeting) greeting.textContent = `Welcome, ${newName}!`;
   } catch (err) {
@@ -66,11 +69,17 @@ window.sendProfilePasswordReset = async function () {
   }
 };
 
-// Populate the sidebar greeting whenever auth state resolves
-onAuthStateChanged(auth, (user) => {
+// Populate the sidebar greeting when auth state resolves
+onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   const greeting = document.getElementById("userGreeting");
-  if (greeting) {
+  if (!greeting) return;
+
+  try {
+    const snap = await get(ref(db, `users/${user.uid}`));
+    const name = snap.exists() ? (snap.val().fullName || "") : "";
+    greeting.textContent = `Welcome, ${name || user.email?.split("@")[0] || "User"}!`;
+  } catch {
     greeting.textContent = `Welcome, ${user.displayName || user.email?.split("@")[0] || "User"}!`;
   }
 });
