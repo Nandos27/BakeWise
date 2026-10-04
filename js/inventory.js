@@ -855,9 +855,9 @@ window.runTransactionQuery = function() {
       if (isExpired) dynamicExpired++;
 
       if (isLowStock || isExpired) {
-        let issueBadge = isExpired 
-          ? `<span class="badge bg-warning text-dark">Expired</span>`
-          : `<span class="badge bg-danger">Low Stock</span>`;
+        let issueBadge = "";
+          if (isExpired) issueBadge += `<span class="badge bg-warning text-dark me-1">Expired</span>`;
+          if (isLowStock) issueBadge += `<span class="badge bg-danger">Low Stock</span>`;
         
         let limitText = isExpired ? `Expired Qty: ${formatDecimal(expiredQty)} ${item.unit}` : `Min: ${item.minThreshold}`;
 
