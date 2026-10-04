@@ -1128,3 +1128,147 @@ window.printDetailedReport = function() {
 
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 };
+
+window.printSummaryReport = function() {
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDFCtor) { alert("jsPDF library missing!"); return; }
+
+  const totalIngredients = document.getElementById("rptTotalItems")?.innerText || "0";
+  const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
+  const expired = document.getElementById("rptExpired")?.innerText || "0";
+  const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
+  const recordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+
+  // Reuse the live transaction table (already filtered by runTransactionQuery)
+  const tbody = document.getElementById("fullTransactionTableBody");
+  const txRows = [];
+  if (tbody && tbody.rows.length > 0) {
+    Array.from(tbody.rows).forEach(row => {
+      if (row.cells.length === 1) return; // skip "no matching" placeholder
+      txRows.push([
+        row.cells[0]?.innerText.trim() || "-",
+        row.cells[1]?.innerText.trim() || "-",
+        row.cells[2]?.innerText.trim() || "-",
+        row.cells[3]?.innerText.trim() || "-",
+        row.cells[4]?.innerText.trim() || "-"
+      ]);
+    });
+  }
+
+  const doc = new jsPDFCtor('p', 'mm', 'a4');
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+  const margin = 14;
+
+  // Header
+  doc.setFont("times", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(160, 90, 53);
+  doc.text("BakeWise Kitchen Management", pageW / 2, 20, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(44, 36, 27);
+  doc.text("Inventory & Transaction Summary Report", pageW / 2, 27, { align: "center" });
+
+  doc.setDrawColor(160, 90, 53);
+  doc.setLineWidth(0.8);
+  doc.line(margin, 31, pageW - margin, 31);
+
+  // Metrics row (4 boxes)
+  const boxY = 38;
+  const boxH = 18;
+  const gap = 4;
+  const boxW = (pageW - margin * 2 - gap * 3) / 4;
+  const labels = ["Total Items", "Low Stock", "Expired", "Suppliers"];
+  const values = [totalIngredients, lowStock, expired, suppliers];
+
+  labels.forEach((label, i) => {
+    const x = margin + i * (boxW + gap);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(x, boxY, boxW, boxH, 1, 1, 'FD');
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(label, x + boxW / 2, boxY + 6, { align: "center" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text(String(values[i]), x + boxW / 2, boxY + 14, { align: "center" });
+  });
+
+  // Section title
+  doc.setFont("times", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(44, 36, 27);
+  doc.text(`Filtered Transaction History (${recordCount})`, margin, boxY + boxH + 12);
+
+  // Transactions table
+  const body = txRows.length ? txRows : [["-", "-", "No matching transactions.", "-", "-"]];
+
+  if (typeof doc.autoTable === "function") {
+    doc.autoTable({
+      startY: boxY + boxH + 17,
+      head: [['Date', 'Type', 'Ingredient', 'Quantity', 'Reason / Supplier']],
+      body: body,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [44, 36, 27],
+        fontSize: 9,
+        fontStyle: 'bold',
+        lineColor: [180, 180, 180],
+        lineWidth: 0.2
+      },
+      bodyStyles: {
+        fontSize: 8.5,
+        textColor: [44, 36, 27],
+        lineColor: [220, 220, 220],
+        lineWidth: 0.15
+      },
+      margin: { left: margin, right: margin },
+      styles: { cellPadding: 2 }
+    });
+  } else {
+    let y = boxY + boxH + 22;
+    doc.setFontSize(9);
+    body.forEach(r => {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(r.join("  |  ").substring(0, 110), margin, y);
+      y += 6;
+    });
+  }
+
+  // Footer
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(130, 130, 130);
+  doc.text(
+    "BakeWise Integrated Kitchen System - Official Generated Report",
+    pageW / 2,
+    pageH - 10,
+    { align: "center" }
+  );
+
+  // Save
+  const filename = 'BakeWise_Summary_Report.pdf';
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isIOS) {
+    window.open(url, '_blank');
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+};
