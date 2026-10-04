@@ -1256,6 +1256,7 @@ window.printSummaryReport = function() {
   const lowStock = document.getElementById("rptLowStock")?.innerText || "0";
   const expired = document.getElementById("rptExpired")?.innerText || "0";
   const suppliers = document.getElementById("rptSuppliers")?.innerText || "0";
+  const attentionCount = document.getElementById("attentionCountBadge")?.innerText || "0";
 
   const doc = new jsPDFCtor('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.width;
@@ -1263,6 +1264,7 @@ window.printSummaryReport = function() {
 
   const startY = bakeWiseDocHeader(doc, "Executive Inventory & Operations Summary");
 
+  // ---- Metric boxes ----
   const boxY = startY + 4;
   const boxH = 22;
   const gap = 4;
@@ -1290,28 +1292,32 @@ window.printSummaryReport = function() {
     doc.text(String(values[i]), x + boxW / 2, boxY + 18, { align: "center" });
   });
 
-  const attentionCount = document.getElementById("attentionCountBadge")?.innerText || "0";
+  // ---- Attention alert strip ----
   let catBoxY = boxY + boxH + 12;
-  
+
   if (attentionCount !== "0" && attentionCount !== "") {
     const alertY = boxY + boxH + 4;
+    const alertH = 10;
+
     doc.setFillColor(254, 226, 226);
     doc.setDrawColor(220, 38, 38);
     doc.setLineWidth(0.3);
-    doc.roundedRect(margin, alertY, pageW - margin * 2, 10, 1.5, 1.5, 'FD');
-  
+    doc.roundedRect(margin, alertY, pageW - margin * 2, alertH, 1.5, 1.5, 'FD');
+
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(185, 28, 28);
     doc.text(
-      `⚠  ${attentionCount} item${attentionCount === "1" ? "" : "s"} require immediate attention.`,
-      margin + 5,
+      `${attentionCount} item${attentionCount === "1" ? "" : "s"} require immediate attention.`,
+      margin + 8,
       alertY + 6.5
     );
-  
+
     catBoxY += 12;
   }
-  const catBoxH = 72;
+
+  // ---- Category breakdown ----
+  const catBoxH = 95;
 
   doc.setDrawColor(...BRAND.rule);
   doc.setLineWidth(0.3);
@@ -1334,10 +1340,10 @@ window.printSummaryReport = function() {
       ctx.drawImage(chartCanvas, 0, 0);
       const chartDataUrl = tempCanvas.toDataURL("image/png");
 
-      const chartImgW = 110;
+      const chartImgW = 75;
       const chartImgH = chartImgW * (chartCanvas.height / chartCanvas.width);
       const chartX = (pageW - chartImgW) / 2;
-      const chartY = catBoxY + 14;
+      const chartY = catBoxY + 15;
 
       doc.addImage(chartDataUrl, 'PNG', chartX, chartY, chartImgW, chartImgH, undefined, 'FAST');
     } catch (e) {
