@@ -1097,70 +1097,88 @@ window.printDetailedReport = function() {
 
           formattedRows += `
             <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 7px 10px; font-size: 10px; color: #334155;">${date}</td>
-              <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: ${typeColor};">${type}</td>
-              <td style="padding: 7px 10px; font-size: 10px; font-weight: 600; color: #0f172a;">${ingredient}</td>
-              <td style="padding: 7px 10px; font-size: 10px; font-weight: 700; color: #334155;">${quantity}</td>
-              <td style="padding: 7px 10px; font-size: 10px; color: #475569;">${details}</td>
+              <td style="padding: 8px 12px; font-size: 11px; color: #334155;">${date}</td>
+              <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: ${typeColor};">${type}</td>
+              <td style="padding: 8px 11px; font-size: 11px; font-weight: 600; color: #0f172a;">${ingredient}</td>
+              <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: #334155;">${quantity}</td>
+              <td style="padding: 8px 12px; font-size: 11px; color: #475569;">${details}</td>
             </tr>
           `;
         }
       });
     } else {
-      formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 15px; color: #94a3b8; font-size: 11px;">No transactions found.</td></tr>`;
+      formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">No transactions found for the specified filters.</td></tr>`;
     }
 
     const container = document.createElement("div");
-    container.id = "tempPrintContainer";
-    container.style.cssText = "position: relative; width: 100%; max-width: 800px; margin: 0 auto; background: #ffffff; padding: 20px; box-sizing: border-box;";
+    
+    // FORCE REAL VIEWPORT VISIBILITY SO MOBILE CANNOT SKIP PAINTING
+    container.style.position = "fixed";
+    container.style.top = "0";
+    container.style.left = "0";
+    container.style.width = "800px";
+    container.style.maxHeight = "100vh";
+    container.style.background = "#ffffff";
+    container.style.zIndex = "999999";
+    container.style.overflow = "hidden";
+    // Make it invisible to the human eye via opacity rather than display:none, 
+    // ensuring the mobile browser still executes its full layout paint cycle:
+    container.style.opacity = "0.01"; 
 
     container.innerHTML = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
-        <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px;">
-          <h1 style="margin: 0; color: #1e3a8a; font-size: 20px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
-          <p style="margin: 3px 0 0 0; font-size: 13px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 25px; color: #0f172a; background: #ffffff;">
+        <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
+          <h1 style="margin: 0; color: #1e3a8a; font-size: 22px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
+          <p style="margin: 4px 0 0 0; font-size: 14px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
         </div>
 
-        <div style="margin-bottom: 12px; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; color: #1e3a8a;">
+        <div style="margin-bottom: 15px; background: #f1f5f9; padding: 10px 14px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e3a8a;">
           Filtered Transaction Records: ${cleanRecordCount} Total Records
         </div>
 
         <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-top: 15px;">
           <thead>
             <tr style="background-color: #1e3a8a; color: #ffffff;">
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase;">Date</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase;">Type</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase;">Ingredient</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase;">Quantity</th>
-              <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase;">Reason / Supplier</th>
+              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Date</th>
+              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Type</th>
+              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Ingredient</th>
+              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Quantity</th>
+              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Reason / Supplier</th>
             </tr>
           </thead>
           <tbody>
             ${formattedRows}
           </tbody>
         </table>
+
+        <div style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+          <div>BakeWise Enterprise Inventory System &bull; Audit Trail Log</div>
+          <div>Official System Document</div>
+        </div>
       </div>
     `;
 
-    // Append it temporarily to the page body so it has true dimensions
     document.body.appendChild(container);
 
     const opt = {
       margin: 10,
       filename: 'BakeWise_Detailed_Transaction_Report.pdf',
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(container).save().then(() => {
-      document.body.removeChild(container);
-    }).catch((err) => {
-      if (document.getElementById("tempPrintContainer")) {
+    // Give mobile and desktop engines 400ms to register the opacity-layered DOM node into the paint tree
+    setTimeout(() => {
+      html2pdf().set(opt).from(container).save().then(() => {
         document.body.removeChild(container);
-      }
-      console.error("PDF generation failed:", err);
-    });
+      }).catch((err) => {
+        if (container.parentNode) {
+          document.body.removeChild(container);
+        }
+        console.error("PDF generation failed:", err);
+      });
+    }, 400);
 
   } catch (err) {
     console.error("Detailed PDF Error:", err);
