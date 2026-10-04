@@ -927,8 +927,9 @@ window.runTransactionQuery = function() {
         labels: labelsWithValues,
         datasets: [{
           data: Object.values(dynamicCategoryCounts),
-          backgroundColor: ['#A05A35', '#C68B69', '#E8C7B0', '#8B5A3C', '#D4A574', '#6B4226'],
-          borderWidth: 1
+          backgroundColor: ['#7A6A5A', '#A89376', '#5C6B5A', '#8B7355', '#C9B8A0', '#4A5A5A'],
+          borderColor: '#FFFFFF',
+          borderWidth: 2
         }]
       },
       options: {
