@@ -958,7 +958,12 @@ const getPdfConfig = (filename) => ({
   margin:       [12, 12, 12, 12],
   filename:     filename,
   image:        { type: 'jpeg', quality: 0.98 },
-  html2canvas:  { scale: 2.5, logging: false, useCORS: true },
+  html2canvas:  { 
+    scale: 2.5, 
+    logging: false, 
+    useCORS: true, 
+    windowWidth: 1024 // <--- Forces mobile and desktop to render identically!
+  },
   jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
   pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
 });
