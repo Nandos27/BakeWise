@@ -2,6 +2,105 @@
 import { db, auth } from "./firebase.js";
 import { ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+const BRAND = {
+  primary:   [160, 90, 53],
+  primaryLt: [252, 244, 238],
+  ink:       [44, 36, 27],
+  muted:     [120, 110, 100],
+  rule:      [220, 210, 200],
+  ok:        [22, 163, 74],
+  warn:      [217, 119, 6],
+  danger:    [220, 38, 38],
+  white:     [255, 255, 255]
+};
+
+function bakeWiseDocHeader(doc, subtitle) {
+  const pageW = doc.internal.pageSize.width;
+  const margin = 14;
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(...BRAND.primary);
+  doc.text("BakeWise Kitchen", margin, 20);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(subtitle, margin, 27);
+
+  const now = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+  const ref = "RPT-" + Math.floor(100000 + Math.random() * 900000);
+
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`Ref: ${ref}`, pageW - margin, 18, { align: "right" });
+  doc.text(`Generated: ${now}`, pageW - margin, 23, { align: "right" });
+
+  doc.setDrawColor(...BRAND.primary);
+  doc.setLineWidth(0.7);
+  doc.line(margin, 32, pageW - margin, 32);
+
+  return 38;
+}
+
+function bakeWiseDocFooter(doc, note) {
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+  const margin = 14;
+
+  doc.setDrawColor(...BRAND.rule);
+  doc.setLineWidth(0.3);
+  doc.line(margin, pageH - 18, pageW - margin, pageH - 18);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(note || "BakeWise Kitchen Management • System-generated report", margin, pageH - 12);
+  doc.text("Page 1 of 1", pageW - margin, pageH - 12, { align: "right" });
+}
+
+function bakeWiseAutoTableTheme() {
+  return {
+    theme: 'grid',
+    headStyles: {
+      fillColor: BRAND.primary,
+      textColor: BRAND.white,
+      fontSize: 9,
+      fontStyle: 'bold',
+      lineColor: BRAND.primary,
+      lineWidth: 0.2
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      textColor: BRAND.ink,
+      lineColor: BRAND.rule,
+      lineWidth: 0.15
+    },
+    alternateRowStyles: { fillColor: BRAND.primaryLt },
+    styles: { cellPadding: 2 }
+  };
+}
+
+function bakeWiseSavePdf(doc, filename) {
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isIOS) {
+    window.open(url, '_blank');
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
 // 1. Populate Email Order Supplier Dropdown & Auto-fill Email
 onValue(ref(db, 'suppliers/'), (snapshot) => {
   const poSelect = document.getElementById("poSupplierSelect");
@@ -209,117 +308,57 @@ window.downloadOrderPdf = function(orderKey) {
 
     const doc = new jsPDFCtor('p', 'mm', 'a4');
     const pageW = doc.internal.pageSize.width;
-    const margin = 14;
 
-    // ---------- HEADER ----------
-    // "BakeWise Kitchen" — serif bold look
+    const startY = bakeWiseDocHeader(doc, "Official Purchase Order & Invoice");
+
+    // PO Number overrides top-right meta
     doc.setFont("times", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(44, 36, 27);          // #2C241B
-    doc.text("BakeWise Kitchen", margin, 22);
+    doc.setFontSize(16);
+    doc.setTextColor(...BRAND.primary);
+    doc.text(String(po.poNumber || "-"), pageW - 14, 20, { align: "right" });
 
-    // "Official Purchase Order & Invoice"
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(80, 80, 80);
-    doc.text("Official Purchase Order & Invoice", margin, 28);
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text("Date: " + (po.date || "-"), pageW - 14, 25, { align: "right" });
 
-    // PO Number — top right
-    doc.setFont("times", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(44, 36, 27);
-    doc.text(String(po.poNumber || "-"), pageW - margin, 22, { align: "right" });
-
-    // Date — under PO number
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(80, 80, 80);
-    doc.text("Date: " + (po.date || "-"), pageW - margin, 28, { align: "right" });
-
-    // Maroon divider
-    doc.setDrawColor(160, 90, 53);          // #A05A35
-    doc.setLineWidth(0.6);
-    doc.line(margin, 32, pageW - margin, 32);
-
-    // ---------- SUPPLIER ----------
-    let y = 42;
+    let y = startY + 4;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.setTextColor(44, 36, 27);
-    doc.text("To Supplier:", margin, y);
+    doc.setTextColor(...BRAND.ink);
+    doc.text("To Supplier:", 14, y);
 
     y += 7;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(String(po.supplierName || "-"), margin, y);
+    doc.text(String(po.supplierName || "-"), 14, y);
 
     y += 7;
-    doc.setTextColor(60, 60, 60);
-    doc.text(String(po.supplierEmail || "-"), margin, y);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(String(po.supplierEmail || "-"), 14, y);
 
-    // ---------- ORDER SPECS BOX ----------
     y += 14;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.setTextColor(44, 36, 27);
-    doc.text("Order Specifications:", margin, y);
+    doc.setTextColor(...BRAND.primary);
+    doc.text("Order Specifications:", 14, y);
 
-    // Grey box
     y += 4;
-    const boxX = margin;
-    const boxW = pageW - margin * 2;
     const boxH = 30;
-    doc.setFillColor(244, 244, 244);        // #F4F4F4
-    doc.roundedRect(boxX, y, boxW, boxH, 1.5, 1.5, 'F');
+    doc.setFillColor(...BRAND.primaryLt);
+    doc.roundedRect(14, y, pageW - 28, boxH, 1.5, 1.5, 'F');
 
-    // Inner text
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    doc.setTextColor(44, 36, 27);
+    doc.setTextColor(...BRAND.ink);
     let innerY = y + 8;
-    doc.text(`Item: ${po.ingredientName || "-"}`, boxX + 6, innerY);
-
+    doc.text(`Item: ${po.ingredientName || "-"}`, 20, innerY);
     innerY += 7;
-    doc.text(`Quantity: ${po.quantity || "-"} ${po.unit || ""}`, boxX + 6, innerY);
-
+    doc.text(`Quantity: ${po.quantity || "-"} ${po.unit || ""}`, 20, innerY);
     innerY += 7;
-    doc.text(`Notes: ${po.notes || "None"}`, boxX + 6, innerY);
+    doc.text(`Notes: ${po.notes || "None"}`, 20, innerY);
 
-    // ---------- FOOTER ----------
-    const pageH = doc.internal.pageSize.height;
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.3);
-    doc.line(margin, pageH - 20, pageW - margin, pageH - 20);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(130, 130, 130);
-    doc.text(
-      "This is an automated purchase order generated by BakeWise Management System.",
-      pageW / 2,
-      pageH - 14,
-      { align: "center" }
-    );
-
-    // ---------- SAVE (mobile-safe) ----------
-    const filename = `Invoice_${po.poNumber || orderKey}.pdf`;
-    const blob = doc.output('blob');
-    const url = URL.createObjectURL(blob);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-    if (isIOS) {
-      const w = window.open(url, '_blank');
-      if (!w) {
-        const a = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
-    } else {
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    bakeWiseDocFooter(doc, "BakeWise Kitchen Management • System-generated invoice");
+    bakeWiseSavePdf(doc, `Invoice_${po.poNumber || orderKey}.pdf`);
   });
 };
 
