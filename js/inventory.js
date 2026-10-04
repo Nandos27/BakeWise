@@ -1070,118 +1070,75 @@ window.printSummaryReport = function() {
 };
 
 window.printDetailedReport = function() {
-  if (typeof html2pdf === "undefined") {
-    alert("PDF library is missing!");
+  if (typeof window.jspdf === "undefined" && typeof jsPDF === "undefined") {
+    alert("jsPDF library is missing!");
     return;
   }
 
   try {
+    const { jsPDF } = window.jspdf || window;
+    const doc = new jsPDF('p', 'mm', 'a4');
+
     let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
     let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
 
     const originalTable = document.getElementById("fullTransactionTableBody");
-    let formattedRows = "";
+    let rowsData = [];
 
     if (originalTable && originalTable.rows.length > 0) {
-      Array.from(originalTable.rows).forEach((row, idx) => {
+      Array.from(originalTable.rows).forEach((row) => {
         if (row.cells.length >= 5) {
-          const date = row.cells[0].innerText.trim();
-          const type = row.cells[1].innerText.trim();
-          const ingredient = row.cells[2].innerText.trim();
-          const quantity = row.cells[3].innerText.trim();
-          const details = row.cells[4].innerText.trim();
-
-          const isStockIn = type.toLowerCase().includes("in");
-          const typeColor = isStockIn ? "#16a34a" : "#dc2626";
-          const bgColor = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
-
-          formattedRows += `
-            <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 8px 12px; font-size: 11px; color: #334155;">${date}</td>
-              <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: ${typeColor};">${type}</td>
-              <td style="padding: 8px 11px; font-size: 11px; font-weight: 600; color: #0f172a;">${ingredient}</td>
-              <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: #334155;">${quantity}</td>
-              <td style="padding: 8px 12px; font-size: 11px; color: #475569;">${details}</td>
-            </tr>
-          `;
+          rowsData.push([
+            row.cells[0].innerText.trim(),
+            row.cells[1].innerText.trim(),
+            row.cells[2].innerText.trim(),
+            row.cells[3].innerText.trim(),
+            row.cells[4].innerText.trim()
+          ]);
         }
       });
-    } else {
-      formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">No transactions found for the specified filters.</td></tr>`;
     }
 
-    const container = document.createElement("div");
-    
-    // FORCE REAL VIEWPORT VISIBILITY SO MOBILE CANNOT SKIP PAINTING
-    container.style.position = "fixed";
-    container.style.top = "0";
-    container.style.left = "0";
-    container.style.width = "800px";
-    container.style.maxHeight = "100vh";
-    container.style.background = "#ffffff";
-    container.style.zIndex = "999999";
-    container.style.overflow = "hidden";
-    // Make it invisible to the human eye via opacity rather than display:none, 
-    // ensuring the mobile browser still executes its full layout paint cycle:
-    container.style.opacity = "0.01"; 
+    // Header styling
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138); // #1e3a8a
+    doc.text("BAKEWISE KITCHEN MANAGEMENT", 14, 20);
 
-    container.innerHTML = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 25px; color: #0f172a; background: #ffffff;">
-        <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
-          <h1 style="margin: 0; color: #1e3a8a; font-size: 22px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
-          <p style="margin: 4px 0 0 0; font-size: 14px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
-        </div>
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(71, 85, 105); // #475569
+    doc.text("Itemized Inventory Audit & Ledger", 14, 26);
 
-        <div style="margin-bottom: 15px; background: #f1f5f9; padding: 10px 14px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e3a8a;">
-          Filtered Transaction Records: ${cleanRecordCount} Total Records
-        </div>
+    // Record count badge text
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(30, 58, 138);
+    doc.text(`Filtered Transaction Records: ${cleanRecordCount} Total Records`, 14, 36);
 
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-top: 15px;">
-          <thead>
-            <tr style="background-color: #1e3a8a; color: #ffffff;">
-              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Date</th>
-              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Type</th>
-              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Ingredient</th>
-              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Quantity</th>
-              <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Reason / Supplier</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${formattedRows}
-          </tbody>
-        </table>
-
-        <div style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
-          <div>BakeWise Enterprise Inventory System &bull; Audit Trail Log</div>
-          <div>Official System Document</div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(container);
-
-    const opt = {
-      margin: 10,
-      filename: 'BakeWise_Detailed_Transaction_Report.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // Give mobile and desktop engines 400ms to register the opacity-layered DOM node into the paint tree
-    setTimeout(() => {
-      html2pdf().set(opt).from(container).save().then(() => {
-        document.body.removeChild(container);
-      }).catch((err) => {
-        if (container.parentNode) {
-          document.body.removeChild(container);
-        }
-        console.error("PDF generation failed:", err);
+    // Check if autoTable plugin is available for clean native tables
+    if (typeof doc.autoTable === 'function') {
+      doc.autoTable({
+        startY: 42,
+        head: [['Date', 'Type', 'Ingredient', 'Quantity', 'Reason / Supplier']],
+        body: rowsData.length > 0 ? rowsData : [["No transactions found for the specified filters.", "", "", "", ""]],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 58, 138], fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
+        margin: { left: 14, right: 14 }
       });
-    }, 400);
+    } else {
+      // Fallback if autoTable isn't loaded
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("Table plugin missing. Check console.", 14, 45);
+    }
+
+    // Trigger direct file download
+    doc.save('BakeWise_Detailed_Transaction_Report.pdf');
 
   } catch (err) {
-    console.error("Detailed PDF Error:", err);
-    alert("Could not generate PDF file.");
+    console.error("Native jsPDF Generation Error:", err);
+    alert("Could not generate PDF file. Please check console.");
   }
 };
