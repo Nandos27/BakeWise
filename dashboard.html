@@ -295,6 +295,23 @@
       .sv-footer {
         display: none !important;
       }
+      /* Add this inside existing @media print block */
+    .table {
+      width: 100% !important;
+      table-layout: auto !important;
+    }
+    th, td {
+      word-wrap: break-word !important;
+      white-space: normal !important;
+    }
+    /* Let metric boxes wrap safely on narrow screens instead of forcing cramped nowrap */
+    .row.text-center.mb-4.g-3 {
+      flex-wrap: wrap !important;
+    }
+    .row.text-center.mb-4.g-3 > div {
+      flex: 1 1 50% !important;
+      max-width: 50% !important;
+    }
     }
 
     /* 9. Mobile Responsiveness */
