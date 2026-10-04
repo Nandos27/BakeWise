@@ -160,8 +160,8 @@ onValue(ref(db, 'purchase_orders/'), (snapshot) => {
           </span>
         </td>
         <td>
-          <button class="btn btn-sm btn-outline-secondary me-1" onclick="OrderPdf('${key}')">
-            <i class="bi bi-"></i> PDF
+          <button class="btn btn-sm btn-outline-secondary me-1" onclick="downloadOrderPdf('${key}')">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
           </button>
           ${!isReceived ? `
             <button class="btn btn-sm btn-success" onclick="markOrderReceived('${key}')">
