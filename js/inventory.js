@@ -987,11 +987,91 @@ const generatePdfHeader = (reportTitle, reportSubtitle) => {
 };
 
 window.printDetailedReport = function() {
-  console.log("Checking window properties:", {
-    html2pdf: typeof window.html2pdf,
-    jsPDF: typeof window.jsPDF,
-    jspdf: typeof window.jspdf
-  });
-  
-  alert("html2pdf is: " + typeof window.html2pdf);
+  if (typeof html2pdf === "undefined") {
+    alert("html2pdf library is missing!");
+    return;
+  }
+
+  const originalTable = document.getElementById("fullTransactionTableBody");
+  let rawRecordCount = document.getElementById("queryRecordCount")?.innerText || "0";
+  let cleanRecordCount = rawRecordCount.replace(/records/gi, '').trim();
+
+  let formattedRows = "";
+  if (originalTable && originalTable.rows.length > 0) {
+    Array.from(originalTable.rows).forEach((row, idx) => {
+      if (row.cells.length >= 5) {
+        const date = row.cells[0].innerText.trim();
+        const type = row.cells[1].innerText.trim();
+        const ingredient = row.cells[2].innerText.trim();
+        const quantity = row.cells[3].innerText.trim();
+        const details = row.cells[4].innerText.trim();
+
+        const isStockIn = type.toLowerCase().includes("in");
+        const typeColor = isStockIn ? "#16a34a" : "#dc2626";
+        const bgColor = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+        formattedRows += `
+          <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 12px; font-size: 11px; color: #334155;">${date}</td>
+            <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: ${typeColor};">${type}</td>
+            <td style="padding: 8px 12px; font-size: 11px; font-weight: 600; color: #0f172a;">${ingredient}</td>
+            <td style="padding: 8px 12px; font-size: 11px; font-weight: 700; color: #334155;">${quantity}</td>
+            <td style="padding: 8px 12px; font-size: 11px; color: #475569;">${details}</td>
+          </tr>
+        `;
+      }
+    });
+  } else {
+    formattedRows = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">No transactions found.</td></tr>`;
+  }
+
+  const container = document.createElement("div");
+  container.style.cssText = "position: fixed; top: 0; left: 0; width: 800px; background: #ffffff; z-index: 999999; opacity: 0.01; pointer-events: none;";
+
+  container.innerHTML = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 25px; color: #0f172a; background: #ffffff;">
+      <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px;">
+        <h1 style="margin: 0; color: #1e3a8a; font-size: 22px; font-weight: 700; text-transform: uppercase;">BAKEWISE KITCHEN MANAGEMENT</h1>
+        <p style="margin: 4px 0 0 0; font-size: 14px; color: #475569; font-weight: 600;">Itemized Inventory Audit & Ledger</p>
+      </div>
+
+      <div style="margin-bottom: 15px; background: #f1f5f9; padding: 10px 14px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e3a8a;">
+        Filtered Transaction Records: ${cleanRecordCount} Total Records
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-top: 15px;">
+        <thead>
+          <tr style="background-color: #1e3a8a; color: #ffffff;">
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Date</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Type</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Ingredient</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Quantity</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;">Reason / Supplier</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${formattedRows}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  const opt = {
+    margin: 10,
+    filename: 'BakeWise_Detailed_Transaction_Report.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  setTimeout(() => {
+    html2pdf().set(opt).from(container).save().then(() => {
+      document.body.removeChild(container);
+    }).catch((err) => {
+      if (container.parentNode) document.body.removeChild(container);
+      console.error("PDF generation failed:", err);
+    });
+  }, 300);
 };
