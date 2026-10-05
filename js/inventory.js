@@ -138,6 +138,47 @@ function bakeWiseSavePdf(doc, filename) {
 }
 
 export { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseAutoTableTheme, bakeWiseMultiPageFooter, bakeWiseSavePdf };
+
+// ========== SHARED PAGINATION HELPER ==========
+function paginate({ list, pagerId, perPage, currentPage, onPageChange }) {
+  const pagerEl = document.getElementById(pagerId);
+  if (!pagerEl) return;
+  const total = list.length;
+  if (total === 0) { pagerEl.innerHTML = ""; return; }
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const p = Math.min(Math.max(currentPage, 1), totalPages);
+  const start = (p - 1) * perPage;
+  const end = Math.min(start + perPage, total);
+
+  pagerEl.innerHTML = `
+    <div class="d-flex justify-content-between align-items-center small text-muted mt-2 px-1 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <span>Showing ${start + 1}–${end} of ${total}</span>
+        <select class="form-select form-select-sm" style="width:auto;" data-pp="${pagerId}">
+          <option value="10"  ${perPage===10 ?"selected":""}>10 / page</option>
+          <option value="20"  ${perPage===20 ?"selected":""}>20 / page</option>
+          <option value="50"  ${perPage===50 ?"selected":""}>50 / page</option>
+          <option value="100" ${perPage===100?"selected":""}>100 / page</option>
+        </select>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary" data-nav="prev" ${p===1?"disabled":""}>
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <span>Page ${p} / ${totalPages}</span>
+        <button class="btn btn-sm btn-outline-secondary" data-nav="next" ${p===totalPages?"disabled":""}>
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>`;
+
+  pagerEl.querySelector("select[data-pp]")?.addEventListener("change", (e) => {
+    onPageChange({ page: 1, perPage: parseInt(e.target.value, 10) });
+  });
+  pagerEl.querySelector('[data-nav="prev"]')?.addEventListener("click", () => onPageChange({ page: p - 1 }));
+  pagerEl.querySelector('[data-nav="next"]')?.addEventListener("click", () => onPageChange({ page: p + 1 }));
+}
 // ========== END HELPERS ==========
 
 export let allIngredients = {};
@@ -744,31 +785,105 @@ if (stockOutForm) {
   });
 }
 
-onValue(ref(db, 'stock_in/'), (snap) => {
+let stockInFullList = [];
+let stockInPage = 1;
+let stockInPerPage = 20;
+
+function renderStockInHistory() {
   const table = document.getElementById("stockInTableBody");
-  if (table) table.innerHTML = "";
-  globalStockIn = [];
-  if (snap.exists()) {
-    Object.values(snap.val()).forEach((item) => {
-      globalStockIn.push({...item, type: "IN"});
-      if (table) table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td><td>${item.supplier}</td></tr>`;
-    });
+  if (!table) return;
+  const total = stockInFullList.length;
+  if (total === 0) {
+    table.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No stock in records yet.</td></tr>`;
+    const p = document.getElementById("stockInPager");
+    if (p) p.innerHTML = "";
+    return;
   }
+  const start = (stockInPage - 1) * stockInPerPage;
+  const slice = stockInFullList.slice(start, start + stockInPerPage);
+  table.innerHTML = slice.map(item => `
+    <tr>
+      <td>${item.date}</td>
+      <td class="fw-bold">${item.ingredientName}</td>
+      <td class="text-success fw-bold">+${item.addedQty} ${item.unit}</td>
+      <td>${item.supplier}</td>
+    </tr>`).join("");
+
+  paginate({
+    list: stockInFullList,
+    pagerId: "stockInPager",
+    perPage: stockInPerPage,
+    currentPage: stockInPage,
+    onPageChange: ({ page, perPage }) => {
+      if (page) stockInPage = page;
+      if (perPage) { stockInPerPage = perPage; stockInPage = 1; }
+      renderStockInHistory();
+    }
+  });
+}
+
+onValue(ref(db, 'stock_in/'), (snap) => {
+  stockInFullList = [];
+  if (snap.exists()) {
+    Object.values(snap.val())
+      .map(i => ({ ...i, type: "IN" }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .forEach(item => stockInFullList.push(item));
+  }
+  globalStockIn = stockInFullList;
+  stockInPage = 1;
+  renderStockInHistory();
   renderDashboardWidgets();
 });
 
-onValue(ref(db, 'stock_out/'), (snap) => {
+let stockOutFullList = [];
+let stockOutPage = 1;
+let stockOutPerPage = 20;
+
+function renderStockOutHistory() {
   const table = document.getElementById("stockOutTableBody");
-  if (table) table.innerHTML = "";
-  globalStockOut = [];
-  if (snap.exists()) {
-    Object.values(snap.val()).forEach((item) => {
-      globalStockOut.push({ ...item, type: "OUT" });
-      if (table) {
-        table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
-      }
-    });
+  if (!table) return;
+  const total = stockOutFullList.length;
+  if (total === 0) {
+    table.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No stock out records yet.</td></tr>`;
+    const p = document.getElementById("stockOutPager");
+    if (p) p.innerHTML = "";
+    return;
   }
+  const start = (stockOutPage - 1) * stockOutPerPage;
+  const slice = stockOutFullList.slice(start, start + stockOutPerPage);
+  table.innerHTML = slice.map(item => `
+    <tr>
+      <td>${item.date}</td>
+      <td class="fw-bold">${item.ingredientName}</td>
+      <td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td>
+      <td>${item.reason}</td>
+    </tr>`).join("");
+
+  paginate({
+    list: stockOutFullList,
+    pagerId: "stockOutPager",
+    perPage: stockOutPerPage,
+    currentPage: stockOutPage,
+    onPageChange: ({ page, perPage }) => {
+      if (page) stockOutPage = page;
+      if (perPage) { stockOutPerPage = perPage; stockOutPage = 1; }
+      renderStockOutHistory();
+    }
+  });
+}
+
+onValue(ref(db, 'stock_out/'), (snap) => {
+  stockOutFullList = [];
+  if (snap.exists()) {
+    Object.values(snap.val())
+      .map(i => ({ ...i, type: "OUT" }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .forEach(item => stockOutFullList.push(item));
+  }
+  globalStockOut = stockOutFullList;
+  stockOutPage = 1;
+  renderStockOutHistory();
   renderDashboardWidgets();
 });
 
