@@ -133,29 +133,49 @@ if (emailOrderForm) {
 
 // 4. Render Purchase Order History Table (paginated)
 let poFullList = [];
+let poFilteredList = [];
 let poPage = 1;
 let poPerPage = 20;
 
+function applyPoFilters() {
+  const search = document.getElementById("poSearchInput")?.value.toLowerCase().trim() || "";
+  const status = document.getElementById("poStatusFilter")?.value.toLowerCase() || "";
+
+  poFilteredList = poFullList.filter(({ po }) => {
+    const hay = (po.poNumber + " " + po.supplierName + " " + po.ingredientName + " " + po.status).toLowerCase();
+    const matchesSearch = !search || hay.includes(search);
+    const matchesStatus = !status || po.status.toLowerCase() === status;
+    return matchesSearch && matchesStatus;
+  });
+
+  poPage = 1;
+  renderPoPage();
+}
+
 function renderPoPage() {
   const tableBody = document.getElementById("poHistoryTableBody");
+  const pagerEl = document.getElementById("poPager");
   if (!tableBody) return;
 
-  const total = poFullList.length;
+  const total = poFilteredList.length;
   if (total === 0) {
-tableBody.innerHTML = `
+    tableBody.innerHTML = `
       <tr>
         <td colspan="7" class="text-center py-5 text-muted">
           <i class="bi bi-envelope-at" style="font-size: 2rem; opacity: 0.4;"></i>
-          <div class="mt-2 small">No purchase orders yet. Send an order to a supplier to see it here.</div>
+          <div class="mt-2 small">No purchase orders match your search.</div>
         </td>
-      </tr>`;    
-    const p = document.getElementById("poPager");
-    if (p) p.innerHTML = "";
+      </tr>`;
+    if (pagerEl) pagerEl.innerHTML = "";
     return;
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / poPerPage));
+  if (poPage > totalPages) poPage = totalPages;
+  if (poPage < 1) poPage = 1;
+
   const start = (poPage - 1) * poPerPage;
-  const slice = poFullList.slice(start, start + poPerPage);
+  const slice = poFilteredList.slice(start, start + poPerPage);
 
   tableBody.innerHTML = slice.map(({ key, po }) => {
     const isReceived = po.status === "Received";
@@ -181,7 +201,7 @@ tableBody.innerHTML = `
   }).join("");
 
   paginate({
-    list: poFullList,
+    list: poFilteredList,
     pagerId: "poPager",
     perPage: poPerPage,
     currentPage: poPage,
@@ -202,32 +222,12 @@ onValue(ref(db, 'purchase_orders/'), (snapshot) => {
       .sort((a, b) => new Date(b.po.date) - new Date(a.po.date))
       .forEach(entry => poFullList.push(entry));
   }
-  poPage = 1;
-  renderPoPage();
+  applyPoFilters();
 });
 
-// Purchase Order History Filtering
-function filterPOHistoryTable() {
-  const searchValue = document.getElementById("poSearchInput")?.value.toLowerCase().trim() || "";
-  const statusValue = document.getElementById("poStatusFilter")?.value.toLowerCase() || "";
-  
-  const rows = document.querySelectorAll("#poHistoryTableBody tr");
-
-  rows.forEach(row => {
-    const textContent = row.textContent.toLowerCase();
-    const matchesSearch = textContent.includes(searchValue);
-    const matchesStatus = !statusValue || textContent.includes(statusValue);
-
-    if (matchesSearch && matchesStatus) {
-      row.style.display = "";
-    } else {
-      row.style.display = "none";
-    }
-  });
-}
-
-document.getElementById("poSearchInput")?.addEventListener("input", filterPOHistoryTable);
-document.getElementById("poStatusFilter")?.addEventListener("change", filterPOHistoryTable);
+// Wire the search inputs
+document.getElementById("poSearchInput")?.addEventListener("input", applyPoFilters);
+document.getElementById("poStatusFilter")?.addEventListener("change", applyPoFilters);
 
 // 5. Action:  PDF for a specific Purchase Order
 window.downloadOrderPdf = function(orderKey) {
