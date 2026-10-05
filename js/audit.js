@@ -54,7 +54,13 @@ function renderAuditPage() {
   );
 
   if (filtered.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No matching audit logs found.</td></tr>`;
+tableBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="text-center py-5 text-muted">
+          <i class="bi bi-journal-text" style="font-size: 2rem; opacity: 0.4;"></i>
+          <div class="mt-2 small">No matching audit logs found.</div>
+        </td>
+      </tr>`;
     if (pagerEl) pagerEl.innerHTML = "";
     return;
   }
