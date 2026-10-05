@@ -68,6 +68,14 @@
       color: #A05A35;
     }
 
+    .sidebar .nav-item {
+      width: 100%;
+    }
+
+    #moduleTabs {
+      flex-wrap: nowrap;
+    }
+    
     .sidebar .nav-link {
       color: #8C847A !important;
       font-weight: 500;
@@ -422,12 +430,13 @@
       }
     }
 
-              @media (min-width: 951px) {
+    @media (min-width: 951px) {
       #moduleTabs {
         flex-grow: 1;
         overflow-y: auto;
         min-height: 0;
         padding-right: 4px;
+        flex-wrap: nowrap; 
       }
       #moduleTabs::-webkit-scrollbar {
         width: 6px;
