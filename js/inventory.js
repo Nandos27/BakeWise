@@ -745,12 +745,12 @@ window.rejectPendingStock = async function(key) {
   if (!snap.exists()) return;
   const item = snap.val();
 
-  if (!confirm(`Reject ${item.addedQty} ${item.unit} of ${item.name} submitted by ${item.submittedBy}?`)) return;
+  if (!confirm(`Reject ${item.addedQty} ${item.unit} of ${item.ingredientName} submitted by ${item.submittedBy}?`)) return;
 
   const rejecter = auth.currentUser ? auth.currentUser.email : "Unknown";
   await logAuditEvent(
     "Stock In (Rejected)",
-    `Rejected +${item.addedQty} ${item.unit} of ${item.name} (Submitted by: ${item.submittedBy || "Staff"}, Rejected by: ${rejecter})`
+    `Rejected +${item.addedQty} ${item.unit} of ${item.ingredientName} (Submitted by: ${item.submittedBy || "Staff"}, Rejected by: ${rejecter})`
   );
   await remove(ref(db, 'pending_stock_in/' + key));
   window.renderPendingStockCards();
