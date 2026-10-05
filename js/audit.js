@@ -74,13 +74,16 @@ tableBody.innerHTML = `
   const slice = filtered.slice(start, start + auditPerPage);
 
   tableBody.innerHTML = slice.map(log => {
-    let badgeClass = "bg-secondary";
-    if (log.action === "Stock In") badgeClass = "bg-success";
-    if (log.action === "Stock Out") badgeClass = "bg-danger";
-    if (log.action === "Dispose Expired") badgeClass = "bg-dark";
-    if (log.action === "Add Ingredient" || log.action === "Add Category" || log.action === "Add Supplier") badgeClass = "bg-info text-dark";
-    if (log.action === "Edit Ingredient") badgeClass = "bg-primary";
-    if (log.action && log.action.includes("Delete")) badgeClass = "bg-warning text-dark";
+  let badgeClass = "bg-secondary";
+  if (log.action === "Stock In") badgeClass = "bg-success";
+  if (log.action === "Stock In (Pending)") badgeClass = "bg-warning text-dark";
+  if (log.action === "Stock In (Approved)") badgeClass = "bg-info text-dark";
+  if (log.action === "Stock In (Rejected)") badgeClass = "bg-danger";
+  if (log.action === "Stock Out") badgeClass = "bg-danger";
+  if (log.action === "Dispose Expired") badgeClass = "bg-dark";
+  if (log.action === "Add Ingredient" || log.action === "Add Category" || log.action === "Add Supplier") badgeClass = "bg-info text-dark";
+  if (log.action === "Edit Ingredient") badgeClass = "bg-primary";
+  if (log.action && log.action.includes("Delete")) badgeClass = "bg-warning text-dark";
 
     return `
       <tr>
