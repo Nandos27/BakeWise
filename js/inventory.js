@@ -613,7 +613,7 @@ if (stockInForm) {
   });
 }
 
-async function executeDirectStockIn(payload) {
+async function executeDirectStockIn(payload, approverEmail) {
   try {
     const item = allIngredients[payload.ingredientKey];
     if (!item) { alert("Ingredient not found."); return; }
@@ -657,8 +657,18 @@ async function executeDirectStockIn(payload) {
       newExpiry: expDateStr || "N/A"
     });
 
-    await logAuditEvent("Stock In", `Added +${payload.addedQty} ${item.unit} of ${item.name} (Supplier: ${payload.supplier})`);
-
+    if (approverEmail) {
+      await logAuditEvent(
+        "Stock In (Approved)",
+        `Approved +${payload.addedQty} ${item.unit} of ${item.name} (Submitted by: ${payload.submittedBy || "Staff"}, Approved by: ${approverEmail})`
+      );
+    } else {
+      await logAuditEvent(
+        "Stock In",
+        `Added +${payload.addedQty} ${item.unit} of ${item.name} (Supplier: ${payload.supplier})`
+      );
+    }
+    
     alert("Stock In recorded successfully!");
     if (stockInForm) {
       stockInForm.reset();
@@ -724,13 +734,24 @@ window.approvePendingStock = async function(key) {
   const snap = await get(ref(db, 'pending_stock_in/' + key));
   if (!snap.exists()) return;
   const item = snap.val();
-  await executeDirectStockIn(item);
+  const approver = auth.currentUser ? auth.currentUser.email : "Unknown";
+  await executeDirectStockIn(item, approver);
   await remove(ref(db, 'pending_stock_in/' + key));
   window.renderPendingStockCards();
 };
 
 window.rejectPendingStock = async function(key) {
-  if (!confirm("Reject and delete this pending stock-in?")) return;
+  const snap = await get(ref(db, 'pending_stock_in/' + key));
+  if (!snap.exists()) return;
+  const item = snap.val();
+
+  if (!confirm(`Reject ${item.addedQty} ${item.unit} of ${item.name} submitted by ${item.submittedBy}?`)) return;
+
+  const rejecter = auth.currentUser ? auth.currentUser.email : "Unknown";
+  await logAuditEvent(
+    "Stock In (Rejected)",
+    `Rejected +${item.addedQty} ${item.unit} of ${item.name} (Submitted by: ${item.submittedBy || "Staff"}, Rejected by: ${rejecter})`
+  );
   await remove(ref(db, 'pending_stock_in/' + key));
   window.renderPendingStockCards();
 };
