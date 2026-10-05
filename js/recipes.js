@@ -194,6 +194,10 @@ if (bakeBatchForm) {
 
     recipe.ingredients.forEach(item => {
       const ingredient = currentInventory[item.ingredientKey];
+      if (!ingredient) {
+        missingStock.push(`${item.ingredientName} (ingredient no longer exists)`);
+        return;
+      }
       const currentStock = ingredient?.quantity || 0;
       const totalNeeded = item.amountPerUnit * batchQty;
 
@@ -249,48 +253,6 @@ if (bakeBatchForm) {
     }).catch(err => alert("Error updating stock: " + err.message));
   });
 }
-
-// Manual Stock Out
-const stockOutForm = document.getElementById("stockOutForm");
-if (stockOutForm) {
-  stockOutForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const ingKey = document.getElementById("stockOutIngSelect").value;
-    const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
-    const reason = document.getElementById("stockOutReason").value;
-    const entryDate = document.getElementById("stockOutDate").value;
-
-    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
-      if (!snap.exists()) return;
-
-      const item = snap.val();
-      if (item.quantity < deductedQty) {
-        return alert("Error: Not enough stock to deduct!");
-      }
-
-      const newQty = item.quantity - deductedQty;
-      let ingredientUpdates = { quantity: newQty };
-      if (newQty <= 0) {
-        ingredientUpdates.expiryDate = "";
-      }
-
-      update(ref(db, `ingredients/${ingKey}`), ingredientUpdates);
-
-      push(ref(db, 'stock_out/'), { 
-        ingredientName: item.name, 
-        deductedQty: deductedQty, 
-        unit: item.unit, 
-        reason: reason, 
-        date: entryDate 
-      }).then(() => { 
-        alert("Stock Out recorded and stock deducted!"); 
-        stockOutForm.reset(); 
-        const today = new Date().toISOString().split("T")[0];
-        const stockOutDateElem = document.getElementById("stockOutDate");
-        if (stockOutDateElem) stockOutDateElem.value = today;
-      });
-    });
-  });
 
 // Manual Discard Action
 window.discardIngredient = function(key) {
