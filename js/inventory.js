@@ -137,6 +137,16 @@ function bakeWiseSavePdf(doc, filename) {
   setTimeout(cleanup, 60000);
 }
 
+function emptyStateHTML(message, icon = "bi-inbox") {
+  return `
+    <tr>
+      <td colspan="20" class="text-center py-5 text-muted">
+        <i class="bi ${icon}" style="font-size: 2rem; opacity: 0.4;"></i>
+        <div class="mt-2 small">${message}</div>
+      </td>
+    </tr>`;
+}
+
 // ========== SHARED PAGINATION HELPER ==========
 function paginate({ list, pagerId, perPage, currentPage, onPageChange }) {
   const pagerEl = document.getElementById(pagerId);
@@ -793,7 +803,7 @@ function renderStockInHistory() {
   if (!table) return;
   const total = stockInFullList.length;
   if (total === 0) {
-    table.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No stock in records yet.</td></tr>`;
+    table.innerHTML = emptyStateHTML("No stock-in records yet. Record your first stock-in to see it here.", "bi-box-arrow-in-down");
     const p = document.getElementById("stockInPager");
     if (p) p.innerHTML = "";
     return;
@@ -844,8 +854,7 @@ function renderStockOutHistory() {
   if (!table) return;
   const total = stockOutFullList.length;
   if (total === 0) {
-    table.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No stock out records yet.</td></tr>`;
-    const p = document.getElementById("stockOutPager");
+    table.innerHTML = emptyStateHTML("No stock-out records yet. Bake a batch or deduct stock to see activity here.", "bi-box-arrow-up");    const p = document.getElementById("stockOutPager");
     if (p) p.innerHTML = "";
     return;
   }
