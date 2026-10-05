@@ -142,7 +142,13 @@ function renderPoPage() {
 
   const total = poFullList.length;
   if (total === 0) {
-    tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No purchase orders found.</td></tr>`;
+tableBody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center py-5 text-muted">
+          <i class="bi bi-envelope-at" style="font-size: 2rem; opacity: 0.4;"></i>
+          <div class="mt-2 small">No purchase orders yet. Send an order to a supplier to see it here.</div>
+        </td>
+      </tr>`;    
     const p = document.getElementById("poPager");
     if (p) p.innerHTML = "";
     return;
