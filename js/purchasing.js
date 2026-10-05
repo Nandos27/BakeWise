@@ -1,7 +1,7 @@
 // js/purchasing.js
 import { db, auth } from "./firebase.js";
 import { ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseSavePdf } from "./inventory.js";
+import { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseSavePdf, paginate } from "./inventory.js";
 
 
 // 1. Populate Email Order Supplier Dropdown & Auto-fill Email
@@ -131,34 +131,36 @@ if (emailOrderForm) {
   });
 }
 
-// 4. Render Purchase Order History Table
-onValue(ref(db, 'purchase_orders/'), (snapshot) => {
+// 4. Render Purchase Order History Table (paginated)
+let poFullList = [];
+let poPage = 1;
+let poPerPage = 20;
+
+function renderPoPage() {
   const tableBody = document.getElementById("poHistoryTableBody");
   if (!tableBody) return;
 
-  tableBody.innerHTML = "";
-  if (!snapshot.exists()) {
+  const total = poFullList.length;
+  if (total === 0) {
     tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No purchase orders found.</td></tr>`;
+    const p = document.getElementById("poPager");
+    if (p) p.innerHTML = "";
     return;
   }
 
-  const orders = snapshot.val();
-  Object.keys(orders).forEach((key) => {
-    const po = orders[key];
-    const isReceived = po.status === "Received";
+  const start = (poPage - 1) * poPerPage;
+  const slice = poFullList.slice(start, start + poPerPage);
 
-    const row = `
+  tableBody.innerHTML = slice.map(({ key, po }) => {
+    const isReceived = po.status === "Received";
+    return `
       <tr>
         <td class="fw-bold">${po.poNumber}</td>
         <td>${po.date}</td>
         <td>${po.supplierName}</td>
         <td class="fw-bold">${po.ingredientName}</td>
         <td>${po.quantity} ${po.unit}</td>
-        <td>
-          <span class="badge ${isReceived ? 'bg-success' : 'bg-warning text-dark'}">
-            ${po.status}
-          </span>
-        </td>
+        <td><span class="badge ${isReceived ? 'bg-success' : 'bg-warning text-dark'}">${po.status}</span></td>
         <td>
           <button class="btn btn-sm btn-outline-secondary me-1" onclick="downloadOrderPdf('${key}')">
             <i class="bi bi-file-earmark-pdf me-1"></i> PDF
@@ -166,15 +168,36 @@ onValue(ref(db, 'purchase_orders/'), (snapshot) => {
           ${!isReceived ? `
             <button class="btn btn-sm btn-success" onclick="markOrderReceived('${key}')">
               <i class="bi bi-check-circle"></i> Order Received
-            </button>
-          ` : `
-            <button class="btn btn-sm btn-light text-muted" disabled>Received</button>
-          `}
+            </button>` : `
+            <button class="btn btn-sm btn-light text-muted" disabled>Received</button>`}
         </td>
       </tr>`;
+  }).join("");
 
-    tableBody.innerHTML += row;
+  paginate({
+    list: poFullList,
+    pagerId: "poPager",
+    perPage: poPerPage,
+    currentPage: poPage,
+    onPageChange: ({ page, perPage }) => {
+      if (page) poPage = page;
+      if (perPage) { poPerPage = perPage; poPage = 1; }
+      renderPoPage();
+    }
   });
+}
+
+onValue(ref(db, 'purchase_orders/'), (snapshot) => {
+  poFullList = [];
+  if (snapshot.exists()) {
+    const orders = snapshot.val();
+    Object.keys(orders)
+      .map(key => ({ key, po: orders[key] }))
+      .sort((a, b) => new Date(b.po.date) - new Date(a.po.date))
+      .forEach(entry => poFullList.push(entry));
+  }
+  poPage = 1;
+  renderPoPage();
 });
 
 // Purchase Order History Filtering
