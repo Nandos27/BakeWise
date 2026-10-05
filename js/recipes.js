@@ -292,19 +292,6 @@ if (stockOutForm) {
     });
   });
 
-  onValue(ref(db, 'stock_out/'), (snap) => {
-    const table = document.getElementById("stockOutTableBody");
-    if (table) table.innerHTML = "";
-    if (snap.exists()) {
-      Object.values(snap.val()).forEach((item) => {
-        if (table) {
-          table.innerHTML += `<tr><td>${item.date}</td><td class="fw-bold">${item.ingredientName}</td><td class="text-danger fw-bold">-${item.deductedQty} ${item.unit}</td><td>${item.reason}</td></tr>`;
-        }
-      });
-    }
-  });
-}
-
 // Manual Discard Action
 window.discardIngredient = function(key) {
   const currentInventory = window.allIngredients || {};
