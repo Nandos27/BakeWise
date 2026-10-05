@@ -137,8 +137,6 @@ function bakeWiseSavePdf(doc, filename) {
   setTimeout(cleanup, 60000);
 }
 
-export { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseAutoTableTheme, bakeWiseMultiPageFooter, bakeWiseSavePdf };
-
 // ========== SHARED PAGINATION HELPER ==========
 function paginate({ list, pagerId, perPage, currentPage, onPageChange }) {
   const pagerEl = document.getElementById(pagerId);
@@ -181,6 +179,7 @@ function paginate({ list, pagerId, perPage, currentPage, onPageChange }) {
 }
 // ========== END HELPERS ==========
 
+export { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseAutoTableTheme, bakeWiseMultiPageFooter, bakeWiseSavePdf, paginate };
 export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
