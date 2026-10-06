@@ -72,55 +72,63 @@ if (addIngRowBtn) {
 // Save Recipe Handler
 const createRecipeForm = document.getElementById("createRecipeForm");
 if (createRecipeForm) {
-  createRecipeForm.addEventListener("submit", (e) => {
+  createRecipeForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const recipeName = document.getElementById("recipeName").value.trim();
-    const rows = document.querySelectorAll(".recipe-ing-row");
+    const btn = createRecipeForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Saving...");
+    try {
+      const recipeName = document.getElementById("recipeName").value.trim();
+      const rows = document.querySelectorAll(".recipe-ing-row");
 
-    if (rows.length === 0) {
-      alert("Please add at least one ingredient row.");
-      return;
-    }
-
-    const ingredientsList = [];
-    let isValid = true;
-    const currentInventory = window.allIngredients || {};
-
-    rows.forEach((row) => {
-      const select = row.querySelector(".recipe-ing-select");
-      const qtyInput = row.querySelector(".recipe-ing-qty");
-
-      const ingKey = select.value;
-      const amount = parseFloat(qtyInput.value);
-
-      if (!ingKey || isNaN(amount) || amount <= 0) {
-        isValid = false;
+      if (rows.length === 0) {
+        alert("Please add at least one ingredient row.");
         return;
       }
 
-      ingredientsList.push({
-        ingredientKey: ingKey,
-        ingredientName: currentInventory[ingKey]?.name || "Unknown",
-        unit: currentInventory[ingKey]?.unit || "",
-        amountPerUnit: amount
+      const ingredientsList = [];
+      let isValid = true;
+      const currentInventory = window.allIngredients || {};
+
+      rows.forEach((row) => {
+        const select = row.querySelector(".recipe-ing-select");
+        const qtyInput = row.querySelector(".recipe-ing-qty");
+
+        const ingKey = select.value;
+        const amount = parseFloat(qtyInput.value);
+
+        if (!ingKey || isNaN(amount) || amount <= 0) {
+          isValid = false;
+          return;
+        }
+
+        ingredientsList.push({
+          ingredientKey: ingKey,
+          ingredientName: currentInventory[ingKey]?.name || "Unknown",
+          unit: currentInventory[ingKey]?.unit || "",
+          amountPerUnit: amount
+        });
       });
-    });
 
-    if (!isValid) {
-      alert("Please select a valid ingredient and amount for each row.");
-      return;
-    }
+      if (!isValid) {
+        alert("Please select a valid ingredient and amount for each row.");
+        return;
+      }
 
-    push(ref(db, 'recipes/'), {
-      name: recipeName,
-      ingredients: ingredientsList,
-      createdAt: new Date().toISOString()
-    }).then(() => {
+      await push(ref(db, 'recipes/'), {
+        name: recipeName,
+        ingredients: ingredientsList,
+        createdAt: new Date().toISOString()
+      });
+
       alert(`Recipe "${recipeName}" saved successfully!`);
       createRecipeForm.reset();
       if (recipeIngContainer) recipeIngContainer.innerHTML = "";
       createIngredientRow();
-    }).catch((err) => alert("Error saving recipe: " + err.message));
+    } catch (err) {
+      alert("Error saving recipe: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 }
 
@@ -172,85 +180,92 @@ window.deleteRecipe = function(key) {
 // -------------------------------------------------------------
 const bakeBatchForm = document.getElementById("bakeBatchForm");
 if (bakeBatchForm) {
-  bakeBatchForm.addEventListener("submit", (e) => {
+  bakeBatchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const recipeKey = document.getElementById("bakeRecipeSelect").value;
-    const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
+    const btn = bakeBatchForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Baking...");
+    try {
+      const recipeKey = document.getElementById("bakeRecipeSelect").value;
+      const batchQty = parseFloat(document.getElementById("bakeBatchQty").value);
 
-    if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
-      alert("Please select a valid recipe and batch quantity.");
-      return;
-    }
-
-    const recipe = globalRecipes[recipeKey];
-    if (!recipe || !recipe.ingredients) return;
-
-    const currentInventory = window.allIngredients || {};
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-
-    let expiredItems = [];
-    let missingStock = [];
-
-    recipe.ingredients.forEach(item => {
-      const ingredient = currentInventory[item.ingredientKey];
-      if (!ingredient) {
-        missingStock.push(`${item.ingredientName} (ingredient no longer exists)`);
+      if (!recipeKey || isNaN(batchQty) || batchQty <= 0) {
+        alert("Please select a valid recipe and batch quantity.");
         return;
       }
-      const currentStock = ingredient?.quantity || 0;
-      const totalNeeded = item.amountPerUnit * batchQty;
 
-      if (ingredient?.expiryDate && currentStock > 0) {
-        const expDate = new Date(ingredient.expiryDate);
-        if (expDate < todayDate) {
-          expiredItems.push(`${item.ingredientName} (Expired: ${currentStock} ${item.unit} on ${ingredient.expiryDate})`);
+      const recipe = globalRecipes[recipeKey];
+      if (!recipe || !recipe.ingredients) return;
+
+      const currentInventory = window.allIngredients || {};
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+
+      let expiredItems = [];
+      let missingStock = [];
+
+      recipe.ingredients.forEach(item => {
+        const ingredient = currentInventory[item.ingredientKey];
+        if (!ingredient) {
+          missingStock.push(`${item.ingredientName} (ingredient no longer exists)`);
+          return;
         }
-      }
+        const currentStock = ingredient.quantity || 0;
+        const totalNeeded = item.amountPerUnit * batchQty;
 
-      if (currentStock < totalNeeded) {
-        missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
-      }
-    });
+        if (ingredient.expiryDate && currentStock > 0) {
+          const expDate = new Date(ingredient.expiryDate);
+          if (expDate < todayDate) {
+            expiredItems.push(`${item.ingredientName} (Expired: ${currentStock} ${item.unit} on ${ingredient.expiryDate})`);
+          }
+        }
 
-    if (expiredItems.length > 0) {
-      alert("Cannot bake batch! The following ingredients are EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
-      return;
-    }
-
-    if (missingStock.length > 0) {
-      alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
-      return;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-    const updatePromises = recipe.ingredients.map(item => {
-      const currentStock = currentInventory[item.ingredientKey].quantity;
-      const totalDeduction = item.amountPerUnit * batchQty;
-      const newQty = currentStock - totalDeduction;
-
-      let ingredientUpdates = { quantity: newQty };
-      if (newQty <= 0) {
-        ingredientUpdates.expiryDate = "";
-      }
-
-      const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), ingredientUpdates);
-
-      const recordStockOut = push(ref(db, 'stock_out/'), {
-        ingredientName: item.ingredientName,
-        deductedQty: totalDeduction,
-        unit: item.unit,
-        reason: `Production: ${batchQty}x ${recipe.name}`,
-        date: today
+        if (currentStock < totalNeeded) {
+          missingStock.push(`${item.ingredientName} (Need: ${totalNeeded} ${item.unit}, Have: ${currentStock} ${item.unit})`);
+        }
       });
 
-      return Promise.all([updateStock, recordStockOut]);
-    });
+      if (expiredItems.length > 0) {
+        alert("Cannot bake batch! The following ingredients are EXPIRED:\n\n" + expiredItems.join("\n") + "\n\nPlease discard expired items before baking.");
+        return;
+      }
 
-    Promise.all(updatePromises).then(() => {
+      if (missingStock.length > 0) {
+        alert("Cannot complete batch due to insufficient stock:\n\n" + missingStock.join("\n"));
+        return;
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const updatePromises = recipe.ingredients.map(item => {
+        const currentStock = currentInventory[item.ingredientKey].quantity;
+        const totalDeduction = item.amountPerUnit * batchQty;
+        const newQty = currentStock - totalDeduction;
+
+        let ingredientUpdates = { quantity: newQty };
+        if (newQty <= 0) {
+          ingredientUpdates.expiryDate = "";
+        }
+
+        const updateStock = update(ref(db, `ingredients/${item.ingredientKey}`), ingredientUpdates);
+
+        const recordStockOut = push(ref(db, 'stock_out/'), {
+          ingredientName: item.ingredientName,
+          deductedQty: totalDeduction,
+          unit: item.unit,
+          reason: `Production: ${batchQty}x ${recipe.name}`,
+          date: today
+        });
+
+        return Promise.all([updateStock, recordStockOut]);
+      });
+
+      await Promise.all(updatePromises);
       alert(`Successfully baked ${batchQty}x ${recipe.name}! Stock deducted.`);
       bakeBatchForm.reset();
-    }).catch(err => alert("Error updating stock: " + err.message));
+    } catch (err) {
+      alert("Error updating stock: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 }
 
