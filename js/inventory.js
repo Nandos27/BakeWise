@@ -187,12 +187,31 @@ function paginate({ list, pagerId, perPage, currentPage, onPageChange }) {
   pagerEl.querySelector('[data-nav="prev"]')?.addEventListener("click", () => onPageChange({ page: p - 1 }));
   pagerEl.querySelector('[data-nav="next"]')?.addEventListener("click", () => onPageChange({ page: p + 1 }));
 }
+
 // ========== END HELPERS ==========
 
 export { BRAND, BRAND_NAME, BRAND_TAGLINE, bakeWiseDocHeader, bakeWiseDocFooter, bakeWiseAutoTableTheme, bakeWiseMultiPageFooter, bakeWiseSavePdf, paginate };
 export let allIngredients = {};
 export let globalStockIn = [];
 export let globalStockOut = [];
+
+// ========== REUSABLE BUTTON LOADING STATE ==========
+window.setBtnLoading = function(btn, text = "Saving...") {
+  if (!btn) return;
+  btn.dataset.originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${text}`;
+};
+
+window.resetBtn = function(btn) {
+  if (!btn) return;
+  btn.disabled = false;
+  if (btn.dataset.originalHtml) {
+    btn.innerHTML = btn.dataset.originalHtml;
+    delete btn.dataset.originalHtml;
+  }
+};
+// ========== END LOADING STATE ==========
 
 // -------------------------------------------------------------
 // BATCH & EXPIRY FUNCTIONS
@@ -567,6 +586,10 @@ const stockInForm = document.getElementById("stockInForm");
 if (stockInForm) {
   stockInForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const btn = stockInForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Adding...");
+    try {
+      
     const ingKey = document.getElementById("stockInIngSelect").value;
     const addedQty = parseFloat(document.getElementById("stockInQty").value);
     const supplier = document.getElementById("stockInSupSelect").value;
@@ -609,7 +632,10 @@ if (stockInForm) {
       return;
     }
 
-    executeDirectStockIn(payload);
+    await executeDirectStockIn(payload);
+      } finally {
+    resetBtn(btn);
+  }
   });
 }
 
