@@ -196,6 +196,13 @@ onAuthStateChanged(auth, (user) => {
         if (role === "admin") {
           document.querySelectorAll(".super-admin-only").forEach(el => el.classList.remove("d-none"));
         }
+            // Recipes tab: expand list to full width for staff
+          const recipeListCol = document.getElementById("recipeListColumn");
+          if (recipeListCol) {
+            recipeListCol.className = (role === "admin" || role === "supervisor")
+              ? "col-md-7"
+              : "col-md-12";
+          }
       } else {
         signOut(auth).then(() => {
           alert("Access Denied: Your user profile has been deleted by an administrator.");
