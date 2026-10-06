@@ -311,26 +311,33 @@ const addIngredientForm = document.getElementById("addIngredientForm");
 if (addIngredientForm) {
   addIngredientForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const ingName = document.getElementById("ingName").value;
-    const qty = parseFloat(document.getElementById("ingQty").value);
-    const unit = document.getElementById("ingUnit").value;
-    const expDate = toIsoDateString(document.getElementById("ingExpiry").value);
+    const btn = addIngredientForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Adding...");
+    try {
+      const ingName = document.getElementById("ingName").value;
+      const qty = parseFloat(document.getElementById("ingQty").value);
+      const unit = document.getElementById("ingUnit").value;
+      const expDate = toIsoDateString(document.getElementById("ingExpiry").value);
 
-    const newIng = {
-      name: ingName,
-      category: document.getElementById("ingCategorySelect").value,
-      quantity: qty,
-      minThreshold: parseFloat(document.getElementById("ingMin").value),
-      expiryDate: expDate,
-      unit: unit,
-      batches: [{ qty: qty, expiryDate: expDate }]
-    };
+      const newIng = {
+        name: ingName,
+        category: document.getElementById("ingCategorySelect").value,
+        quantity: qty,
+        minThreshold: parseFloat(document.getElementById("ingMin").value),
+        expiryDate: expDate,
+        unit: unit,
+        batches: [{ qty: qty, expiryDate: expDate }]
+      };
 
-    push(ref(db, 'ingredients/'), newIng).then(async () => {
+      await push(ref(db, 'ingredients/'), newIng);
       await logAuditEvent("Add Ingredient", `Created new ingredient: ${ingName} (${qty} ${unit})`);
       alert("Ingredient Saved!");
       addIngredientForm.reset();
-    });
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 
   onValue(ref(db, 'ingredients/'), (snapshot) => {
@@ -375,40 +382,43 @@ window.openEditModal = function(key) {
 
 const editForm = document.getElementById("editForm");
 if (editForm) {
-  editForm.addEventListener("submit", (e) => {
+  editForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const key = document.getElementById("editKey").value;
     if (!key) return;
 
-    const existingItem = allIngredients[key] || {};
-    const newName = document.getElementById("editName").value;
-    const newQty = parseFloat(document.getElementById("editQty").value);
-    const newUnit = document.getElementById("editUnit").value;
-    const newExp = toIsoDateString(document.getElementById("editExpiry").value);
+    const btn = editForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Updating...");
+    try {
+      const existingItem = allIngredients[key] || {};
+      const newName = document.getElementById("editName").value;
+      const newQty = parseFloat(document.getElementById("editQty").value);
+      const newUnit = document.getElementById("editUnit").value;
+      const newExp = toIsoDateString(document.getElementById("editExpiry").value);
 
-    const updatedData = {
-      name: newName,
-      category: existingItem.category || "",
-      quantity: newQty,
-      minThreshold: parseFloat(document.getElementById("editMin").value),
-      expiryDate: newExp,
-      unit: newUnit,
-      batches: [{ qty: newQty, expiryDate: newExp }]
-    };
+      const updatedData = {
+        name: newName,
+        category: existingItem.category || "",
+        quantity: newQty,
+        minThreshold: parseFloat(document.getElementById("editMin").value),
+        expiryDate: newExp,
+        unit: newUnit,
+        batches: [{ qty: newQty, expiryDate: newExp }]
+      };
 
-    update(ref(db, `ingredients/${key}`), updatedData)
-      .then(async () => {
-        await logAuditEvent("Edit Ingredient", `Updated ingredient details for: ${newName} (Qty: ${newQty} ${newUnit}, Exp: ${newExp})`);
-        alert("Ingredient updated successfully!");
-        const editModalElement = document.getElementById('editModal');
-        if (editModalElement && typeof bootstrap !== "undefined") {
-          const modal = bootstrap.Modal.getInstance(editModalElement);
-          if (modal) modal.hide();
-        }
-      })
-      .catch((err) => {
-        alert("Error updating ingredient: " + err.message);
-      });
+      await update(ref(db, `ingredients/${key}`), updatedData);
+      await logAuditEvent("Edit Ingredient", `Updated ingredient details for: ${newName} (Qty: ${newQty} ${newUnit}, Exp: ${newExp})`);
+      alert("Ingredient updated successfully!");
+      const editModalElement = document.getElementById('editModal');
+      if (editModalElement && typeof bootstrap !== "undefined") {
+        const modal = bootstrap.Modal.getInstance(editModalElement);
+        if (modal) modal.hide();
+      }
+    } catch (err) {
+      alert("Error updating ingredient: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 }
 
@@ -504,14 +514,21 @@ function renderInventoryTable() {
 // -------------------------------------------------------------
 const addCategoryForm = document.getElementById("addCategoryForm");
 if (addCategoryForm) {
-  addCategoryForm.addEventListener("submit", (e) => {
+  addCategoryForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const catName = document.getElementById("catName").value;
-    push(ref(db, 'categories/'), { name: catName }).then(async () => {
+    const btn = addCategoryForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Adding...");
+    try {
+      const catName = document.getElementById("catName").value;
+      await push(ref(db, 'categories/'), { name: catName });
       await logAuditEvent("Add Category", `Created category: ${catName}`);
       alert("Category Added!");
       addCategoryForm.reset();
-    });
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 
   onValue(ref(db, 'categories/'), (snapshot) => {
@@ -543,19 +560,26 @@ if (addCategoryForm) {
 
 const addSupplierForm = document.getElementById("addSupplierForm");
 if (addSupplierForm) {
-  addSupplierForm.addEventListener("submit", (e) => {
+  addSupplierForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const supName = document.getElementById("supName").value;
-    push(ref(db, 'suppliers/'), {
-      name: supName,
-      contact: document.getElementById("supContact").value,
-      phone: document.getElementById("supPhone").value,
-      email: document.getElementById("supEmail").value
-    }).then(async () => {
+    const btn = addSupplierForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Adding...");
+    try {
+      const supName = document.getElementById("supName").value;
+      await push(ref(db, 'suppliers/'), {
+        name: supName,
+        contact: document.getElementById("supContact").value,
+        phone: document.getElementById("supPhone").value,
+        email: document.getElementById("supEmail").value
+      });
       await logAuditEvent("Add Supplier", `Saved supplier: ${supName}`);
       alert("Supplier Saved!");
       addSupplierForm.reset();
-    });
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 
   onValue(ref(db, 'suppliers/'), (snapshot) => {
@@ -788,19 +812,22 @@ if (typeof window.currentUserRole === "undefined") {
 
 const stockOutForm = document.getElementById("stockOutForm");
 if (stockOutForm) {
-  stockOutForm.addEventListener("submit", (e) => {
+  stockOutForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const ingKey = document.getElementById("stockOutIngSelect").value;
-    const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
-    const reason = document.getElementById("stockOutReason").value;
-    const useDate = document.getElementById("stockOutDate").value;
+    const btn = stockOutForm.querySelector("button[type=submit]");
+    setBtnLoading(btn, "Deducting...");
+    try {
+      const ingKey = document.getElementById("stockOutIngSelect").value;
+      const deductedQty = parseFloat(document.getElementById("stockOutQty").value);
+      const reason = document.getElementById("stockOutReason").value;
+      const useDate = document.getElementById("stockOutDate").value;
 
-    if (!ingKey || isNaN(deductedQty) || deductedQty <= 0) {
-      alert("Please select an ingredient and enter a valid quantity.");
-      return;
-    }
+      if (!ingKey || isNaN(deductedQty) || deductedQty <= 0) {
+        alert("Please select an ingredient and enter a valid quantity.");
+        return;
+      }
 
-    get(ref(db, `ingredients/${ingKey}`)).then((snap) => {
+      const snap = await get(ref(db, `ingredients/${ingKey}`));
       if (!snap.exists()) {
         alert("Selected ingredient not found in database.");
         return;
@@ -816,28 +843,25 @@ if (stockOutForm) {
 
       const newQty = currentQty - deductedQty;
 
-      update(ref(db, `ingredients/${ingKey}`), { quantity: newQty })
-        .then(() => {
-          return push(ref(db, 'stock_out/'), {
-            ingredientName: item.name,
-            deductedQty: deductedQty,
-            unit: item.unit,
-            reason: reason || "General Use",
-            date: useDate
-          });
-        })
-        .then(async () => {
-          await logAuditEvent("Stock Out", `Deducted -${deductedQty} ${item.unit} of ${item.name} (Reason: ${reason})`);
-          alert("Stock Out recorded successfully!");
-          stockOutForm.reset();
-          const todayStr = new Date().toISOString().split("T")[0];
-          const stockOutDateElem = document.getElementById("stockOutDate");
-          if (stockOutDateElem) stockOutDateElem.value = todayStr;
-        })
-        .catch((err) => {
-          alert("Error processing Stock Out: " + err.message);
-        });
-    });
+      await update(ref(db, `ingredients/${ingKey}`), { quantity: newQty });
+      await push(ref(db, 'stock_out/'), {
+        ingredientName: item.name,
+        deductedQty: deductedQty,
+        unit: item.unit,
+        reason: reason || "General Use",
+        date: useDate
+      });
+      await logAuditEvent("Stock Out", `Deducted -${deductedQty} ${item.unit} of ${item.name} (Reason: ${reason})`);
+      alert("Stock Out recorded successfully!");
+      stockOutForm.reset();
+      const todayStr = new Date().toISOString().split("T")[0];
+      const d = document.getElementById("stockOutDate");
+      if (d) d.value = todayStr;
+    } catch (err) {
+      alert("Error processing Stock Out: " + err.message);
+    } finally {
+      resetBtn(btn);
+    }
   });
 }
 
