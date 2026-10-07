@@ -6,18 +6,13 @@ and support purchasing decisions. The system aims to reduce manual
 inventory errors, improve stock visibility, and help reduce ingredient
 wastage.
 
-## 📋 Table of Contents
+## Table of Contents
 
 1. [Features](#-features)
 2. [Tech Stack](#-tech-stack)
 3. [System Workflow](#-system-workflow)
-4. [Getting Started](#-getting-started)
-5. [Usage](#-usage)
-6. [Testing](#-testing)
-7. [Roadmap](#-roadmap)
-8. [Project Team](#-project-team)
 
-## ✨ Features
+## Features
 
 - **User Authentication:** User registration and login using Firebase
   Authentication.
@@ -71,7 +66,7 @@ wastage.
 - **Git and GitHub** are used for source-code version control and
   collaboration.
 
-## 🔄 System Workflow
+## System Workflow
 
 ```text
 User
