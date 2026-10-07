@@ -38,7 +38,7 @@ wastage.
 - **Reports:** Generate inventory and forecasting information for
   monitoring and purchasing decisions.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend:** HTML5, CSS3, Bootstrap 5.3, JavaScript
 - **Authentication:** Firebase Authentication
